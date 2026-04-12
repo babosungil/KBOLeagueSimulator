@@ -5,6 +5,14 @@
 
 'use strict';
 
+// ── Base URL (상대경로 자동 감지) ──
+// index.html이 있는 폴더를 기준으로 data/ 경로를 계산
+// → 로컬/GitHub Pages/어떤 서버든 폴더 구조만 맞으면 동작
+const BASE_URL = document.currentScript
+  ? new URL('.', document.currentScript.src).href.replace(/js\/$/, '')
+  : new URL('.', location.href).href;
+function dataUrl(path) { return `${BASE_URL}${path}`; }
+
 // ── 런타임 데이터 저장소 (DataLoader가 채움) ──
 const DB = {
   hitters: [],   // buildHitter() 처리 전 원본
@@ -142,8 +150,8 @@ function csvRowToPitcher(row, handLookup, teamName) {
  */
 async function loadTeamCSV(year, teamCode, korName, profileRows) {
   const [hitterRes, pitcherRes] = await Promise.all([
-    fetch(`data/${year}/${year}_hitter_${teamCode}.csv`),
-    fetch(`data/${year}/${year}_pitcher_${teamCode}.csv`),
+    fetch(dataUrl(`data/${year}/${year}_hitter_${teamCode}.csv`)),
+    fetch(dataUrl(`data/${year}/${year}_pitcher_${teamCode}.csv`)),
   ]);
   if (!hitterRes.ok)  throw new Error(`${korName}(${teamCode}) 타자 데이터를 찾을 수 없습니다 (${year})`);
   if (!pitcherRes.ok) throw new Error(`${korName}(${teamCode}) 투수 데이터를 찾을 수 없습니다 (${year})`);
@@ -175,12 +183,12 @@ async function loadTeamCSV(year, teamCode, korName, profileRows) {
 async function loadTeamData(year, home, away, onReady, onError) {
   try {
     // player_profile은 연도 무관 공통 파일 — 한 번만 fetch
-    const profileRes = await fetch('data/player_profile.csv');
+    const profileRes = await fetch(dataUrl('data/player_profile.csv'));
     if (!profileRes.ok) throw new Error('player_profile.csv를 찾을 수 없습니다');
     const profileRows = parseCSV(await profileRes.text());
 
     // _meta.json의 name_kor에서 한글명 조회 (없으면 영문 코드 그대로 사용)
-    const metaRes  = await fetch('data/_meta.json');
+    const metaRes  = await fetch(dataUrl('data/_meta.json'));
     const meta     = metaRes.ok ? await metaRes.json() : {};
     const nameKor  = (meta.name_kor) || {};
     const homeKor  = nameKor[home] || home;
@@ -209,7 +217,7 @@ async function loadTeamData(year, home, away, onReady, onError) {
  */
 async function loadMeta(onReady, onError) {
   try {
-    const res  = await fetch('data/_meta.json');
+    const res  = await fetch(dataUrl('data/_meta.json'));
     if (!res.ok) throw new Error('메타 데이터를 찾을 수 없습니다');
     const meta = await res.json();
     onReady(meta);

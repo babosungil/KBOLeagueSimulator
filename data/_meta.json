@@ -1,0 +1,18 @@
+{
+  "years": ["2025"],
+  "teams": {
+    "2025": ["KIA","SAMSUNG","LG","DOOSAN","KT","SSG","LOTTE","HANHWA","NC","KIWOOM"]
+  },
+  "name_kor": {
+    "KIA": "기아",
+    "SAMSUNG": "삼성",
+    "LG":"LG",
+    "DOOSAN":"두산",
+    "KT":"KT",
+    "SSG":"SSG",
+    "LOTTE":"롯데",
+    "HANHWA":"한화",
+    "NC":"NC",
+    "KIWOOM":"키움"
+  }
+}

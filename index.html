@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KBO 리그 시뮬레이터</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@300;400;500;700&family=Bebas+Neue&family=JetBrains+Mono:wght@400;700&display=swap');
+:root{--bg:#0a0c10;--bg2:#111318;--bg3:#181c24;--border:#1e2430;--border2:#2a3040;--text:#e8eaf0;--text2:#8890a0;--text3:#4a5468;--accent:#f5a623;--accent2:#e8340a;--accent3:#2dcc6f;--accent4:#3b82f6;--panel:#13161e}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-serif;font-size:13px;min-height:100vh;overflow-x:hidden}
+#header{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+#header h1{font-family:'Black Han Sans',sans-serif;font-size:20px;color:var(--accent);letter-spacing:2px;text-shadow:0 0 20px rgba(245,166,35,0.4)}
+.score-display{display:flex;align-items:center;gap:14px;font-family:'Bebas Neue',sans-serif;font-size:34px;letter-spacing:3px}
+.team-score{display:flex;flex-direction:column;align-items:center}
+.team-name{font-size:11px;font-family:'Noto Sans KR';letter-spacing:1px;color:var(--text2)}
+.score-num{line-height:1}
+.score-vs{font-size:16px;color:var(--text3);padding:0 4px}
+.inning-display{display:flex;flex-direction:column;align-items:center;font-family:'JetBrains Mono';font-size:12px;color:var(--text2);gap:2px}
+.inning-num{font-size:18px;color:var(--text);font-family:'Bebas Neue'}
+.header-right{display:flex;gap:8px;align-items:center}
+.btn{padding:7px 14px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);border-radius:6px;cursor:pointer;font-family:'Noto Sans KR';font-size:12px;transition:all .2s}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);color:#000;border-color:var(--accent);font-weight:700}
+.btn.primary:hover{background:#ffc142}
+.btn.danger{border-color:var(--accent2);color:var(--accent2)}
+.btn.danger:hover{background:var(--accent2);color:#fff}
+.speed-ctrl{display:flex;align-items:center;gap:6px;color:var(--text2);font-size:11px}
+.speed-ctrl input[type=range]{width:70px;accent-color:var(--accent)}
+#main{display:grid;grid-template-columns:1fr 300px 260px;height:calc(100vh - 54px)}
+#field-panel{padding:14px;border-right:1px solid var(--border);display:flex;flex-direction:column;gap:10px;overflow-y:auto}
+.diamond-wrap{position:relative;width:100%;max-width:300px;margin:0 auto;aspect-ratio:1}
+.diamond-svg{width:100%;height:100%}
+.last-pitch{max-width:300px;width:100%;margin:0 auto;text-align:center;height:34px;display:flex;align-items:center;justify-content:center}
+.pitch-badge{display:inline-block;padding:5px 18px;border-radius:20px;font-size:13px;font-weight:700;letter-spacing:2px;animation:badgeIn .25s ease}
+@keyframes badgeIn{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+.badge-ball{background:rgba(59,130,246,.2);border:1px solid var(--accent4);color:var(--accent4)}
+.badge-strike{background:rgba(245,166,35,.2);border:1px solid var(--accent);color:var(--accent)}
+.badge-foul{background:rgba(168,85,247,.2);border:1px solid #a855f7;color:#a855f7}
+.badge-hit{background:rgba(45,204,111,.2);border:1px solid var(--accent3);color:var(--accent3)}
+.badge-out{background:rgba(232,52,10,.2);border:1px solid var(--accent2);color:var(--accent2)}
+.badge-hr{background:rgba(245,166,35,.4);border:2px solid var(--accent);color:var(--accent);font-size:15px}
+.badge-walk{background:rgba(59,130,246,.3);border:1px solid var(--accent4);color:var(--accent4)}
+.badge-k{background:rgba(232,52,10,.3);border:1px solid var(--accent2);color:var(--accent2)}
+.badge-steal{background:rgba(168,85,247,.3);border:1px solid #a855f7;color:#a855f7}
+.badge-bunt{background:rgba(100,200,100,.2);border:1px solid #64c864;color:#64c864}
+.badge-ext{background:rgba(245,166,35,.5);border:2px solid var(--accent);color:var(--accent);font-size:14px;animation:badgeIn .3s ease}
+.count-section{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:300px;margin:0 auto;width:100%}
+.count-box{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center}
+.count-box .label{font-size:10px;color:var(--text2);letter-spacing:1px;text-transform:uppercase}
+.count-box .dots{display:flex;justify-content:center;gap:5px;margin-top:5px}
+.dot{width:11px;height:11px;border-radius:50%;border:2px solid var(--border2);background:transparent;transition:all .2s}
+.dot.ab{background:var(--accent4);border-color:var(--accent4);box-shadow:0 0 6px var(--accent4)}
+.dot.as{background:var(--accent);border-color:var(--accent);box-shadow:0 0 6px var(--accent)}
+.dot.ao{background:var(--accent2);border-color:var(--accent2);box-shadow:0 0 6px var(--accent2)}
+.pitch-counter{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:9px 12px;display:flex;justify-content:space-between;align-items:center;max-width:300px;width:100%;margin:0 auto}
+.pc-item{text-align:center}
+.pc-label{font-size:10px;color:var(--text2)}
+.pc-val{font-family:'JetBrains Mono';font-size:17px;color:var(--text);margin-top:1px}
+.pc-val.hl{color:var(--accent)}
+.scoreboard{background:var(--bg2);border:1px solid var(--border);border-radius:6px;overflow:auto;max-width:300px;margin:0 auto;width:100%}
+.sb-table{border-collapse:collapse;width:100%;font-family:'JetBrains Mono';font-size:11px}
+.sb-table td,.sb-table th{padding:3px 5px;text-align:center;border:1px solid var(--border);min-width:20px}
+.sb-table th{color:var(--text2);background:var(--bg3);font-size:9px}
+.sb-table .tc{text-align:left;color:var(--text);font-weight:700;min-width:52px;font-size:11px}
+.sb-table .tot{font-weight:700;color:var(--accent)}
+.sb-table .ci{background:rgba(245,166,35,.08)}
+.situation-bar{max-width:300px;width:100%;margin:0 auto;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:7px 12px;display:flex;gap:12px;align-items:center;font-size:11px}
+.sit-item{display:flex;flex-direction:column;align-items:center;gap:2px}
+.sit-label{font-size:9px;color:var(--text3);letter-spacing:1px}
+.sit-val{font-family:'JetBrains Mono';font-size:12px;color:var(--text)}
+.sit-val.risp{color:var(--accent3)}
+#atbat-panel{border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.panel-header{padding:8px 14px;background:var(--bg2);border-bottom:1px solid var(--border);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text2);display:flex;justify-content:space-between;align-items:center}
+.pitcher-card{padding:10px 14px;border-bottom:1px solid var(--border);background:var(--panel)}
+.pitcher-card .role{font-size:10px;color:var(--accent);letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;display:flex;justify-content:space-between;align-items:center}
+.pitcher-card .pname{font-family:'Black Han Sans';font-size:17px;letter-spacing:1px}
+.pitcher-card .pteam{color:var(--text2);font-size:11px}
+.pstats,.bstats{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:8px}
+.pstat,.bstat{text-align:center}
+.pval,.bval{font-family:'JetBrains Mono';font-size:13px;color:var(--text)}
+.plabel,.blabel{font-size:9px;color:var(--text3);letter-spacing:1px;margin-top:1px}
+.stamina-wrap{margin-top:7px}
+.stamina-label{display:flex;justify-content:space-between;font-size:10px;color:var(--text2);margin-bottom:3px}
+.stamina-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden}
+.stamina-fill{height:100%;border-radius:2px;transition:width .5s,background .5s}
+.pitcher-role-badge{font-size:9px;padding:2px 6px;border-radius:10px;font-family:'Noto Sans KR'}
+.role-starter{background:rgba(59,130,246,.2);color:var(--accent4);border:1px solid rgba(59,130,246,.4)}
+.role-middle{background:rgba(100,100,100,.2);color:var(--text2);border:1px solid rgba(100,100,100,.4)}
+.role-closer{background:rgba(232,52,10,.2);color:var(--accent2);border:1px solid rgba(232,52,10,.4)}
+.batter-card{padding:10px 14px;border-bottom:1px solid var(--border)}
+.batter-card .role{font-size:10px;color:var(--accent3);letter-spacing:2px;text-transform:uppercase;margin-bottom:3px}
+.batter-card .bname{font-family:'Black Han Sans';font-size:17px}
+.batter-card .binfo{color:var(--text2);font-size:11px}
+.today-stats{padding:8px 14px;border-bottom:1px solid var(--border);font-size:11px}
+.today-stats .ts-title{color:var(--text2);font-size:10px;letter-spacing:1px;margin-bottom:5px}
+.ts-row{display:flex;justify-content:space-between;padding:2px 0}
+.ts-k{color:var(--text2)}.ts-v{font-family:'JetBrains Mono';color:var(--text)}
+.tab-bar{display:flex;border-bottom:1px solid var(--border)}
+.tab{flex:1;padding:8px;text-align:center;font-size:11px;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-content{flex:1;overflow-y:auto}
+.log-panel{padding:6px 0}
+.log-entry{padding:5px 14px;border-bottom:1px solid var(--border);font-size:11px;display:flex;gap:7px;align-items:flex-start;animation:logIn .2s ease}
+@keyframes logIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
+.log-inn{color:var(--text3);font-family:'JetBrains Mono';font-size:10px;min-width:28px}
+.log-msg{color:var(--text);flex:1}
+.log-msg.hit{color:var(--accent3)}.log-msg.hr{color:var(--accent);font-weight:700}
+.log-msg.out{color:var(--text2)}.log-msg.score{color:var(--accent);font-weight:700}
+.log-msg.steal{color:#a855f7}.log-msg.bunt{color:#64c864}
+.log-msg.change{color:var(--accent4)}.log-msg.ext{color:var(--accent);font-weight:700}
+.formula-panel{padding:10px 14px;font-size:11px;line-height:1.8}
+.fs-section{margin-bottom:12px}
+.fs-title{color:var(--accent);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;border-bottom:1px solid var(--border);padding-bottom:3px}
+.fr{display:flex;justify-content:space-between;padding:1px 0}
+.fk{color:var(--text2)}.fv{font-family:'JetBrains Mono';color:var(--text)}
+#lineup-panel{display:flex;flex-direction:column;overflow:hidden}
+.lineup-half{flex:1;overflow-y:auto;border-bottom:1px solid var(--border)}
+.lineup-half:last-child{border-bottom:none}
+.lineup-title{padding:7px 12px;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text2);border-bottom:1px solid var(--border);background:var(--bg2);position:sticky;top:0}
+.lr{display:flex;align-items:center;padding:5px 10px;border-bottom:1px solid var(--border);gap:7px;transition:background .15s}
+.lr:hover{background:var(--bg3)}.lr.batting{background:rgba(245,166,35,.07)}
+.lr.batting .lr-name{color:var(--accent)}
+.lr-num{font-family:'JetBrains Mono';color:var(--text3);font-size:11px;min-width:14px;text-align:right}
+.lr-pos{font-size:9px;color:var(--text2);background:var(--border);border-radius:3px;padding:1px 4px;min-width:26px;text-align:center}
+.lr-name{font-size:12px;flex:1}
+.lr-avg{font-family:'JetBrains Mono';font-size:10px;color:var(--text2)}
+.lr-today{font-size:10px;color:var(--text3);min-width:54px;text-align:right;font-family:'JetBrains Mono'}
+.lr-today.gh{color:var(--accent3)}.lr-today.ghr{color:var(--accent)}
+/* ── 셋업 화면 ── */
+#setup-screen{position:fixed;inset:0;background:var(--bg);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+#setup-screen h2{font-family:'Black Han Sans';font-size:26px;color:var(--accent);margin-bottom:4px;letter-spacing:2px}
+.subtitle{color:var(--text2);margin-bottom:28px;font-size:13px}
+.setup-grid{display:grid;grid-template-columns:1fr 80px 1fr;gap:16px;max-width:600px;width:100%;align-items:center}
+.setup-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px}
+.setup-card h3{font-size:11px;color:var(--text2);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px}
+.setup-year{width:100%;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:7px 10px;border-radius:7px;font-family:'Noto Sans KR';font-size:12px;cursor:pointer;margin-bottom:8px}
+.setup-year:focus{outline:none;border-color:var(--accent)}
+.team-select{width:100%;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 10px;border-radius:7px;font-family:'Noto Sans KR';font-size:13px;cursor:pointer}
+.team-select:focus{outline:none;border-color:var(--accent)}
+.vs-div{text-align:center;font-family:'Bebas Neue';font-size:30px;color:var(--text3)}
+.start-area{text-align:center;margin-top:20px}
+.btn-start{background:var(--accent);color:#000;border:none;padding:13px 44px;border-radius:8px;font-family:'Black Han Sans';font-size:15px;letter-spacing:2px;cursor:pointer;transition:all .2s;box-shadow:0 4px 20px rgba(245,166,35,.3)}
+.btn-start:hover{background:#ffc142;transform:translateY(-1px)}
+.btn-start:disabled{background:var(--border2);color:var(--text3);cursor:not-allowed;transform:none;box-shadow:none}
+.setup-notice{color:var(--text3);font-size:11px;margin-top:10px}
+/* ── 로딩 ── */
+.loading-overlay{position:fixed;inset:0;background:rgba(10,12,16,.92);z-index:300;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+.loading-spinner{width:38px;height:38px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{color:var(--text2);font-size:13px}
+.loading-sub{color:var(--text3);font-size:11px}
+/* ── 게임 종료 ── */
+.game-over{position:fixed;inset:0;background:rgba(10,12,16,.97);z-index:200;display:none;flex-direction:column;align-items:center;justify-content:flex-start;padding:20px;overflow-y:auto}
+.game-over.show{display:flex}
+.go-title{font-family:'Black Han Sans';font-size:38px;color:var(--accent);letter-spacing:4px;margin-bottom:4px;margin-top:10px}
+.go-score{font-family:'Bebas Neue';font-size:64px;letter-spacing:8px}
+.go-winner{color:var(--accent3);font-size:16px;margin-bottom:16px}
+.go-ext-badge{background:rgba(245,166,35,.2);border:1px solid var(--accent);color:var(--accent);padding:3px 12px;border-radius:12px;font-size:12px;margin-bottom:6px;display:inline-block}
+.boxscore-wrap{width:100%;max-width:780px;display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.bs-section{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.bs-title{padding:8px 14px;background:var(--bg2);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text2);border-bottom:1px solid var(--border)}
+.bs-table{width:100%;border-collapse:collapse;font-family:'JetBrains Mono';font-size:11px}
+.bs-table th{padding:4px 7px;text-align:center;color:var(--text3);font-size:9px;border-bottom:1px solid var(--border);background:var(--bg3)}
+.bs-table th:first-child{text-align:left;min-width:80px}
+.bs-table td{padding:3px 7px;text-align:center;border-bottom:1px solid rgba(30,36,48,.5)}
+.bs-table td:first-child{text-align:left;color:var(--text)}
+.bs-table tr:last-child td{border-bottom:none}
+.bs-table .highlight{color:var(--accent)}
+.mvp-section{background:var(--panel);border:1px solid var(--accent);border-radius:10px;overflow:hidden;width:100%;max-width:780px;margin-bottom:14px}
+.mvp-header{padding:8px 14px;background:rgba(245,166,35,.1);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);border-bottom:1px solid rgba(245,166,35,.3)}
+.mvp-body{display:grid;grid-template-columns:1fr 1fr}
+.mvp-card{padding:12px 16px;border-right:1px solid var(--border)}
+.mvp-card:last-child{border-right:none}
+.mvp-tag{font-size:9px;color:var(--text2);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+.mvp-name{font-family:'Black Han Sans';font-size:20px;letter-spacing:1px;color:var(--accent)}
+.mvp-stats{font-size:11px;color:var(--text2);margin-top:3px}
+.mvp-stats span{color:var(--text);font-family:'JetBrains Mono'}
+.sb-full{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;width:100%;max-width:780px;margin-bottom:14px}
+.sb-full-table{width:100%;border-collapse:collapse;font-family:'JetBrains Mono';font-size:11px}
+.sb-full-table th{padding:4px 6px;text-align:center;color:var(--text2);font-size:9px;background:var(--bg3)}
+.sb-full-table td{padding:3px 6px;text-align:center;border-top:1px solid var(--border)}
+.sb-full-table .tc2{text-align:left;font-weight:700;min-width:60px}
+.sb-full-table .ci2{background:rgba(245,166,35,.05)}
+.sb-full-table .tot2{color:var(--accent);font-weight:700}
+.ext-cell{color:var(--accent);font-size:10px}
+/* ── 연장 배너 ── */
+.extra-overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.7);z-index:150;pointer-events:none}
+.extra-banner{font-family:'Black Han Sans';font-size:48px;color:var(--accent);letter-spacing:6px;text-shadow:0 0 40px rgba(245,166,35,.7);animation:extIn .6s ease}
+@keyframes extIn{from{transform:scale(1.5);opacity:0}to{transform:scale(1);opacity:1}}
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+@media(max-width:880px){#main{grid-template-columns:1fr 280px}#lineup-panel{display:none}}
+</style>
+</head>
+<body>
+
+<!-- ── 셋업 화면 ── -->
+<div id="setup-screen">
+  <h2>⚾ KBO 시뮬레이터</h2>
+  <p class="subtitle">실제 선수 데이터 · 연장전 · 투수 분업 · 좌우 유불리</p>
+
+  <!-- 연도 선택 (메타에서 동적 생성) -->
+  <div style="margin-bottom:16px;display:flex;align-items:center;gap:10px">
+    <span style="color:var(--text2);font-size:12px">시즌</span>
+    <select class="setup-year" id="year-select" style="width:100px"></select>
+  </div>
+
+  <div class="setup-grid">
+    <div class="setup-card">
+      <h3>원정팀</h3>
+      <select class="team-select" id="away-select"></select>
+    </div>
+    <div class="vs-div">VS</div>
+    <div class="setup-card">
+      <h3>홈팀</h3>
+      <select class="team-select" id="home-select"></select>
+    </div>
+  </div>
+
+  <div class="start-area">
+    <button class="btn-start" id="start-btn" disabled>시뮬레이션 시작</button>
+    <p class="setup-notice" id="setup-notice">데이터 로딩 중...</p>
+  </div>
+</div>
+
+<!-- ── 로딩 오버레이 ── -->
+<div class="loading-overlay" id="loading" style="display:none">
+  <div class="loading-spinner"></div>
+  <div class="loading-text" id="loading-text">데이터 로딩 중...</div>
+  <div class="loading-sub"  id="loading-sub"></div>
+</div>
+
+<!-- ── 게임 종료 화면 ── -->
+<div class="game-over" id="game-over">
+  <div class="go-title">GAME OVER</div>
+  <div class="go-score"  id="go-score"></div>
+  <div id="go-ext-label"></div>
+  <div class="go-winner" id="go-winner"></div>
+  <div class="sb-full">
+    <div class="bs-title">이닝별 스코어</div>
+    <table class="sb-full-table" id="final-scoreboard"></table>
+  </div>
+  <div class="boxscore-wrap" id="boxscore-wrap"></div>
+  <div class="mvp-section">
+    <div class="mvp-header">🏆 오늘의 MVP</div>
+    <div class="mvp-body" id="mvp-body"></div>
+  </div>
+  <div style="display:flex;gap:10px;margin-top:4px;margin-bottom:20px">
+    <button class="btn primary" onclick="restartGame()">다시 시작</button>
+  </div>
+</div>
+
+<!-- ── 연장전 배너 ── -->
+<div class="extra-overlay" id="extra-overlay" style="display:none">
+  <div class="extra-banner" id="extra-banner"></div>
+</div>
+
+<!-- ── 헤더 ── -->
+<div id="header">
+  <div>
+    <h1>KBO 시뮬레이터
+      <span style="color:var(--text2);font-size:13px;font-family:'Noto Sans KR'" id="header-year"></span>
+    </h1>
+  </div>
+  <div class="score-display">
+    <div class="team-score">
+      <div class="team-name" id="a-team-name">원정</div>
+      <div class="score-num" id="a-score">0</div>
+    </div>
+    <div class="score-vs">:</div>
+    <div class="team-score">
+      <div class="score-num" id="h-score">0</div>
+      <div class="team-name" id="h-team-name">홈</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="inning-display">
+      <div class="inning-num" id="inning-display">1회</div>
+      <div id="half-display">초</div>
+    </div>
+    <div class="speed-ctrl">
+      <span>속도</span>
+      <input type="range" id="speed-slider" min="0" max="4" value="2" step="1">
+      <span id="speed-label">보통</span>
+    </div>
+    <button class="btn primary" id="play-btn" onclick="togglePlay()">▶ 재생</button>
+    <button class="btn" onclick="stepOnce()">1구</button>
+    <button class="btn danger" onclick="showSetup()">팀선택</button>
+  </div>
+</div>
+
+<!-- ── 메인 ── -->
+<div id="main">
+  <!-- 필드 패널 -->
+  <div id="field-panel">
+    <div class="diamond-wrap">
+      <svg class="diamond-svg" viewBox="0 0 280 280" xmlns="http://www.w3.org/2000/svg">
+        <rect x="10" y="10" width="260" height="260" rx="4" fill="#0d1a0e" opacity="0.5"/>
+        <polygon points="140,50 230,140 140,230 50,140" fill="#1a1208" opacity="0.5"/>
+        <line x1="140" y1="240" x2="20"  y2="120" stroke="#2a3018" stroke-width="1"/>
+        <line x1="140" y1="240" x2="260" y2="120" stroke="#2a3018" stroke-width="1"/>
+        <circle cx="140" cy="148" r="7"   fill="#1e1a10" stroke="#2a2510" stroke-width="1"/>
+        <circle cx="140" cy="148" r="2.5" fill="#333020"/>
+        <polygon points="140,228 128,240 132,252 148,252 152,240" fill="#e8e0d0" opacity="0.9"/>
+        <rect id="base-1" x="217" y="129" width="18" height="18" rx="2" fill="#1a2a10" stroke="#2a3a20" stroke-width="1.5"/>
+        <g transform="rotate(45 140 50)"><rect id="base-2" x="131" y="41" width="18" height="18" rx="2" fill="#1a2a10" stroke="#2a3a20" stroke-width="1.5"/></g>
+        <rect id="base-3" x="45" y="129" width="18" height="18" rx="2" fill="#1a2a10" stroke="#2a3a20" stroke-width="1.5"/>
+        <circle id="runner-1" cx="226" cy="138" r="7" fill="transparent"/>
+        <circle id="runner-2" cx="140" cy="50"  r="7" fill="transparent"/>
+        <circle id="runner-3" cx="54"  cy="138" r="7" fill="transparent"/>
+        <text x="238" y="143" fill="#2a4a20" font-size="7" font-family="monospace">1B</text>
+        <text x="128" y="45"  fill="#2a4a20" font-size="7" font-family="monospace">2B</text>
+        <text x="20"  y="143" fill="#2a4a20" font-size="7" font-family="monospace">3B</text>
+        <text x="128" y="260" fill="#2a4a20" font-size="7" font-family="monospace">HOME</text>
+      </svg>
+    </div>
+    <div class="last-pitch" id="last-pitch-area"></div>
+    <div class="count-section">
+      <div class="count-box"><div class="label">볼</div>
+        <div class="dots"><div class="dot" id="b0"></div><div class="dot" id="b1"></div><div class="dot" id="b2"></div><div class="dot" id="b3"></div></div>
+      </div>
+      <div class="count-box"><div class="label">스트라이크</div>
+        <div class="dots"><div class="dot" id="s0"></div><div class="dot" id="s1"></div><div class="dot" id="s2"></div></div>
+      </div>
+      <div class="count-box"><div class="label">아웃</div>
+        <div class="dots"><div class="dot" id="o0"></div><div class="dot" id="o1"></div><div class="dot" id="o2"></div></div>
+      </div>
+    </div>
+    <div class="pitch-counter">
+      <div class="pc-item"><div class="pc-label">이번 타석</div><div class="pc-val hl" id="pc-ab">0</div></div>
+      <div class="pc-item"><div class="pc-label">투수 투구수</div><div class="pc-val" id="pc-p">0</div></div>
+      <div class="pc-item"><div class="pc-label">평균 투구수</div><div class="pc-val" id="pc-avg">-</div></div>
+      <div class="pc-item"><div class="pc-label">총 투구수</div><div class="pc-val" id="pc-tot">0</div></div>
+    </div>
+    <div class="situation-bar">
+      <div class="sit-item"><div class="sit-label">이닝</div><div class="sit-val" id="sit-inning">-</div></div>
+      <div class="sit-item"><div class="sit-label">RISP</div><div class="sit-val risp" id="sit-risp">-</div></div>
+      <div class="sit-item"><div class="sit-label">득점권 타율</div><div class="sit-val" id="sit-risp-avg">-</div></div>
+      <div class="sit-item"><div class="sit-label">도루</div><div class="sit-val" id="sit-steal">-</div></div>
+      <div class="sit-item"><div class="sit-label">번트</div><div class="sit-val" id="sit-bunt">-</div></div>
+    </div>
+    <div class="scoreboard"><table class="sb-table" id="scoreboard"></table></div>
+  </div>
+
+  <!-- 타석 패널 -->
+  <div id="atbat-panel">
+    <div class="panel-header"><span>현재 타석</span><span id="pitcher-role-display"></span></div>
+    <div class="pitcher-card">
+      <div class="role"><span>⚾ 투수</span><span class="pitcher-role-badge" id="p-role-badge"></span></div>
+      <div class="pname" id="p-name">-</div>
+      <div class="pteam" id="p-team">-</div>
+      <div class="pstats">
+        <div class="pstat"><div class="pval" id="p-era">-</div><div class="plabel">ERA</div></div>
+        <div class="pstat"><div class="pval" id="p-k9">-</div><div class="plabel">K/9</div></div>
+        <div class="pstat"><div class="pval" id="p-whip">-</div><div class="plabel">WHIP</div></div>
+        <div class="pstat"><div class="pval" id="p-bb9">-</div><div class="plabel">BB/9</div></div>
+      </div>
+      <div class="stamina-wrap">
+        <div class="stamina-label"><span>체력</span><span id="stamina-pct">100%</span></div>
+        <div class="stamina-bar"><div class="stamina-fill" id="stamina-fill" style="width:100%;background:var(--accent3)"></div></div>
+      </div>
+    </div>
+    <div class="batter-card">
+      <div class="role">🏏 타자</div>
+      <div class="bname" id="b-name">-</div>
+      <div class="binfo" id="b-info">-</div>
+      <div class="bstats">
+        <div class="bstat"><div class="bval" id="b-avg" style="color:var(--accent3)">-</div><div class="blabel">AVG</div></div>
+        <div class="bstat"><div class="bval" id="b-hr">-</div><div class="blabel">HR</div></div>
+        <div class="bstat"><div class="bval" id="b-rbi">-</div><div class="blabel">RBI</div></div>
+        <div class="bstat"><div class="bval" id="b-ops">-</div><div class="blabel">OPS</div></div>
+      </div>
+    </div>
+    <div class="today-stats">
+      <div class="ts-title">오늘 성적</div>
+      <div class="ts-row"><span class="ts-k">타석</span><span class="ts-v" id="ts-pa">0</span></div>
+      <div class="ts-row"><span class="ts-k">안타</span><span class="ts-v" id="ts-h">0</span></div>
+      <div class="ts-row"><span class="ts-k">홈런</span><span class="ts-v" id="ts-hr">0</span></div>
+      <div class="ts-row"><span class="ts-k">타점</span><span class="ts-v" id="ts-rbi">0</span></div>
+      <div class="ts-row"><span class="ts-k">삼진</span><span class="ts-v" id="ts-k">0</span></div>
+      <div class="ts-row"><span class="ts-k">볼넷</span><span class="ts-v" id="ts-bb">0</span></div>
+    </div>
+    <div class="tab-bar">
+      <div class="tab active" id="tab-log"     onclick="switchTab('log')">경기 기록</div>
+      <div class="tab"        id="tab-formula" onclick="switchTab('formula')">계산식</div>
+    </div>
+    <div class="tab-content">
+      <div id="content-log" class="log-panel"><div id="game-log"></div></div>
+      <div id="content-formula" class="formula-panel" style="display:none">
+        <div class="fs-section"><div class="fs-title">하이브리드 엔진 v2.1</div>
+          <div class="fr"><span class="fk">1단계</span><span class="fv">PA결과 선결정</span></div>
+          <div class="fr"><span class="fk">2단계</span><span class="fv">좌우 유불리 보정</span></div>
+          <div class="fr"><span class="fk">3단계</span><span class="fv">주자상황·이닝 보정</span></div>
+          <div class="fr"><span class="fk">4단계</span><span class="fv">RISP 가중치 적용</span></div>
+          <div class="fr"><span class="fk">5단계</span><span class="fv">카운트 시퀀스 생성</span></div>
+        </div>
+        <div class="fs-section"><div class="fs-title">좌우 유불리 (플래툰)</div>
+          <div class="fr"><span class="fk">동타 (불리)</span><span class="fv">안타 -4%, K +8%</span></div>
+          <div class="fr"><span class="fk">반대 (유리)</span><span class="fv">안타 +3%, K -5%</span></div>
+        </div>
+        <div class="fs-section"><div class="fs-title">불펜 분업</div>
+          <div class="fr"><span class="fk">선발</span><span class="fv">평균 5.5이닝 목표</span></div>
+          <div class="fr"><span class="fk">중간계투</span><span class="fv">6~7회</span></div>
+          <div class="fr"><span class="fk">셋업</span><span class="fv">8회 ERA &lt;3.5</span></div>
+          <div class="fr"><span class="fk">마무리</span><span class="fv">9회+ 최저 ERA</span></div>
+        </div>
+        <div class="fs-section"><div class="fs-title">현재 타석 계산</div><div id="formula-calc"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 라인업 패널 -->
+  <div id="lineup-panel">
+    <div class="lineup-half">
+      <div class="lineup-title" id="away-lineup-title">원정팀 라인업</div>
+      <div id="away-lineup"></div>
+    </div>
+    <div class="lineup-half">
+      <div class="lineup-title" id="home-lineup-title">홈팀 라인업</div>
+      <div id="home-lineup"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 스크립트: 엔진 로드 후 진입점 실행 ── -->
+<script src="js/engine.js"></script>
+<script>
+// ── 셋업 화면 진입점 ──
+// index.html에는 데이터가 없으므로, _meta.json → 팀 JSON 순으로 fetch
+
+(async function init() {
+  const yearSel  = document.getElementById('year-select');
+  const homeSel  = document.getElementById('home-select');
+  const awaySel  = document.getElementById('away-select');
+  const startBtn = document.getElementById('start-btn');
+  const notice   = document.getElementById('setup-notice');
+
+  // 1. 메타 로드
+  loadMeta(
+    (meta) => {
+      // 연도 옵션 생성
+      meta.years.forEach((y, i) => {
+        yearSel.innerHTML += `<option value="${y}" ${i === 0 ? 'selected' : ''}>${y}시즌</option>`;
+      });
+
+      // 연도 변경 시 팀 목록 갱신
+      function refreshTeams() {
+        const year  = yearSel.value;
+        const teams = meta.teams[year] || [];
+        homeSel.innerHTML = '';
+        awaySel.innerHTML = '';
+        const nameKor = meta.name_kor || {};
+        teams.forEach((t, i) => {
+          const label = nameKor[t] || t;
+          homeSel.innerHTML += `<option value="${t}" ${i === 0 ? 'selected' : ''}>${label}</option>`;
+          awaySel.innerHTML += `<option value="${t}" ${i === 1 ? 'selected' : ''}>${label}</option>`;
+        });
+        startBtn.disabled = teams.length < 2;
+        notice.textContent = teams.length >= 2
+          ? `${year}시즌 · 10개 구단 데이터`
+          : '해당 시즌 데이터 없음';
+      }
+
+      yearSel.addEventListener('change', refreshTeams);
+      refreshTeams(); // 초기 실행
+    },
+    (err) => {
+      notice.textContent = `⚠ 메타 로드 실패: ${err}`;
+    }
+  );
+
+  // 2. 시작 버튼
+  startBtn.addEventListener('click', startGame);
+
+  // 3. 속도 슬라이더
+  document.getElementById('speed-slider').addEventListener('input', function () {
+    speedIdx = parseInt(this.value);
+    document.getElementById('speed-label').textContent = SPEED_LABELS[speedIdx];
+    if (isPlaying) { clearTimeout(playTimer); schedNext(); }
+  });
+})();
+
+// ── 게임 시작 ──
+async function startGame() {
+  const year = document.getElementById('year-select').value;
+  const home = document.getElementById('home-select').value;
+  const away = document.getElementById('away-select').value;
+
+  if (home === away) { alert('홈팀과 원정팀이 같습니다.'); return; }
+
+  // 로딩 표시
+  const loadingEl  = document.getElementById('loading');
+  const loadTextEl = document.getElementById('loading-text');
+  const loadSubEl  = document.getElementById('loading-sub');
+  loadingEl.style.display = 'flex';
+  loadTextEl.textContent  = '데이터 로딩 중...';
+  const homeSelEl = document.getElementById('home-select');
+  const awaySelEl = document.getElementById('away-select');
+  const homeLabel = homeSelEl.options[homeSelEl.selectedIndex]?.text || home;
+  const awayLabel = awaySelEl.options[awaySelEl.selectedIndex]?.text || away;
+  loadSubEl.textContent   = `${year} · ${awayLabel} vs ${homeLabel}`;
+
+  loadTeamData(
+    year, home, away,
+    ({ homeKor, awayKor }) => {
+      // 성공 → 게임 초기화
+      loadingEl.style.display = 'none';
+
+      gs = initGame(homeKor, awayKor);
+      if (!gs) return;
+
+      // 헤더 연도 표시
+      document.getElementById('header-year').textContent = year;
+
+      // UI 초기화 (한글명 사용)
+      document.getElementById('h-team-name').textContent    = homeKor;
+      document.getElementById('a-team-name').textContent    = awayKor;
+      document.getElementById('h-score').textContent        = '0';
+      document.getElementById('a-score').textContent        = '0';
+      document.getElementById('home-lineup-title').textContent = homeKor + ' 라인업';
+      document.getElementById('away-lineup-title').textContent = awayKor + ' 라인업';
+      document.getElementById('game-log').innerHTML         = '';
+      document.getElementById('game-over').classList.remove('show');
+      document.getElementById('go-ext-label').innerHTML     = '';
+      document.getElementById('inning-display').textContent = '1회';
+      document.getElementById('half-display').textContent   = '초';
+
+      updateGameUI(); updateLnpUI(); updateSbUI(); updateSituationBar();
+      addLog(`⚾ ${year}시즌 · ${awayKor} vs ${homeKor} 경기 시작!`, '');
+      startPA();
+      document.getElementById('setup-screen').style.display = 'none';
+    },
+    (err) => {
+      // 실패
+      loadingEl.style.display = 'none';
+      alert(`데이터 로드 실패: ${err}\n\n아래 파일이 있는지 확인해주세요.\n- data/player_profile.csv\n- data/${year}/${year}_hitter_${home}.csv\n- data/${year}/${year}_pitcher_${home}.csv\n- data/${year}/${year}_hitter_${away}.csv\n- data/${year}/${year}_pitcher_${away}.csv`);
+    }
+  );
+}
+</script>
+</body>
+</html>

@@ -85,11 +85,32 @@ function parseIP(str) {
 /**
  * player_profile CSV로부터 playerId → { hitterHand, pitcherHand } 맵을 빌드.
  */
-function buildHandLookup(profileRows) {
+// playerId → 프로필 전체 맵 (hand + 나이·체격·연봉 등)
+function buildProfileLookup(profileRows) {
   const map = {};
   profileRows.forEach(r => {
     const [hh, ph] = HAND_MAP[r['batting_throwing']] || ['R', 'R'];
-    map[r['playerId']] = { hitterHand: hh, pitcherHand: ph };
+    // 나이 계산
+    const age = r['birthday']
+      ? Math.floor((Date.now() - new Date(r['birthday'])) / (365.25 * 24 * 3600 * 1000))
+      : null;
+    // 연봉 정규화 (달러 표기 제거, 만원 단위)
+    const salaryRaw = String(r['salary'] || '').replace('달러', '').trim();
+    const salary    = salaryRaw ? parseInt(salaryRaw) : null;
+    map[r['playerId']] = {
+      hitterHand:      hh,
+      pitcherHand:     ph,
+      jerseyNumber:    r['jersey_number'] ? parseInt(r['jersey_number']) : null,
+      age,
+      height:          parseInt(r['height']) || null,
+      weight:          parseInt(r['weight']) || null,
+      position:        r['position'] || null,
+      battingThrowing: r['batting_throwing'] || null,
+      career:          r['career'] || null,
+      draft:           r['draft'] || null,
+      salary,
+      salaryRaw:       r['salary'] || null,
+    };
   });
   return map;
 }
@@ -98,44 +119,75 @@ function buildHandLookup(profileRows) {
  * 타자 CSV 행 → JSON hitter 객체 변환.
  * AVG='-' (타석 없는 투수) 는 null을 반환해 호출 측에서 걸러낸다.
  */
-function csvRowToHitter(row, handLookup, teamName) {
+function csvRowToHitter(row, profileLookup, teamName) {
   if (row['AVG'] === '-') return null;           // 타석 없는 투수 제외
-  const h = handLookup[row['playerId']] || {};
+  const p = profileLookup[row['playerId']] || {};
   return {
-    name: row['선수명'],
-    team: teamName,
-    AVG:  Math.round(parseFloat(row['AVG']) * 1000) / 1000,
-    G:    parseInt(row['G']),
-    PA:   parseInt(row['PA']),
-    AB:   parseInt(row['AB']),
-    H:    parseInt(row['H']),
-    HR:   parseInt(row['HR']),
-    D2:   parseInt(row['2B']),
-    D3:   parseInt(row['3B']),
-    RBI:  parseInt(row['RBI']),
-    TB:   parseInt(row['TB']),
-    SAC:  parseInt(row['SAC']),
-    SF:   parseInt(row['SF']),
-    BB:   parseInt(row['BB']),
-    hand: h.hitterHand || 'R',
+    name:            row['선수명'],
+    team:            teamName,
+    AVG:             Math.round(parseFloat(row['AVG']) * 1000) / 1000,
+    G:               parseInt(row['G']),
+    PA:              parseInt(row['PA']),
+    AB:              parseInt(row['AB']),
+    H:               parseInt(row['H']),
+    HR:              parseInt(row['HR']),
+    D2:              parseInt(row['2B']),
+    D3:              parseInt(row['3B']),
+    RBI:             parseInt(row['RBI']),
+    TB:              parseInt(row['TB']),
+    SAC:             parseInt(row['SAC']),
+    SF:              parseInt(row['SF']),
+    BB:              parseInt(row['BB']),
+    hand:            p.hitterHand      || 'R',
+    // 도루 스탯 (run CSV에서 병합 — 없으면 0)
+    SB:              0,
+    CS:              0,
+    SBA:             0,
+    sbPct:           0,
+    // 수비 포지션 (defense CSV에서 병합)
+    defPos:          null,
+    // 포수 도루 저지율 (defense CSV에서 병합)
+    csPct:           null,
+    // 프로필
+    jerseyNumber:    p.jerseyNumber    || null,
+    age:             p.age             || null,
+    height:          p.height          || null,
+    weight:          p.weight          || null,
+    position:        p.position        || null,
+    battingThrowing: p.battingThrowing || null,
+    career:          p.career          || null,
+    draft:           p.draft           || null,
+    salary:          p.salary          || null,
+    salaryRaw:       p.salaryRaw       || null,
   };
 }
 
 /**
  * 투수 CSV 행 → JSON pitcher 객체 변환.
  */
-function csvRowToPitcher(row, handLookup, teamName) {
-  const h = handLookup[row['playerId']] || {};
+function csvRowToPitcher(row, profileLookup, teamName) {
+  const p = profileLookup[row['playerId']] || {};
   return {
-    name: row['선수명'],
-    team: teamName,
-    ERA:  Math.round(parseFloat(row['ERA'])  * 100) / 100,
-    G:    parseInt(row['G']),
-    IP:   parseIP(row['IP']),
-    SO:   parseInt(row['SO']),
-    BB:   parseInt(row['BB']),
-    WHIP: Math.round(parseFloat(row['WHIP']) * 100) / 100,
-    hand: h.pitcherHand || 'R',
+    name:            row['선수명'],
+    team:            teamName,
+    ERA:             Math.round(parseFloat(row['ERA'])  * 100) / 100,
+    G:               parseInt(row['G']),
+    IP:              parseIP(row['IP']),
+    SO:              parseInt(row['SO']),
+    BB:              parseInt(row['BB']),
+    WHIP:            Math.round(parseFloat(row['WHIP']) * 100) / 100,
+    hand:            p.pitcherHand     || 'R',
+    // 프로필
+    jerseyNumber:    p.jerseyNumber    || null,
+    age:             p.age             || null,
+    height:          p.height          || null,
+    weight:          p.weight          || null,
+    position:        p.position        || null,
+    battingThrowing: p.battingThrowing || null,
+    career:          p.career          || null,
+    draft:           p.draft           || null,
+    salary:          p.salary          || null,
+    salaryRaw:       p.salaryRaw       || null,
   };
 }
 
@@ -149,9 +201,11 @@ function csvRowToPitcher(row, handLookup, teamName) {
  *   data/player_profile.csv          ← 연도 무관 공통 파일
  */
 async function loadTeamCSV(year, teamCode, korName, profileRows) {
-  const [hitterRes, pitcherRes] = await Promise.all([
+  const [hitterRes, pitcherRes, runRes, defRes] = await Promise.all([
     fetch(dataUrl(`data/${year}/${year}_hitter_${teamCode}.csv`)),
     fetch(dataUrl(`data/${year}/${year}_pitcher_${teamCode}.csv`)),
+    fetch(dataUrl(`data/${year}/${year}_run_${teamCode}.csv`)),
+    fetch(dataUrl(`data/${year}/${year}_defense_${teamCode}.csv`)),
   ]);
   if (!hitterRes.ok)  throw new Error(`${korName}(${teamCode}) 타자 데이터를 찾을 수 없습니다 (${year})`);
   if (!pitcherRes.ok) throw new Error(`${korName}(${teamCode}) 투수 데이터를 찾을 수 없습니다 (${year})`);
@@ -161,13 +215,52 @@ async function loadTeamCSV(year, teamCode, korName, profileRows) {
     pitcherRes.text(),
   ]);
 
-  const handLookup = buildHandLookup(profileRows);
+  const profileLookup = buildProfileLookup(profileRows);
+
   // team 필드에는 영문 코드 대신 한글명 저장 → 게임 내 UI 표시에 사용
   const hitters  = parseCSV(hitterText)
-    .map(r => csvRowToHitter(r, handLookup, korName))
+    .map(r => csvRowToHitter(r, profileLookup, korName))
     .filter(Boolean);                             // null(AVG='-') 제거
   const pitchers = parseCSV(pitcherText)
-    .map(r => csvRowToPitcher(r, handLookup, korName));
+    .map(r => csvRowToPitcher(r, profileLookup, korName));
+
+  // ── 도루 데이터 병합 (run CSV) ──────────────────────────────────────────
+  if (runRes.ok) {
+    const runRows = parseCSV(await runRes.text());
+    hitters.forEach(h => {
+      const rr = runRows.find(r => r['선수명'] === h.name);
+      if (rr) {
+        h.SB    = parseInt(rr['SB'])        || 0;
+        h.CS    = parseInt(rr['CS'])        || 0;
+        h.SBA   = parseInt(rr['SBA'])       || 0;
+        h.sbPct = parseFloat(rr['SB%'])     || 0;
+      }
+    });
+  }
+
+  // ── 수비 데이터 병합 (defense CSV) ─────────────────────────────────────
+  if (defRes.ok) {
+    const defRows = parseCSV(await defRes.text());
+    // 선수명 기준으로 출장 수 최다 포지션을 주 포지션으로 결정
+    const defMap = {};
+    defRows.forEach(r => {
+      const name = r['선수명'];
+      if (!defMap[name]) defMap[name] = [];
+      defMap[name].push(r);
+    });
+    hitters.forEach(h => {
+      const rows = defMap[h.name];
+      if (!rows) return;
+      const main = rows.slice().sort((a, b) => parseInt(b['G']) - parseInt(a['G']))[0];
+      h.defPos = main['POS'] || null;
+      // 포수인 경우 도루 저지율 추가
+      const catcherRow = rows.find(r => r['POS'] === '포수');
+      if (catcherRow) {
+        const csVal = catcherRow['CS%'];
+        h.csPct = (csVal && csVal !== '-') ? parseFloat(csVal) : 0;
+      }
+    });
+  }
 
   return { hitters, pitchers };
 }
@@ -264,10 +357,44 @@ function getTeamHitters(team) {
 function getTeamPitchers(team) {
   return DB.pitchers.filter(r => r.team === team).map(buildPitcher);
 }
+// 팀 영문 코드 역조회 (시즌 모드 피로도 연동용)
+function getTeamCode(korName) {
+  if (typeof SS === 'undefined' || !SS.nameKor) return null;
+  return Object.keys(SS.nameKor).find(k => SS.nameKor[k] === korName) || null;
+}
+// 수비 포지션 한글 → 영문 약어
+const POS_KOR_MAP = {
+  '포수': 'C', '1루수': '1B', '2루수': '2B', '3루수': '3B',
+  '유격수': 'SS', '좌익수': 'LF', '중견수': 'CF', '우익수': 'RF',
+  '투수': 'P', '외야수': 'OF', '내야수': 'IF',
+};
+
 function buildLineup(hs) {
-  const s   = [...hs].sort((a, b) => b.ops - a.ops).slice(0, 9);
-  const pos = ['CF', 'SS', '3B', '1B', 'RF', '2B', 'C', 'LF', 'DH'];
-  return s.map((p, i) => ({ ...p, order: i + 1, pos: pos[i] }));
+  const sorted = [...hs].sort((a, b) => b.ops - a.ops);
+  const fallbackPos = ['CF', 'SS', '3B', '1B', 'RF', '2B', 'C', 'LF', 'DH'];
+  const used   = new Set();
+  const lineup = [];
+
+  // 포수(C) 우선 배치 — 포수가 없으면 수비 포지션 무시
+  const catcher = sorted.find(p => p.defPos === '포수');
+  if (catcher) used.add(catcher.name);
+
+  sorted.slice(0, 12).forEach(p => {
+    if (lineup.length >= 9) return;
+    if (used.has(p.name))   return;
+    used.add(p.name);
+    lineup.push(p);
+  });
+
+  // 포수를 7번 타순 자리에 삽입 (없으면 그냥 순서대로)
+  if (catcher && lineup.length >= 6) lineup.splice(6, 0, catcher);
+  else if (catcher)                  lineup.push(catcher);
+
+  return lineup.slice(0, 9).map((p, i) => ({
+    ...p,
+    order: i + 1,
+    pos: POS_KOR_MAP[p.defPos] || fallbackPos[i] || 'DH',
+  }));
 }
 function pickStarter(ps) {
   const s = ps.filter(p => p.isStarter);
@@ -423,25 +550,48 @@ function advRunners(bases, ht) {
 // ═══════════════════════════════════════════════════════
 
 function trySteal(batter, bases, outs) {
-  if (outs >= 2)            return false;
+  if (outs >= 2)             return false;
   if (!bases[0] || bases[1]) return false;
-  const speed = batter.speedScore || 0.2;
-  if (rn() < speed * 0.35) {
-    if (rn() < 0.72) {
-      gs.bases = [null, 'r', bases[2]];
-      batter.todayStats.SB++;
-      addLog(`🟣 ${batter.name} 도루 성공!`, 'steal');
-      showPitch('도루!', 'steal');
-    } else {
-      gs.bases = [null, null, bases[2]];
-      gs.outs  = Math.min(gs.outs + 1, 3);
-      batter.todayStats.CS++;
-      addLog(`🔴 ${batter.name} 도루 실패`, 'out');
-      showPitch('도루 실패', 'out');
-    }
-    return true;
+
+  // ── 도루 시도 확률: 실제 SBA/G 데이터 우선, 없으면 speedScore 추정 ──
+  const sbaPerGame = batter.SBA > 0
+    ? batter.SBA / Math.max(batter.G, 1)
+    : null;
+  const attemptProb = sbaPerGame !== null
+    ? Math.min(sbaPerGame * 0.4, 0.35)          // 실제 도루 시도율 반영
+    : (batter.speedScore || 0.2) * 0.35;         // 추정값 fallback
+
+  if (rn() >= attemptProb) return false;
+
+  // ── 성공률: 실제 SB% 우선, 없으면 기본 72% ──
+  let successRate = batter.sbPct > 0
+    ? batter.sbPct / 100
+    : 0.72;
+
+  // ── 포수 도루 저지율 반영 ──
+  const pitcher   = gs.isTop ? gs.curHP : gs.curAP;
+  const defLineup = gs.isTop ? gs.homeLineup : gs.awayLineup;
+  const catcher   = defLineup.find(p => p.pos === 'C');
+  if (catcher && catcher.csPct > 0) {
+    // 포수 CS%가 높을수록 성공률 감소 (리그 평균 25% 기준 보정)
+    const catcherAdj = (catcher.csPct - 25) / 100;
+    successRate = Math.max(0.40, Math.min(0.90, successRate - catcherAdj));
   }
-  return false;
+
+  if (rn() < successRate) {
+    gs.bases = [null, 'r', bases[2]];
+    batter.todayStats.SB++;
+    addLog(`🟣 ${batter.name} 도루 성공! (시즌 ${batter.SB}도루)`, 'steal');
+    showPitch('도루!', 'steal');
+  } else {
+    gs.bases = [null, null, bases[2]];
+    gs.outs  = Math.min(gs.outs + 1, 3);
+    batter.todayStats.CS++;
+    const catcherName = catcher ? ` (포수: ${catcher.name})` : '';
+    addLog(`🔴 ${batter.name} 도루 실패${catcherName}`, 'out');
+    showPitch('도루 실패', 'out');
+  }
+  return true;
 }
 
 function trySacBunt(batter, bases, outs) {
@@ -489,7 +639,12 @@ function initGame(home, away) {
     outs: 0, bases: [null, null, null],
     homeLineup: hL,   awayLineup: aL,
     homePitchers: pH, awayPitchers: pA,
-    curHP: pickStarter(pH), curAP: pickStarter(pA),
+    curHP: (typeof pickStarterWithFatigue === 'function' && typeof SS !== 'undefined' && SS.gameIdx > 0)
+           ? pickStarterWithFatigue(pH, getTeamCode(home) || home)
+           : pickStarter(pH),
+    curAP: (typeof pickStarterWithFatigue === 'function' && typeof SS !== 'undefined' && SS.gameIdx > 0)
+           ? pickStarterWithFatigue(pA, getTeamCode(away) || away)
+           : pickStarter(pA),
     homeOrder: 0, awayOrder: 0,
     innings: { home: [], away: [] },
     currentPA: null,
@@ -656,7 +811,10 @@ function checkChange() {
 
   if (needChange) {
     if (gs.isExtra) allPitchers.forEach(p => { if (!p.isStarter) p.usedToday = false; });
-    const np = selectReliever(allPitchers, p, gs.inning, scoreDiff);
+    const teamCode = isHomePitching ? getTeamCode(gs.homeTeam) : getTeamCode(gs.awayTeam);
+    const np = (typeof selectRelieverWithFatigue === 'function' && teamCode)
+      ? selectRelieverWithFatigue(allPitchers, p, gs.inning, scoreDiff, teamCode)
+      : selectReliever(allPitchers, p, gs.inning, scoreDiff);
     if (np) {
       np.pitchCount = 0;
       if (isHomePitching) gs.curHP = np; else gs.curAP = np;
@@ -688,6 +846,15 @@ function endGame() {
   buildFinalScoreboard();
   buildBoxScore();
   buildMVP();
+  // ── 시즌 모드 훅 ──
+  if (typeof onSeasonGameEnd === 'function' && gs._seasonGame) {
+    onSeasonGameEnd(gs.homeScore, gs.awayScore);
+    document.getElementById('go-season-btn').style.display  = 'inline-block';
+    document.getElementById('go-restart-btn').style.display = 'none';
+  } else {
+    document.getElementById('go-season-btn').style.display  = 'none';
+    document.getElementById('go-restart-btn').style.display = 'inline-block';
+  }
   document.getElementById('game-over').classList.add('show');
 }
 
@@ -767,8 +934,40 @@ function buildMVP() {
 //  UI 업데이트
 // ═══════════════════════════════════════════════════════
 
+// 선수 프로필 툴팁 HTML 생성
+function buildProfileTooltip(p, type) {
+  const jersey  = p.jerseyNumber ? `#${p.jerseyNumber} ` : '';
+  const age     = p.age     ? `${p.age}세` : '';
+  const body    = (p.height && p.weight) ? `${p.height}cm / ${p.weight}kg` : '';
+  const sbInfo  = (type === 'hitter' && p.SBA > 0)
+    ? `도루 ${p.SB}/${p.SBA} (${p.sbPct}%)` : '';
+  const csInfo  = (type === 'hitter' && p.csPct !== null && p.pos === 'C')
+    ? `도루저지 ${p.csPct}%` : '';
+  const salaryStr = p.salaryRaw
+    ? (p.salaryRaw.includes('달러') ? p.salaryRaw : `${Number(p.salary).toLocaleString()}만원`)
+    : '';
+  const career  = p.career || '';
+  const rows = [
+    age && body ? `${age} · ${body}` : (age || body),
+    sbInfo, csInfo, salaryStr,
+    career,
+  ].filter(Boolean);
+  return `<div class="profile-tooltip">
+    <div class="pt-name">${jersey}${p.name}</div>
+    <div class="pt-pos">${p.battingThrowing || ''} · ${p.defPos || p.position || ''}</div>
+    ${rows.map(r => `<div class="pt-row">${r}</div>`).join('')}
+  </div>`;
+}
+
 function updateBatUI(b) {
-  document.getElementById('b-name').textContent = b.name;
+  const nameEl = document.getElementById('b-name');
+  nameEl.textContent = b.name;
+  // 프로필 툴팁
+  nameEl.title = '';
+  const existTip = nameEl.parentNode.querySelector('.profile-tooltip');
+  if (existTip) existTip.remove();
+  nameEl.parentNode.insertAdjacentHTML('beforeend', buildProfileTooltip(b, 'hitter'));
+
   const pitcher = (gs && gs.curHP && gs.curAP) ? (gs.isTop ? gs.curHP : gs.curAP) : null;
   const pl = pitcher ? calcPlatoon(b.hand, pitcher.hand) : null;
   const platoonTag = pl
@@ -777,7 +976,7 @@ function updateBatUI(b) {
           ? 'background:rgba(45,204,111,.2);color:#2dcc6f;border:1px solid #2dcc6f'
           : 'background:rgba(232,52,10,.2);color:#e8340a;border:1px solid #e8340a'}">
         ${pl.advantage === 'batter' ? '타자유리' : '투수유리'}</span>` : '';
-  document.getElementById('b-info').innerHTML = `${b.team}·${b.order||'-'}번·<b>${b.hand||'R'}타</b>${platoonTag}`;
+  document.getElementById('b-info').innerHTML = `${b.team}·${b.order||'-'}번·${b.pos||''}·<b>${b.hand||'R'}타</b>${platoonTag}`;
   document.getElementById('b-avg').textContent = b.AVG.toFixed(3);
   document.getElementById('b-hr').textContent  = b.HR;
   document.getElementById('b-rbi').textContent = Math.round(b.RBI);
@@ -786,7 +985,13 @@ function updateBatUI(b) {
 }
 
 function updatePitUI(p) {
-  document.getElementById('p-name').textContent  = p.name;
+  const nameEl = document.getElementById('p-name');
+  nameEl.textContent = p.name;
+  // 프로필 툴팁
+  const existTip = nameEl.parentNode.querySelector('.profile-tooltip');
+  if (existTip) existTip.remove();
+  nameEl.parentNode.insertAdjacentHTML('beforeend', buildProfileTooltip(p, 'pitcher'));
+
   document.getElementById('p-team').textContent  = `${p.team} · ${p.hand||'R'}투`;
   document.getElementById('p-era').textContent   = p.ERA.toFixed(2);
   document.getElementById('p-k9').textContent    = p.K9.toFixed(1);
@@ -950,7 +1155,13 @@ function updateTodayStats(b) {
 function togglePlay() {
   isPlaying = !isPlaying;
   document.getElementById('play-btn').textContent = isPlaying ? '⏸ 정지' : '▶ 재생';
-  if (isPlaying) schedNext(); else { clearTimeout(playTimer); playTimer = null; }
+  if (isPlaying) {
+    schedNext();
+  } else {
+    clearTimeout(playTimer); playTimer = null;
+    // 자동 진행을 수동으로 멈춘 시점에 저장
+    if (typeof saveGameState === 'function') saveGameState();
+  }
 }
 function schedNext() {
   if (!isPlaying || (gs && gs.gameOver)) return;
@@ -962,7 +1173,12 @@ function stopPlay() {
   document.getElementById('play-btn').textContent = '▶ 재생';
   clearTimeout(playTimer); playTimer = null;
 }
-function stepOnce()    { if (isPlaying) stopPlay(); processOnePitch(); }
+function stepOnce() {
+  if (isPlaying) stopPlay();
+  processOnePitch();
+  // 1구 실행 직후 저장
+  if (typeof saveGameState === 'function') saveGameState();
+}
 function showSetup()   { stopPlay(); document.getElementById('setup-screen').style.display = 'flex'; }
 function restartGame() { document.getElementById('game-over').classList.remove('show'); showSetup(); }
 function switchTab(t) {

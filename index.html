@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KBO 리그 시뮬레이터</title>
+<title>2026 프로리그 144</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@300;400;500;700&family=Bebas+Neue&family=JetBrains+Mono:wght@400;700&display=swap');
 :root{--bg:#0a0c10;--bg2:#111318;--bg3:#181c24;--border:#1e2430;--border2:#2a3040;--text:#e8eaf0;--text2:#8890a0;--text3:#4a5468;--accent:#f5a623;--accent2:#e8340a;--accent3:#2dcc6f;--accent4:#3b82f6;--panel:#13161e}
@@ -89,6 +89,10 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 .role-middle{background:rgba(100,100,100,.2);color:var(--text2);border:1px solid rgba(100,100,100,.4)}
 .role-closer{background:rgba(232,52,10,.2);color:var(--accent2);border:1px solid rgba(232,52,10,.4)}
 .batter-card{padding:10px 14px;border-bottom:1px solid var(--border)}
+.profile-tooltip{margin-top:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;font-size:10px;line-height:1.8;color:var(--text2)}
+.pt-name{font-family:'Black Han Sans';font-size:14px;color:var(--text);letter-spacing:1px}
+.pt-pos{font-size:10px;color:var(--accent);letter-spacing:1px;margin-bottom:3px}
+.pt-row{color:var(--text2)}
 .batter-card .role{font-size:10px;color:var(--accent3);letter-spacing:2px;text-transform:uppercase;margin-bottom:3px}
 .batter-card .bname{font-family:'Black Han Sans';font-size:17px}
 .batter-card .binfo{color:var(--text2);font-size:11px}
@@ -136,7 +140,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 .setup-card h3{font-size:11px;color:var(--text2);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px}
 .setup-year{width:100%;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:7px 10px;border-radius:7px;font-family:'Noto Sans KR';font-size:12px;cursor:pointer;margin-bottom:8px}
 .setup-year:focus{outline:none;border-color:var(--accent)}
-.team-select{width:100%;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 10px;border-radius:7px;font-family:'Noto Sans KR';font-size:13px;cursor:pointer}
+.team-select{width:100%;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 10px;border-radius:7px;font-family:'Noto Sans KR';font-size:13px;cursor:pointer;text-align:center}
 .team-select:focus{outline:none;border-color:var(--accent)}
 .vs-div{text-align:center;font-family:'Bebas Neue';font-size:30px;color:var(--text3)}
 .start-area{text-align:center;margin-top:20px}
@@ -144,6 +148,55 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 .btn-start:hover{background:#ffc142;transform:translateY(-1px)}
 .btn-start:disabled{background:var(--border2);color:var(--text3);cursor:not-allowed;transform:none;box-shadow:none}
 .setup-notice{color:var(--text3);font-size:11px;margin-top:10px}
+.mode-tabs{display:flex;gap:8px;margin-bottom:20px}
+.mode-tab{padding:8px 20px;border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-family:'Noto Sans KR';font-size:13px;background:var(--bg3);color:var(--text2);transition:all .2s}
+.mode-tab.active{background:var(--accent);color:#000;border-color:var(--accent);font-weight:700}
+#season-screen{position:fixed;inset:0;background:var(--bg);z-index:190;display:none;flex-direction:column;padding:0;overflow:hidden}
+.season-header{background:var(--bg2);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;justify-content:space-between}
+.season-header h2{font-family:'Black Han Sans';font-size:18px;color:var(--accent);letter-spacing:2px}
+.season-body{display:grid;grid-template-columns:1fr 320px;height:calc(100vh - 54px);overflow:hidden}
+.season-main{padding:16px;overflow-y:auto;border-right:1px solid var(--border)}
+.season-side{padding:16px;overflow-y:auto}
+.season-section-title{font-size:10px;letter-spacing:2px;color:var(--text2);text-transform:uppercase;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:6px}
+.progress-bar-wrap{background:var(--bg3);border-radius:4px;height:6px;margin-bottom:4px;overflow:hidden}
+.progress-bar-fill{height:100%;background:var(--accent);border-radius:4px;transition:width .3s}
+.progress-label{font-size:10px;color:var(--text3);margin-bottom:16px}
+.standings-table{width:100%;border-collapse:collapse;font-size:11px;font-family:'JetBrains Mono'}
+.standings-table th{padding:5px 8px;text-align:center;color:var(--text2);font-size:9px;background:var(--bg3);border-bottom:1px solid var(--border)}
+.standings-table td{padding:5px 8px;text-align:center;border-bottom:1px solid var(--border);color:var(--text)}
+.standings-table td:nth-child(2){text-align:left}
+.standings-table .my-team-row td{color:var(--accent)}
+.next-game-card{background:var(--panel);border:1px solid var(--border2);border-radius:8px;padding:14px;margin-bottom:12px}
+.next-game-card.my-game{border-color:var(--accent);background:rgba(245,166,35,.06)}
+.ng-label{font-size:10px;color:var(--text2);letter-spacing:1px;margin-bottom:6px}
+.ng-matchup{font-family:'Bebas Neue';font-size:26px;letter-spacing:2px;margin-bottom:10px}
+.ng-matchup span{color:var(--text3);font-size:16px;margin:0 8px}
+.ng-btn{margin-top:4px}
+#postseason-screen{position:fixed;inset:0;background:var(--bg);z-index:195;display:none;flex-direction:column;align-items:center;justify-content:flex-start;padding:30px;overflow-y:auto}
+.ps-title{font-family:'Black Han Sans';font-size:28px;color:var(--accent);letter-spacing:3px;margin-bottom:24px}
+.ps-bracket{display:flex;flex-direction:column;gap:14px;width:100%;max-width:500px}
+.ps-series{background:var(--panel);border:1px solid var(--border2);border-radius:8px;padding:14px 18px}
+.ps-series.ps-done{opacity:.5}
+.ps-label{font-size:10px;color:var(--accent);letter-spacing:2px;margin-bottom:4px}
+.ps-matchup{font-family:'Bebas Neue';font-size:22px;letter-spacing:2px;margin-bottom:6px}
+.ps-matchup span{color:var(--accent)}
+.ps-status{font-size:10px;color:var(--text3);margin-bottom:8px}
+#turn-modal{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:300;display:none;align-items:center;justify-content:center}
+.turn-modal-inner{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:24px;min-width:340px;max-width:460px;width:90%}
+.turn-modal-title{font-family:'Black Han Sans';font-size:20px;color:var(--accent);letter-spacing:2px;margin-bottom:16px;text-align:center}
+.turn-my-label{font-size:10px;color:var(--accent);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
+.turn-my-score{font-family:'Bebas Neue';font-size:28px;letter-spacing:2px;margin-bottom:16px;display:flex;gap:10px;align-items:center}
+.turn-my-score b{color:var(--text2);font-size:22px}
+.turn-divider{border:none;border-top:1px solid var(--border);margin:12px 0}
+.turn-other-title{font-size:10px;color:var(--text2);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
+.turn-row{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px}
+.tr-team{flex:1;color:var(--text2)}
+.tr-team.tr-win{color:var(--text);font-weight:700}
+.tr-score{font-family:'JetBrains Mono';font-size:14px;color:var(--text);min-width:18px;text-align:center}
+.tr-vs{color:var(--text3);font-size:11px}
+.tr-win{color:var(--accent3)}
+.turn-preview{margin:6px 0 10px;border-left:2px solid var(--border2);padding-left:8px}
+.turn-preview-row{font-size:10px;color:var(--text3);padding:1px 0}
 /* ── 로딩 ── */
 .loading-overlay{position:fixed;inset:0;background:rgba(10,12,16,.92);z-index:300;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
 .loading-spinner{width:38px;height:38px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
@@ -191,6 +244,22 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 ::-webkit-scrollbar{width:3px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+/* ── 주간 일정 ── */
+.weekly-cal{background:var(--panel);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:12px;font-size:11px}
+.weekly-cal-header{background:var(--bg2);padding:8px;text-align:center;color:var(--text);border-bottom:1px solid var(--border);font-weight:700}
+.wc-grid{display:grid;grid-template-columns:repeat(7,1fr);background:var(--bg3)}
+.wc-day-th{text-align:center;padding:4px;font-size:9px;color:var(--text2);border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
+.wc-day-th:last-child{border-right:none}
+.wc-cell{text-align:center;padding:8px 4px;border-right:1px solid var(--border);background:var(--panel);min-height:50px;display:flex;flex-direction:column;justify-content:flex-start;align-items:center;gap:4px}
+.wc-cell:last-child{border-right:none}
+.wc-date{font-size:9px;color:var(--text3);margin-bottom:2px}
+.wc-match{color:var(--text);font-size:10px;line-height:1.2}
+.wc-result{font-family:'JetBrains Mono';font-size:11px;font-weight:700;margin-top:2px}
+.wc-win{color:var(--accent3)}
+.wc-loss{color:var(--accent2)}
+.wc-draw{color:var(--text2)}
+.wc-rest{color:var(--text3);font-size:10px;margin-top:8px}
+.wc-today{background:rgba(245,166,35,.07);box-shadow:inset 0 -2px 0 var(--accent)}
 @media(max-width:880px){#main{grid-template-columns:1fr 280px}#lineup-panel{display:none}}
 </style>
 </head>
@@ -198,31 +267,23 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 
 <!-- ── 셋업 화면 ── -->
 <div id="setup-screen">
-  <h2>⚾ KBO 시뮬레이터</h2>
-  <p class="subtitle">실제 선수 데이터 · 연장전 · 투수 분업 · 좌우 유불리</p>
+  <h2>⚾ 2026 프로리그 144</h2>
 
-  <!-- 연도 선택 (메타에서 동적 생성) -->
-  <div style="margin-bottom:16px;display:flex;align-items:center;gap:10px">
-    <span style="color:var(--text2);font-size:12px">시즌</span>
-    <select class="setup-year" id="year-select" style="width:100px"></select>
-  </div>
-
-  <div class="setup-grid">
-    <div class="setup-card">
-      <h3>원정팀</h3>
-      <select class="team-select" id="away-select"></select>
+  <div class="setup-action-group" style="display:flex;flex-direction:column;gap:12px;width:100%;max-width:320px;margin-top:20px;">
+    <!-- 내팀 선택과 시즌 시작 그룹 -->
+    <div class="setup-card" style="display:flex;flex-direction:column;gap:12px;padding:20px;">
+      <div style="text-align:center;">
+        <h3 style="margin-bottom:8px;">내 팀 선택</h3>
+        <select class="team-select" id="myteam-select"></select>
+      </div>
+      <button class="btn-start" id="season-start-btn" disabled onclick="startSeasonMode()" style="width:100%;padding:14px;margin-top:4px;">시즌 시작</button>
     </div>
-    <div class="vs-div">VS</div>
-    <div class="setup-card">
-      <h3>홈팀</h3>
-      <select class="team-select" id="home-select"></select>
-    </div>
+
+    <!-- 이어하기 버튼 -->
+    <button class="btn-start" id="season-resume-btn" disabled onclick="resumeSeasonMode()" style="width:100%;padding:14px;">이어하기</button>
   </div>
 
-  <div class="start-area">
-    <button class="btn-start" id="start-btn" disabled>시뮬레이션 시작</button>
-    <p class="setup-notice" id="setup-notice">데이터 로딩 중...</p>
-  </div>
+  <p class="setup-notice" id="setup-notice">데이터 로딩 중...</p>
 </div>
 
 <!-- ── 로딩 오버레이 ── -->
@@ -230,6 +291,39 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
   <div class="loading-spinner"></div>
   <div class="loading-text" id="loading-text">데이터 로딩 중...</div>
   <div class="loading-sub"  id="loading-sub"></div>
+</div>
+
+<!-- ── 시즌 화면 ── -->
+<div id="season-screen">
+  <div class="season-header" style="justify-content:center;position:relative;">
+    <h2>⚾ 2026 시즌</h2>
+    <button class="btn danger" onclick="exitSeasonMode()" style="position:absolute;right:20px;">시즌 종료</button>
+  </div>
+  <div class="season-body">
+    <div class="season-main">
+      <div class="season-section-title">다음 경기</div>
+      <div id="season-next-game"></div>
+      <div class="season-section-title" style="margin-top:16px">순위표</div>
+      <div class="progress-bar-wrap"><div class="progress-bar-fill" id="season-progress-bar" style="width:0%"></div></div>
+      <div class="progress-label" id="season-progress-label">0경기 완료</div>
+      <div id="season-standings"></div>
+    </div>
+    <div class="season-side">
+      <div class="season-section-title">최근 경기 결과</div>
+      <div id="season-recent"></div>
+      <div class="season-section-title" style="margin-top:16px">주간 일정</div>
+      <div id="season-weekly-calendar"></div>
+      <div class="season-section-title" style="margin-top:16px">내 팀 투수 컨디션</div>
+      <div id="season-fatigue"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 포스트시즌 화면 ── -->
+<div id="postseason-screen">
+  <div class="ps-title">🏆 포스트시즌</div>
+  <div class="ps-bracket" id="ps-bracket"></div>
+  <button class="btn danger" style="margin-top:20px" onclick="exitSeasonMode()">시즌 종료</button>
 </div>
 
 <!-- ── 게임 종료 화면 ── -->
@@ -248,7 +342,22 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
     <div class="mvp-body" id="mvp-body"></div>
   </div>
   <div style="display:flex;gap:10px;margin-top:4px;margin-bottom:20px">
-    <button class="btn primary" onclick="restartGame()">다시 시작</button>
+    <button class="btn primary" id="go-restart-btn" onclick="restartGame()">다시 시작</button>
+    <button class="btn primary" id="go-season-btn" style="display:none" onclick="returnToSeason()">시즌으로 돌아가기</button>
+  </div>
+</div>
+
+<!-- ── 턴 결과 모달 ── -->
+<div id="turn-modal">
+  <div class="turn-modal-inner">
+    <div class="turn-modal-title" id="turn-modal-title"></div>
+    <div id="turn-my-result"></div>
+    <hr class="turn-divider">
+    <div class="turn-other-title">같은 턴 다른 경기</div>
+    <div id="turn-other-results"></div>
+    <div style="text-align:center;margin-top:16px">
+      <button class="btn primary" onclick="closeTurnModal()">확인</button>
+    </div>
   </div>
 </div>
 
@@ -426,55 +535,57 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 
 <!-- ── 스크립트: 엔진 로드 후 진입점 실행 ── -->
 <script src="js/engine.js"></script>
+<script src="js/season.js"></script>
 <script>
 // ── 셋업 화면 진입점 ──
 // index.html에는 데이터가 없으므로, _meta.json → 팀 JSON 순으로 fetch
 
 (async function init() {
-  const yearSel  = document.getElementById('year-select');
-  const homeSel  = document.getElementById('home-select');
-  const awaySel  = document.getElementById('away-select');
-  const startBtn = document.getElementById('start-btn');
-  const notice   = document.getElementById('setup-notice');
+  const notice  = document.getElementById('setup-notice');
+  const YEAR    = '2025';   // 연도 고정
 
-  // 1. 메타 로드
+  // 메타 로드
   loadMeta(
     (meta) => {
-      // 연도 옵션 생성
-      meta.years.forEach((y, i) => {
-        yearSel.innerHTML += `<option value="${y}" ${i === 0 ? 'selected' : ''}>${y}시즌</option>`;
+      const nameKor   = meta.name_kor || {};
+      const teams     = meta.teams[YEAR] || [];
+      const myTeamSel = document.getElementById('myteam-select');
+
+      // 내 팀 선택 드롭다운 생성
+      myTeamSel.innerHTML = '';
+      teams.forEach(t => {
+        const label = nameKor[t] || t;
+        myTeamSel.innerHTML += `<option value="${t}">${label}</option>`;
       });
+      document.getElementById('season-start-btn').disabled = teams.length < 2;
+      notice.textContent = ''; // 2025 시즌 10개 구단 텍스트 제거
 
-      // 연도 변경 시 팀 목록 갱신
-      function refreshTeams() {
-        const year  = yearSel.value;
-        const teams = meta.teams[year] || [];
-        homeSel.innerHTML = '';
-        awaySel.innerHTML = '';
-        const nameKor = meta.name_kor || {};
-        teams.forEach((t, i) => {
-          const label = nameKor[t] || t;
-          homeSel.innerHTML += `<option value="${t}" ${i === 0 ? 'selected' : ''}>${label}</option>`;
-          awaySel.innerHTML += `<option value="${t}" ${i === 1 ? 'selected' : ''}>${label}</option>`;
-        });
-        startBtn.disabled = teams.length < 2;
-        notice.textContent = teams.length >= 2
-          ? `${year}시즌 · 10개 구단 데이터`
-          : '해당 시즌 데이터 없음';
-      }
-
-      yearSel.addEventListener('change', refreshTeams);
-      refreshTeams(); // 초기 실행
+      // 이어하기 가능 여부 체크
+      try {
+        const saved     = localStorage.getItem('kbo_season_v1');
+        const savedGame = localStorage.getItem('kbo_game_state_v1');
+        const resumeBtn = document.getElementById('season-resume-btn');
+        if (saved) {
+          resumeBtn.disabled = false;
+          resumeBtn.textContent = savedGame ? '이어하기 (경기 진행 중)' : '이어하기';
+          resumeBtn.style.background = 'var(--panel)';
+          resumeBtn.style.color = 'var(--accent)';
+          resumeBtn.style.border = '1px solid var(--accent)';
+        } else {
+          resumeBtn.disabled = true;
+          resumeBtn.textContent = '이어하기 (저장 데이터 없음)';
+          resumeBtn.style.background = '';
+          resumeBtn.style.color = '';
+          resumeBtn.style.border = '';
+        }
+      } catch(e) {}
     },
     (err) => {
       notice.textContent = `⚠ 메타 로드 실패: ${err}`;
     }
   );
 
-  // 2. 시작 버튼
-  startBtn.addEventListener('click', startGame);
-
-  // 3. 속도 슬라이더
+  // 속도 슬라이더
   document.getElementById('speed-slider').addEventListener('input', function () {
     speedIdx = parseInt(this.value);
     document.getElementById('speed-label').textContent = SPEED_LABELS[speedIdx];
@@ -482,62 +593,74 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
   });
 })();
 
-// ── 게임 시작 ──
-async function startGame() {
-  const year = document.getElementById('year-select').value;
-  const home = document.getElementById('home-select').value;
-  const away = document.getElementById('away-select').value;
+// startGame 제거 (단일경기 모드 삭제)
 
-  if (home === away) { alert('홈팀과 원정팀이 같습니다.'); return; }
+// switchMode 제거 (단일경기 모드 삭제)
 
-  // 로딩 표시
-  const loadingEl  = document.getElementById('loading');
-  const loadTextEl = document.getElementById('loading-text');
-  const loadSubEl  = document.getElementById('loading-sub');
+// ── 시즌 모드 시작 ─────────────────────────────────────
+async function startSeasonMode() {
+  const year      = '2025';   // 연도 고정
+  const myTeam    = document.getElementById('myteam-select').value;
+  const metaRes   = await fetch(dataUrl('data/_meta.json'));
+  const meta      = await metaRes.json();
+  const nameKor   = meta.name_kor || {};
+  const teams     = meta.teams[year] || [];
+
+  // SS 초기화
+  SS.year       = year;
+  SS.myTeam     = myTeam;
+  SS.myTeamKor  = nameKor[myTeam] || myTeam;
+  SS.teams      = teams;
+  SS.nameKor    = nameKor;
+  SS.schedule   = buildSchedule(teams, myTeam);
+  SS.gameIdx    = 0;
+  SS.standings  = initStandings(teams);
+  SS.playerStats= {};
+  SS.phase      = 'season';
+  saveSeasonState();
+
+  // 전체 팀 데이터 로드
+  await loadAllTeamData(year, teams, nameKor);
+  showSeasonScreen();
+}
+
+// ── 이어하기 ───────────────────────────────────────────
+async function resumeSeasonMode() {
+  if (!loadSeasonState()) { alert('저장된 시즌이 없습니다.'); return; }
+  await loadAllTeamData(SS.year, SS.teams, SS.nameKor);
+  if (SS.phase === 'postseason') showPostseasonScreen();
+  else showSeasonScreen();
+}
+
+// ── 전체 팀 데이터 로드 ────────────────────────────────
+async function loadAllTeamData(year, teams, nameKor) {
+  const loadingEl = document.getElementById('loading');
   loadingEl.style.display = 'flex';
-  loadTextEl.textContent  = '데이터 로딩 중...';
-  const homeSelEl = document.getElementById('home-select');
-  const awaySelEl = document.getElementById('away-select');
-  const homeLabel = homeSelEl.options[homeSelEl.selectedIndex]?.text || home;
-  const awayLabel = awaySelEl.options[awaySelEl.selectedIndex]?.text || away;
-  loadSubEl.textContent   = `${year} · ${awayLabel} vs ${homeLabel}`;
+  document.getElementById('loading-text').textContent = '전체 팀 데이터 로딩 중...';
+  // profile 한 번만 fetch
+  const profileRes  = await fetch(dataUrl('data/player_profile.csv'));
+  const profileRows = parseCSV(await profileRes.text());
+  DB.hitters = []; DB.pitchers = [];
+  for (const teamCode of teams) {
+    const korName = nameKor[teamCode] || teamCode;
+    document.getElementById('loading-sub').textContent = `${korName} 로딩 중...`;
+    try {
+      const data = await loadTeamCSV(year, teamCode, korName, profileRows);
+      DB.hitters  = [...DB.hitters,  ...data.hitters];
+      DB.pitchers = [...DB.pitchers, ...data.pitchers];
+    } catch(e) { console.warn(`${korName} 로드 실패:`, e.message); }
+  }
+  loadingEl.style.display = 'none';
+}
 
-  loadTeamData(
-    year, home, away,
-    ({ homeKor, awayKor }) => {
-      // 성공 → 게임 초기화
-      loadingEl.style.display = 'none';
+// ── 시즌 종료 ──────────────────────────────────────────
+// exitSeasonMode → season.js로 이동
 
-      gs = initGame(homeKor, awayKor);
-      if (!gs) return;
-
-      // 헤더 연도 표시
-      document.getElementById('header-year').textContent = year;
-
-      // UI 초기화 (한글명 사용)
-      document.getElementById('h-team-name').textContent    = homeKor;
-      document.getElementById('a-team-name').textContent    = awayKor;
-      document.getElementById('h-score').textContent        = '0';
-      document.getElementById('a-score').textContent        = '0';
-      document.getElementById('home-lineup-title').textContent = homeKor + ' 라인업';
-      document.getElementById('away-lineup-title').textContent = awayKor + ' 라인업';
-      document.getElementById('game-log').innerHTML         = '';
-      document.getElementById('game-over').classList.remove('show');
-      document.getElementById('go-ext-label').innerHTML     = '';
-      document.getElementById('inning-display').textContent = '1회';
-      document.getElementById('half-display').textContent   = '초';
-
-      updateGameUI(); updateLnpUI(); updateSbUI(); updateSituationBar();
-      addLog(`⚾ ${year}시즌 · ${awayKor} vs ${homeKor} 경기 시작!`, '');
-      startPA();
-      document.getElementById('setup-screen').style.display = 'none';
-    },
-    (err) => {
-      // 실패
-      loadingEl.style.display = 'none';
-      alert(`데이터 로드 실패: ${err}\n\n아래 파일이 있는지 확인해주세요.\n- data/player_profile.csv\n- data/${year}/${year}_hitter_${home}.csv\n- data/${year}/${year}_pitcher_${home}.csv\n- data/${year}/${year}_hitter_${away}.csv\n- data/${year}/${year}_pitcher_${away}.csv`);
-    }
-  );
+// ── 경기 종료 후 시즌으로 복귀 ─────────────────────────
+function returnToSeason() {
+  document.getElementById('game-over').classList.remove('show');
+  if (SS.phase === 'postseason') showPostseasonScreen();
+  else showSeasonScreen();
 }
 </script>
 </body>

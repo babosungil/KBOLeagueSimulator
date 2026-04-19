@@ -29,7 +29,7 @@ const PITCH_DIST = {
 };
 const SPEED_DELAYS = [0, 150, 500, 1100, 2200];
 const SPEED_LABELS = ['최고속', '빠름', '보통', '느림', '아주느림'];
-const MAX_INNINGS  = 12;
+// 최대 11회 지원. 포스트시즌 무제한 등은 함수화 하여 사용
 
 // ── 전역 상태 ──
 let gs        = null;
@@ -461,7 +461,7 @@ function calcPlatoon(bHand, pHand) {
 
 function decidePAResult(b, p, bases, inning, outs) {
   const era = adjERA(p), pq = Math.max(0.5, Math.min(1.8, era / 4.30));
-  let hit = b.hit_rate * (0.85 / pq + 0.15),
+  let hit = b.hit_rate * (0.85 * pq + 0.15),
       bb  = b.bb_rate  * (0.5 + 0.5 * pq),
       k   = b.k_rate   * (0.5 + 0.5 / pq);
   const kb = (p.K9 - 7.5) * 0.006, bp = (p.BB9 - 3.5) * 0.004;
@@ -784,7 +784,8 @@ function endHalf() {
     gs.inning++;
     if (gs.inning > 9) {
       if (gs.homeScore === gs.awayScore) {
-        if (gs.inning > MAX_INNINGS) { endGame(); return; }
+        const _maxInn = (typeof SS !== 'undefined' && SS.phase === 'postseason') ? 999 : 11;
+        if (gs.inning > _maxInn) { endGame(); return; }
         gs.isExtra = true;
         showExtraBanner(gs.inning);
         addLog(`── ⚡ ${gs.inning}회 연장전 시작! ──`, 'ext');
@@ -943,14 +944,9 @@ function buildProfileTooltip(p, type) {
     ? `도루 ${p.SB}/${p.SBA} (${p.sbPct}%)` : '';
   const csInfo  = (type === 'hitter' && p.csPct !== null && p.pos === 'C')
     ? `도루저지 ${p.csPct}%` : '';
-  const salaryStr = p.salaryRaw
-    ? (p.salaryRaw.includes('달러') ? p.salaryRaw : `${Number(p.salary).toLocaleString()}만원`)
-    : '';
-  const career  = p.career || '';
   const rows = [
     age && body ? `${age} · ${body}` : (age || body),
-    sbInfo, csInfo, salaryStr,
-    career,
+    sbInfo, csInfo
   ].filter(Boolean);
   return `<div class="profile-tooltip">
     <div class="pt-name">${jersey}${p.name}</div>

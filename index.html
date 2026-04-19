@@ -27,9 +27,12 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 .btn.danger:hover{background:var(--accent2);color:#fff}
 .speed-ctrl{display:flex;align-items:center;gap:6px;color:var(--text2);font-size:11px}
 .speed-ctrl input[type=range]{width:70px;accent-color:var(--accent)}
-#main{display:grid;grid-template-columns:1fr 300px 260px;height:calc(100vh - 54px)}
-#field-panel{padding:14px;border-right:1px solid var(--border);display:flex;flex-direction:column;gap:10px;overflow-y:auto}
-.diamond-wrap{position:relative;width:100%;max-width:300px;margin:0 auto;aspect-ratio:1}
+#main{display:flex;flex-direction:column;align-items:center;padding:14px;gap:16px;height:calc(100vh - 54px);overflow-y:auto;overflow-x:hidden}
+.scoreboard{width:100%;max-width:800px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;overflow-x:auto;margin:0 auto}
+#field-panel{width:100%;max-width:340px;display:flex;flex-direction:column;gap:10px}
+#atbat-panel{width:100%;max-width:340px;display:flex;flex-direction:column;border:1px solid var(--border);border-radius:6px;background:var(--panel);overflow:hidden}
+#lineup-panel{width:100%;max-width:340px;display:flex;flex-direction:column;border:1px solid var(--border);border-radius:6px;background:var(--panel);overflow:hidden}
+
 .diamond-svg{width:100%;height:100%}
 .last-pitch{max-width:300px;width:100%;margin:0 auto;text-align:center;height:34px;display:flex;align-items:center;justify-content:center}
 .pitch-badge{display:inline-block;padding:5px 18px;border-radius:20px;font-size:13px;font-weight:700;letter-spacing:2px;animation:badgeIn .25s ease}
@@ -58,7 +61,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 .pc-label{font-size:10px;color:var(--text2)}
 .pc-val{font-family:'JetBrains Mono';font-size:17px;color:var(--text);margin-top:1px}
 .pc-val.hl{color:var(--accent)}
-.scoreboard{background:var(--bg2);border:1px solid var(--border);border-radius:6px;overflow:auto;max-width:300px;margin:0 auto;width:100%}
+.pc-val.hl{color:var(--accent)}
 .sb-table{border-collapse:collapse;width:100%;font-family:'JetBrains Mono';font-size:11px}
 .sb-table td,.sb-table th{padding:3px 5px;text-align:center;border:1px solid var(--border);min-width:20px}
 .sb-table th{color:var(--text2);background:var(--bg3);font-size:9px}
@@ -70,7 +73,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 .sit-label{font-size:9px;color:var(--text3);letter-spacing:1px}
 .sit-val{font-family:'JetBrains Mono';font-size:12px;color:var(--text)}
 .sit-val.risp{color:var(--accent3)}
-#atbat-panel{border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.sit-val.risp{color:var(--accent3)}
 .panel-header{padding:8px 14px;background:var(--bg2);border-bottom:1px solid var(--border);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text2);display:flex;justify-content:space-between;align-items:center}
 .pitcher-card{padding:10px 14px;border-bottom:1px solid var(--border);background:var(--panel)}
 .pitcher-card .role{font-size:10px;color:var(--accent);letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;display:flex;justify-content:space-between;align-items:center}
@@ -154,9 +157,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 #season-screen{position:fixed;inset:0;background:var(--bg);z-index:190;display:none;flex-direction:column;padding:0;overflow:hidden}
 .season-header{background:var(--bg2);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;justify-content:space-between}
 .season-header h2{font-family:'Black Han Sans';font-size:18px;color:var(--accent);letter-spacing:2px}
-.season-body{display:grid;grid-template-columns:1fr 320px;height:calc(100vh - 54px);overflow:hidden}
-.season-main{padding:16px;overflow-y:auto;border-right:1px solid var(--border)}
-.season-side{padding:16px;overflow-y:auto}
+.season-body{display:flex;flex-direction:column;padding:20px;gap:20px;height:calc(100vh - 54px);overflow-y:auto;max-width:700px;margin:0 auto}
 .season-section-title{font-size:10px;letter-spacing:2px;color:var(--text2);text-transform:uppercase;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:6px}
 .progress-bar-wrap{background:var(--bg3);border-radius:4px;height:6px;margin-bottom:4px;overflow:hidden}
 .progress-bar-fill{height:100%;background:var(--accent);border-radius:4px;transition:width .3s}
@@ -250,9 +251,9 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 .wc-grid{display:grid;grid-template-columns:repeat(7,1fr);background:var(--bg3)}
 .wc-day-th{text-align:center;padding:4px;font-size:9px;color:var(--text2);border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
 .wc-day-th:last-child{border-right:none}
-.wc-cell{text-align:center;padding:8px 4px;border-right:1px solid var(--border);background:var(--panel);min-height:50px;display:flex;flex-direction:column;justify-content:flex-start;align-items:center;gap:4px}
+.wc-cell{text-align:center;padding:8px 4px;border-right:1px solid var(--border);background:var(--panel);min-height:90px;display:flex;flex-direction:column;justify-content:flex-start;align-items:center;gap:4px}
 .wc-cell:last-child{border-right:none}
-.wc-date{font-size:9px;color:var(--text3);margin-bottom:2px}
+.wc-date{font-size:9px;color:var(--text3);margin-bottom:2px;font-weight:700}
 .wc-match{color:var(--text);font-size:10px;line-height:1.2}
 .wc-result{font-family:'JetBrains Mono';font-size:11px;font-weight:700;margin-top:2px}
 .wc-win{color:var(--accent3)}
@@ -261,6 +262,24 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 .wc-rest{color:var(--text3);font-size:10px;margin-top:8px}
 .wc-today{background:rgba(245,166,35,.07);box-shadow:inset 0 -2px 0 var(--accent)}
 @media(max-width:880px){#main{grid-template-columns:1fr 280px}#lineup-panel{display:none}}
+/* ── 시즌 탭 슬라이드 ── */
+#season-screen{flex-direction:column;overflow:hidden}
+#season-slides-wrap{flex:1;overflow:hidden;position:relative;}
+#season-slides{display:flex;width:500%;height:100%;transform:translateX(-40%);transition:transform .35s cubic-bezier(.25,.46,.45,.94);}
+.season-slide{width:20%;height:100%;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
+.season-slide-body{padding:16px 20px 80px;max-width:700px;margin:0 auto;display:flex;flex-direction:column;gap:20px;}
+/* ── 하단 탭 내비게이션 ── */
+#season-bottom-nav{height:62px;background:var(--bg2);border-top:1px solid var(--border);display:flex;flex-shrink:0;}
+.snav-btn{flex:1;display:flex;align-items:center;justify-content:center;font-size:26px;cursor:pointer;border:none;background:transparent;color:var(--text3);transition:color .2s,background .15s;padding:0;-webkit-tap-highlight-color:transparent;}
+.snav-btn.snav-active{color:var(--accent);}
+.snav-btn.snav-exit-btn{color:var(--accent2);}
+.snav-btn.snav-disabled{cursor:default;pointer-events:none;opacity:.15;}
+.snav-btn:not(.snav-disabled):active{background:var(--bg3);}
+/* ── 타선 드래그 ── */
+.lnp-drag-item{display:flex;align-items:center;padding:10px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;gap:10px;user-select:none;touch-action:none;transition:opacity .15s,border-color .15s;}
+.lnp-drag-item.lnp-dragging{opacity:.35;border-color:var(--accent);}
+.lnp-drag-item.lnp-over{border-color:var(--accent3);background:rgba(45,204,111,.07);}
+.drag-handle{color:var(--text3);font-size:18px;cursor:grab;padding:4px;}
 </style>
 </head>
 <body>
@@ -295,26 +314,118 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 
 <!-- ── 시즌 화면 ── -->
 <div id="season-screen">
-  <div class="season-header" style="justify-content:center;position:relative;">
-    <h2>⚾ 2026 시즌</h2>
-    <button class="btn danger" onclick="exitSeasonMode()" style="position:absolute;right:20px;">시즌 종료</button>
+  <div id="season-slides-wrap">
+    <div id="season-slides">
+
+      <!-- 탭 1: 나가기 -->
+      <div class="season-slide">
+        <div class="season-slide-body" style="min-height:calc(100dvh - 62px);justify-content:center;align-items:center;">
+          <div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:24px;">
+            <div style="width:88px;height:88px;border-radius:50%;background:rgba(232,52,10,.1);border:2px solid var(--accent2);display:flex;align-items:center;justify-content:center;">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </div>
+            <div style="font-family:'Black Han Sans';font-size:24px;">시즌 나가기</div>
+            <div style="color:var(--text2);font-size:13px;">현재까지의 기록은 자동 저장됩니다.</div>
+            <button class="btn danger" style="padding:13px 48px;font-size:15px;" onclick="exitSeasonMode()">나가기</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 탭 2: 투수 상태 -->
+      <div class="season-slide">
+        <div class="season-slide-body">
+          <div class="season-section-title">투수 상태</div>
+          <div id="season-fatigue"></div>
+        </div>
+      </div>
+
+      <!-- 탭 3: 시즌 메인 -->
+      <div class="season-slide">
+        <div class="season-slide-body">
+          <div id="season-next-game"></div>
+          <div>
+            <div class="season-section-title" style="display:flex;justify-content:space-between;align-items:center;border-bottom:none;padding-bottom:0;margin-bottom:4px;">
+              <span>경기 일정</span>
+              <span class="progress-label" id="season-progress-label" style="font-size:12px;font-weight:normal;margin-bottom:0;">0 / 144</span>
+            </div>
+            <div class="progress-bar-wrap" style="margin-bottom:12px;"><div class="progress-bar-fill" id="season-progress-bar" style="width:0%"></div></div>
+            <div id="season-upcoming-turns"></div>
+          </div>
+          <div>
+            <div class="season-section-title">순위표</div>
+            <div id="season-standings"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 탭 4: 타선 편집 -->
+      <div class="season-slide">
+        <div class="season-slide-body">
+          <div id="season-lineup-editor"></div>
+        </div>
+      </div>
+
+      <!-- 탭 5: 미사용 -->
+      <div class="season-slide">
+        <div class="season-slide-body"></div>
+      </div>
+
+    </div><!-- /#season-slides -->
+  </div><!-- /#season-slides-wrap -->
+
+  <!-- 하단 탭 내비게이션 바 -->
+  <div id="season-bottom-nav">
+    <button class="snav-btn snav-exit-btn" id="snav-btn-1" onclick="switchSeasonTab(1)">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <button class="snav-btn" id="snav-btn-2" onclick="switchSeasonTab(2)">
+      <svg width="26" height="26" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="4" y="18" width="28" height="4" rx="2" fill="currentColor" opacity=".7"/>
+        <ellipse cx="18" cy="18" rx="14" ry="5" fill="none" stroke="currentColor" stroke-width="2"/>
+        <path d="M4 18 Q18 6 32 18" fill="currentColor" opacity=".85"/>
+        <circle cx="18" cy="18" r="3" fill="var(--bg)"/>
+      </svg>
+    </button>
+    <button class="snav-btn snav-active" id="snav-btn-3" onclick="switchSeasonTab(3)">
+      <svg width="26" height="26" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" stroke-width="6"/>
+        <path d="M50 4 Q65 22 65 50 Q65 78 50 96" fill="none" stroke="currentColor" stroke-width="3" opacity=".6"/>
+        <path d="M50 4 Q35 22 35 50 Q35 78 50 96" fill="none" stroke="currentColor" stroke-width="3" opacity=".6"/>
+        <path d="M4 50 Q22 35 50 35 Q78 35 96 50" fill="none" stroke="currentColor" stroke-width="3" opacity=".6"/>
+        <path d="M4 50 Q22 65 50 65 Q78 65 96 50" fill="none" stroke="currentColor" stroke-width="3" opacity=".6"/>
+      </svg>
+    </button>
+    <button class="snav-btn" id="snav-btn-4" onclick="switchSeasonTab(4)">
+      <svg width="26" height="26" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <rect x="44" y="10" width="12" height="55" rx="6" fill="currentColor"/>
+        <ellipse cx="50" cy="70" rx="22" ry="10" fill="currentColor" opacity=".8"/>
+        <rect x="46" y="76" width="8" height="14" rx="4" fill="currentColor" opacity=".6"/>
+      </svg>
+    </button>
+    <button class="snav-btn snav-disabled" id="snav-btn-5"></button>
   </div>
-  <div class="season-body">
-    <div class="season-main">
-      <div class="season-section-title">다음 경기</div>
-      <div id="season-next-game"></div>
-      <div class="season-section-title" style="margin-top:16px">순위표</div>
-      <div class="progress-bar-wrap"><div class="progress-bar-fill" id="season-progress-bar" style="width:0%"></div></div>
-      <div class="progress-label" id="season-progress-label">0경기 완료</div>
-      <div id="season-standings"></div>
+</div>
+
+<!-- ── 투수 설정 모달 ── -->
+<div id="pitcher-modal" style="position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:300;display:none;align-items:center;justify-content:center;">
+  <div class="turn-modal-inner" style="min-width:320px;max-width:400px;padding:20px;">
+    <div class="turn-modal-title">선발 투수 선택</div>
+    <div id="pitcher-list-container" style="display:flex;flex-direction:column;gap:8px;max-height:400px;overflow-y:auto;margin-bottom:16px;"></div>
+    <div style="text-align:center;">
+      <button class="btn primary" onclick="confirmPitcher()">다음 (타선 설정)</button>
+      <button class="btn" style="margin-left:8px;" onclick="closePitcherModal()">취소</button>
     </div>
-    <div class="season-side">
-      <div class="season-section-title">최근 경기 결과</div>
-      <div id="season-recent"></div>
-      <div class="season-section-title" style="margin-top:16px">주간 일정</div>
-      <div id="season-weekly-calendar"></div>
-      <div class="season-section-title" style="margin-top:16px">내 팀 투수 컨디션</div>
-      <div id="season-fatigue"></div>
+  </div>
+</div>
+
+<!-- ── 타선 설정 모달 ── -->
+<div id="lineup-modal" style="position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:300;display:none;align-items:center;justify-content:center;">
+  <div class="turn-modal-inner" style="min-width:340px;max-width:480px;padding:20px;">
+    <div class="turn-modal-title">타선 순서 설정</div>
+    <div id="lineup-list-container" style="display:flex;flex-direction:column;gap:4px;max-height:450px;overflow-y:auto;margin-bottom:16px;"></div>
+    <div style="text-align:center;">
+      <button class="btn primary" onclick="confirmLineup()">경기 시작</button>
+      <button class="btn" style="margin-left:8px;" onclick="closeLineupModal()">취소</button>
     </div>
   </div>
 </div>
@@ -369,9 +480,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 <!-- ── 헤더 ── -->
 <div id="header">
   <div>
-    <h1>KBO 시뮬레이터
-      <span style="color:var(--text2);font-size:13px;font-family:'Noto Sans KR'" id="header-year"></span>
-    </h1>
+    <!-- 헤더 타이틀 요건 제거 -->
   </div>
   <div class="score-display">
     <div class="team-score">
@@ -402,6 +511,9 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 
 <!-- ── 메인 ── -->
 <div id="main">
+  <!-- 점수판 (스크롤 가능하게 독립적으로 최상단) -->
+  <div class="scoreboard"><table class="sb-table" id="scoreboard"></table></div>
+
   <!-- 필드 패널 -->
   <div id="field-panel">
     <div class="diamond-wrap">
@@ -450,8 +562,6 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
       <div class="sit-item"><div class="sit-label">도루</div><div class="sit-val" id="sit-steal">-</div></div>
       <div class="sit-item"><div class="sit-label">번트</div><div class="sit-val" id="sit-bunt">-</div></div>
     </div>
-    <div class="scoreboard"><table class="sb-table" id="scoreboard"></table></div>
-  </div>
 
   <!-- 타석 패널 -->
   <div id="atbat-panel">

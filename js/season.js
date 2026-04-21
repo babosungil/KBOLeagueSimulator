@@ -132,17 +132,18 @@ function clearGameState() {
 function saveSeasonState() {
   try {
     localStorage.setItem(LS_KEY, JSON.stringify({
-      year:        SS.year,
-      myTeam:      SS.myTeam,
-      myTeamKor:   SS.myTeamKor,
-      teams:       SS.teams,
-      nameKor:     SS.nameKor,
-      schedule:    SS.schedule,
-      gameIdx:     SS.gameIdx,
-      standings:   SS.standings,
-      playerStats: SS.playerStats,
-      phase:          SS.phase,
-      pitcherFatigue: SS.pitcherFatigue,
+      year:            SS.year,
+      myTeam:          SS.myTeam,
+      myTeamKor:       SS.myTeamKor,
+      teams:           SS.teams,
+      nameKor:         SS.nameKor,
+      schedule:        SS.schedule,
+      gameIdx:         SS.gameIdx,
+      standings:       SS.standings,
+      playerStats:     SS.playerStats,
+      phase:           SS.phase,
+      pitcherFatigue:  SS.pitcherFatigue,
+      starterRotation: SS.starterRotation,
     }));
   } catch(e) { console.warn('시즌 저장 실패', e); }
 }
@@ -609,6 +610,9 @@ function renderTodayGame() {
     const game = SS.schedule[myGameIdx];
     const hKor = SS.nameKor[game.home] || game.home;
     const aKor = SS.nameKor[game.away] || game.away;
+    // 원정팀 vs 홈팀 순서
+    const leftKor  = aKor; // 원정
+    const rightKor = hKor; // 홈
 
     if (tempGameSetup.currentMyGameIdx !== myGameIdx) {
       tempGameSetup = { myPitcher: null, myLineup: [], wizardMode: false, currentMyGameIdx: myGameIdx };
@@ -616,21 +620,13 @@ function renderTodayGame() {
 
     return `
       <div class="next-game-card my-game">
-        <div class="ng-matchup" style="text-align:center;margin-bottom:0;">${hKor} <span style="font-size:14px;font-weight:400;color:var(--text3);margin:0 8px">vs</span> ${aKor}</div>
-        <div style="display:flex;justify-content:center;gap:8px;margin-top:16px;">
-          <button class="btn primary" onclick="executeGame()">경기 진행</button>
-          <button class="btn" style="background:var(--bg3)" onclick="autoTurnGames()">자동 진행</button>
-          <button class="btn" style="margin-left:auto" onclick="openPitcherModal(false)">선발 투수 편집</button>
-          <button class="btn" onclick="openLineupModal(false)">선발 타자 편집</button>
-        </div>
+        <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-align:center;margin-bottom:4px;">원정 &nbsp;····&nbsp; 홈</div>
+        <div class="ng-matchup" style="text-align:center;margin-bottom:0;">${leftKor} <span style="font-size:14px;font-weight:400;color:var(--text3);margin:0 8px">vs</span> ${rightKor}</div>
       </div>`;
   } else {
     return `
       <div class="next-game-card">
         <div class="ng-matchup" style="font-size:20px;color:var(--text2);text-align:center">내 팀 경기 없음</div>
-        <div style="display:flex;justify-content:center;gap:8px;margin-top:16px;">
-          <button class="btn primary" onclick="autoTurnGames()">휴식 (오늘 경기도 진행)</button>
-        </div>
       </div>`;
   }
 }
@@ -819,82 +815,80 @@ window.changeTurnView = function(delta) {
 function renderUpcomingTurns() {
   if (!SS.schedule || !SS.schedule.length) return '';
   const myTeam = SS.myTeam;
-  
+
   const curGame = SS.schedule[Math.min(SS.gameIdx, SS.schedule.length - 1)];
   const actualCurTurn = curGame ? curGame.turn : 144;
-  
-  let html = `<div class="weekly-cal" style="margin-bottom:12px;">
-    <div class="wc-grid" style="border-top:none;">`;
 
-  // 현재 턴을 기준으로 이전 3턴 ~ 이후 3턴 = 총 7턴 고정 표시
-  for (let i = -3; i <= 3; i++) {
+  // 5칸 고정: 이전 2턴 ~ 현재 ~ 이후 2턴
+  const COLS = 5;
+  const half = Math.floor(COLS / 2); // 2
+  const colWidthPct = Math.floor(100 / COLS);
+
+  let html = `<div class="weekly-cal" style="margin-bottom:12px;"><div class="wc-grid" style="grid-template-columns:repeat(${COLS},1fr);border-top:none;">`;
+
+  for (let i = -half; i <= half; i++) {
     const turnVal = actualCurTurn + i;
-    
+
     if (turnVal < 1 || turnVal > 144) {
-      html += `<div class="wc-cell" style="min-height:90px;background:var(--panel);"></div>`;
+      html += `<div class="wc-cell" style="min-height:80px;background:var(--panel);"></div>`;
       continue;
     }
-    
+
     const games = SS.schedule.filter(g => g.turn === turnVal);
-    const isPast = turnVal < actualCurTurn;
     const isToday = turnVal === actualCurTurn;
-    const cellClass = "wc-cell" + (isToday ? " wc-today" : "");
-    
-    html += `<div class="${cellClass}" style="min-height:90px;"><div class="wc-date">T-${turnVal}</div>`;
-    
+    const cellClass = 'wc-cell' + (isToday ? ' wc-today' : '');
+
+    html += `<div class="${cellClass}" style="min-height:80px;"><div class="wc-date">T${turnVal}</div>`;
+
     if (!games.length) {
-       html += `<div class="wc-rest" style="font-size:9px">휴식</div></div>`;
-       continue;
+      html += `<div class="wc-rest" style="font-size:9px">휴식</div></div>`;
+      continue;
     }
 
-    let gamesHtml = `<div style="display:flex;flex-direction:column;gap:3px;width:100%">`;
+    let gHtml = `<div style="display:flex;flex-direction:column;gap:2px;width:100%">`;
     games.sort((a,b) => {
-       const aMine = (a.home === myTeam || a.away === myTeam) ? 1 : 0;
-       const bMine = (b.home === myTeam || b.away === myTeam) ? 1 : 0;
-       return bMine - aMine;
+      const aMine = (a.home===myTeam||a.away===myTeam)?1:0;
+      const bMine = (b.home===myTeam||b.away===myTeam)?1:0;
+      return bMine - aMine;
     }).forEach(game => {
-      const isMyMatch = (game.home === myTeam || game.away === myTeam);
-      const hKor = SS.nameKor[game.home] || game.home;
-      const aKor = SS.nameKor[game.away] || game.away;
-      
+      const isMyMatch = (game.home===myTeam||game.away===myTeam);
+      const hKor = SS.nameKor[game.home]||game.home;
+      const aKor = SS.nameKor[game.away]||game.away;
       const txtColor = isMyMatch ? 'var(--accent)' : 'var(--text2)';
       const bold = isMyMatch ? '700' : '400';
-      const vsStr = `<span style="color:${txtColor};font-weight:${bold}">${aKor} @ ${hKor}</span>`;
-      
+
       if (game.result) {
-         const hs = game.result.homeScore;
-         const as = game.result.awayScore;
-         const resultClass = isMyMatch ? ((game.home===myTeam&&hs>as) || (game.away===myTeam&&as>hs) ? 'wc-win' : (hs===as ? 'wc-draw' : 'wc-loss')) : '';
-         const rStr = `<span class="${resultClass}" style="font-family:'JetBrains Mono';margin-left:4px">${as}:${hs}</span>`;
-         gamesHtml += `<div class="wc-match" style="font-size:9px">${vsStr}${rStr}</div>`;
+        const hs = game.result.homeScore;
+        const as = game.result.awayScore;
+        const resultClass = isMyMatch
+          ? ((game.home===myTeam&&hs>as)||(game.away===myTeam&&as>hs) ? 'wc-win'
+          : (hs===as ? 'wc-draw' : 'wc-loss')) : '';
+        gHtml += `<div class="wc-match" style="font-size:8px;color:${txtColor};font-weight:${bold}">${aKor} <span class="${resultClass}" style="font-family:'JetBrains Mono'">${as} vs ${hs}</span> ${hKor}</div>`;
       } else {
-         gamesHtml += `<div class="wc-match" style="font-size:9px">${vsStr}</div>`;
+        gHtml += `<div class="wc-match" style="font-size:8px;color:${txtColor};font-weight:${bold}">${aKor} vs ${hKor}</div>`;
       }
     });
-    gamesHtml += `</div>`;
-    
-    html += `${gamesHtml}</div>`;
+    gHtml += `</div>`;
+    html += `${gHtml}</div>`;
   }
+
   html += `</div></div>`;
   return html;
 }
 
 // ── 턴 결과 모달 ─────────────────────────────────────────
-// 내 팀 경기 종료 후, 같은 턴의 나머지 경기 결과를 자동 시뮬 후 표시
 async function showTurnResults(myGameIdx) {
   const myGame = SS.schedule[myGameIdx];
   const myTurn = myGame.turn;
 
-  // 같은 턴의 타 팀 경기 목록
   const turnGames = SS.schedule.filter(g =>
     g.turn === myTurn && g !== myGame
   );
 
-  // 타 팀 경기 자동 시뮬
   const results = [];
   for (const game of turnGames) {
     if (game.result) {
-      results.push(game); // 이미 처리된 경우
+      results.push(game);
       continue;
     }
     const hKor = SS.nameKor[game.home];
@@ -912,7 +906,6 @@ async function showTurnResults(myGameIdx) {
     results.push(game);
   }
 
-  // 모달 HTML 생성
   const myResult  = myGame.result;
   const myHKor    = SS.nameKor[myGame.home];
   const myAKor    = SS.nameKor[myGame.away];
@@ -967,98 +960,260 @@ function exitSeasonMode() {
 
 
 
-// ── 내 팀 투수 피로도 현황 렌더 ─────────────────────────────
+// ── 선발 로테이션 초기화 ─────────────────────────────────────
+function initStarterRotation() {
+  const korName = SS.myTeamKor;
+  if (!korName) return;
+  const allPitchers = DB.pitchers.filter(p => p.team === korName);
+  if (!allPitchers.length) return;
+
+  // 이미 유효한 로테이션이 있으면 유지
+  if (SS.starterRotation && SS.starterRotation.length > 0) {
+    const validNames = new Set(allPitchers.map(p => p.name));
+    SS.starterRotation = SS.starterRotation.filter(n => validNames.has(n));
+    if (SS.starterRotation.length > 0) return;
+  }
+
+  // 초기화: IP/G >= 4.5 선수를 ERA 순으로 선발 로테이션에 배정
+  const naturalStarters = allPitchers
+    .filter(p => p.G > 0 && (p.IP / p.G) >= 4.5)
+    .sort((a, b) => a.ERA - b.ERA);
+  SS.starterRotation = naturalStarters.map(p => p.name);
+}
+
+// ── 투수 피로 정보 계산 헬퍼 ─────────────────────────────────
+function getPitcherFatigueInfo(p, teamCode, isStarter) {
+  const key       = `${p.name}_${teamCode}`;
+  const f         = SS.pitcherFatigue[key];
+  const mult      = getFatigueMult(p.name, teamCode, isStarter);
+  const daysSince = f ? SS.gameIdx - f.lastGame : 99;
+
+  let staminaPct = 100;
+  if (mult >= 99) staminaPct = 0;
+  else if (mult > 1.0) {
+    if (isStarter) {
+      staminaPct = daysSince === 4 ? 80 : 30;
+    } else {
+      if (f && f.consecDays >= 3) staminaPct = 10;
+      else if (f && f.consecDays === 2) staminaPct = 50;
+      else staminaPct = 80;
+    }
+  }
+
+  let status = '', statusColor = 'var(--accent3)';
+  if (isStarter) {
+    if (staminaPct === 0)      { status = '등판불가'; statusColor = 'var(--accent2)'; }
+    else if (staminaPct < 100) { status = `휴식 ${daysSince}일`; statusColor = 'var(--accent)'; }
+    else                       { status = '정상';       statusColor = 'var(--accent3)'; }
+  } else {
+    if (staminaPct <= 10)      { status = '3연투';  statusColor = 'var(--accent2)'; }
+    else if (staminaPct <= 50) { status = '2연투';  statusColor = 'var(--accent)'; }
+    else if (staminaPct <= 80) { status = '1연투';  statusColor = 'var(--accent)'; }
+    else                       { status = '정상';   statusColor = 'var(--accent3)'; }
+  }
+
+  const stColor = staminaPct > 50 ? 'var(--accent3)' : staminaPct > 0 ? 'var(--accent)' : 'var(--accent2)';
+  return { staminaPct, status, statusColor, stColor, mult, daysSince };
+}
+
+// ── 내 팀 투수 피로도 현황 렌더 (선발/불펜 분리) ─────────────
 function renderFatiguePanel() {
   const teamCode = SS.myTeam;
   const korName  = SS.myTeamKor;
-  const pitchers = DB.pitchers.filter(p => p.team === korName);
-  if (!pitchers.length) return '';
+  if (!korName) return '';
 
-  pitchers.forEach(p => {
-    p._isStarter = (p.IP / p.G) >= 4.5;
-    p._roleSort = p._isStarter ? 1 : (p.ERA < 3.0 ? 3 : 2); // 1:선발, 2:계투, 3:마무리
-  });
+  initStarterRotation();
 
-  // 역할(선발-계투-마무리) 최우선, 그다음 피로(체력) 높은 순 -> 우선순위 등판 가능한 순으로 하려면 체력이 낮은 걸 위로? 체력이 많은 걸 위로?
-  // 요구사항 "역할로 정렬" (선발/계투/마무리 끼리 뭉치게)
-  pitchers.sort((a,b) => {
-    if (a._roleSort !== b._roleSort) return a._roleSort - b._roleSort;
+  const allPitchers = DB.pitchers.filter(p => p.team === korName);
+  if (!allPitchers.length) return '';
+
+  const rotation = SS.starterRotation || [];
+
+  // 선발 로테이션에 있는 투수 (순서 유지)
+  const starters = rotation
+    .map(name => allPitchers.find(p => p.name === name))
+    .filter(Boolean);
+
+  // 불펜 투수 (로테이션 외)
+  const relievers = allPitchers.filter(p => !rotation.includes(p.name));
+
+  // 다음 경기 선발: 로테이션 순서에서 등판 가능한 첫 번째
+  let nextStarterName = null;
+  for (const p of starters) {
+    if (getFatigueMult(p.name, teamCode, true) < 99) { nextStarterName = p.name; break; }
+  }
+  if (!nextStarterName && starters.length > 0) nextStarterName = starters[0].name;
+
+  // 불펜 정렬: 상태(체력 높은 순) > 역할(마무리 우선) > ERA
+  relievers.sort((a, b) => {
+    const ia = getPitcherFatigueInfo(a, teamCode, false);
+    const ib = getPitcherFatigueInfo(b, teamCode, false);
+    if (ib.staminaPct !== ia.staminaPct) return ib.staminaPct - ia.staminaPct;
+    const ra = a.ERA < 3.0 ? 0 : a.ERA < 4.0 ? 1 : 2;
+    const rb = b.ERA < 3.0 ? 0 : b.ERA < 4.0 ? 1 : 2;
+    if (ra !== rb) return ra - rb;
     return a.ERA - b.ERA;
   });
 
-  const nextStarter = pickStarterWithFatigue(pitchers, teamCode);
+  // ── 선발 로테이션 행 렌더링
+  let starterRows = '';
+  starters.forEach((p, idx) => {
+    const { staminaPct, status, statusColor, stColor } = getPitcherFatigueInfo(p, teamCode, true);
+    const isNext    = p.name === nextStarterName;
+    const rowBg    = isNext ? 'rgba(245,166,35,.07)' : 'transparent';
+    const leftBdr  = isNext ? '3px solid var(--accent)' : '3px solid transparent';
+    const nameClr  = isNext ? 'var(--accent)' : 'var(--text)';
+    const nextBadge = isNext
+      ? `<span style="font-size:9px;background:rgba(245,166,35,.2);color:var(--accent);border:1px solid rgba(245,166,35,.5);border-radius:8px;padding:1px 6px;white-space:nowrap;">다음 선발</span>`
+      : '';
 
-  let rows = '';
-  pitchers.forEach(p => {
-    const isStarter = p._isStarter;
-    const key       = `${p.name}_${teamCode}`;
-    const f         = SS.pitcherFatigue[key];
-    const mult      = getFatigueMult(p.name, teamCode, isStarter);
-    const daysSince = f ? SS.gameIdx - f.lastGame : 99;
-
-    let staminaPct = 100;
-    if (mult >= 99) staminaPct = 0;
-    else if (mult > 1.0) {
-      if (isStarter) {
-        if (daysSince === 4) staminaPct = 80;
-        else staminaPct = 30; // 3일 이하
-      } else {
-        if (f && f.consecDays >= 3) staminaPct = 10;
-        else if (f && f.consecDays === 2) staminaPct = 50;
-        else staminaPct = 80;
-      }
-    }
-    
-    let status = '', statusColor = 'var(--text)';
-    if (isStarter) {
-      if (staminaPct === 0) { status = '등판불가'; statusColor = 'var(--accent2)'; }
-      else if (staminaPct < 100) { status = `휴식 ${daysSince}일차`; statusColor = 'var(--accent)'; }
-      else if (daysSince >= 99) { status = '대기중'; statusColor = 'var(--text3)'; }
-      else { status = `정상 (${daysSince}일 휴식)`; }
-    } else {
-      if (staminaPct <= 10) { status = '3연투 금지'; statusColor = 'var(--accent2)'; }
-      else if (staminaPct <= 50) { status = '2연투 피로'; statusColor = 'var(--accent)'; }
-      else if (staminaPct <= 80) { status = '1연투'; statusColor = 'var(--accent)'; }
-      else if (daysSince >= 99) { status = '대기중'; statusColor = 'var(--text3)'; }
-      else { status = '정상'; }
-    }
-
-    const role = p._roleSort === 1 ? '선발' : (p._roleSort === 3 ? '마무리' : '계투');
-    const stColor = staminaPct > 50 ? 'var(--accent3)' : (staminaPct > 0 ? 'var(--accent)' : 'var(--accent2)');
-    const staminaStr = `<div style="width:100%;background:rgba(255,255,255,0.1);border-radius:2px;height:12px;position:relative;min-width:80px;">
-        <div style="background:${stColor};width:${staminaPct}%;height:100%;border-radius:2px"></div>
-        <div style="position:absolute;inset:0;font-size:9px;text-align:center;line-height:12px;color:#fff">${staminaPct}%</div>
+    starterRows += `
+      <div class="rot-item" data-idx="${idx}"
+           style="display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--border);background:${rowBg};border-left:${leftBdr};touch-action:none;">
+        <div class="rot-handle" style="cursor:grab;color:var(--text3);flex-shrink:0;padding:2px 4px;display:flex;align-items:center;">
+          <svg width="14" height="12" viewBox="0 0 16 14" fill="currentColor"><rect y="0" width="16" height="2" rx="1"/><rect y="6" width="16" height="2" rx="1"/><rect y="12" width="16" height="2" rx="1"/></svg>
+        </div>
+        <div style="font-family:'Bebas Neue';font-size:18px;color:var(--text3);min-width:18px;text-align:center;flex-shrink:0">${idx + 1}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+            <span style="font-weight:700;font-size:13px;color:${nameClr}">${p.name}</span>
+            ${nextBadge}
+          </div>
+          <div style="font-family:'JetBrains Mono';font-size:10px;color:var(--text3)">ERA ${p.ERA ? p.ERA.toFixed(2) : '-'} · IP ${p.IP ? p.IP.toFixed(1) : 0}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+          <div style="width:56px;">
+            <div style="background:rgba(255,255,255,.08);border-radius:2px;height:7px;overflow:hidden;">
+              <div style="background:${stColor};width:${staminaPct}%;height:100%;border-radius:2px;"></div>
+            </div>
+            <div style="font-size:9px;color:${statusColor};text-align:center;margin-top:2px;">${status}</div>
+          </div>
+          <button onclick="fatigMoveToReliever('${p.name}')" title="불펜으로 이동"
+            style="border:1px solid var(--border2);background:transparent;color:var(--text3);border-radius:4px;padding:3px 7px;font-size:10px;cursor:pointer;white-space:nowrap;font-family:'Noto Sans KR';">불펜↓</button>
+        </div>
       </div>`;
-
-    const isNext = (nextStarter && p.name === nextStarter.name);
-    const nameDisplay = isNext ? `<span style="color:var(--accent);font-weight:700;">${p.name} (선발)</span>` : p.name;
-
-    rows += `<tr>
-      <td style="text-align:center;">${nameDisplay}</td>
-      <td style="text-align:center;color:var(--text3)">${role}</td>
-      <td style="text-align:center;">${staminaStr}</td>
-      <td style="text-align:center;color:${statusColor}">${status}</td>
-    </tr>`;
   });
 
-  return `<table class="standings-table" style="margin-top:8px;width:100%;">
-    <tr>
-      <th style="text-align:center;">투수</th>
-      <th style="text-align:center;">역할</th>
-      <th style="text-align:center;width:100px;">체력</th>
-      <th style="text-align:center;">상태</th>
-    </tr>
-    ${rows}
-  </table>`;
+  if (!starterRows) starterRows = `<div style="padding:14px;color:var(--text3);text-align:center;font-size:12px">선발 투수 없음</div>`;
+
+  // ── 불펜 행 렌더링
+  let relieverRows = '';
+  relievers.forEach(p => {
+    const { staminaPct, status, statusColor, stColor } = getPitcherFatigueInfo(p, teamCode, false);
+    const roleLabel = p.ERA < 3.0 ? '마무리' : p.ERA < 4.0 ? '셋업' : '계투';
+    const roleClr   = p.ERA < 3.0 ? 'var(--accent2)' : p.ERA < 4.0 ? '#f59e0b' : 'var(--text3)';
+
+    relieverRows += `
+      <div style="display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--border);">
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+            <span style="font-weight:700;font-size:13px;color:var(--text)">${p.name}</span>
+            <span style="font-size:9px;color:${roleClr};border:1px solid ${roleClr};border-radius:8px;padding:1px 5px;">${roleLabel}</span>
+          </div>
+          <div style="font-family:'JetBrains Mono';font-size:10px;color:var(--text3)">ERA ${p.ERA ? p.ERA.toFixed(2) : '-'} · IP ${p.IP ? p.IP.toFixed(1) : 0}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+          <div style="width:56px;">
+            <div style="background:rgba(255,255,255,.08);border-radius:2px;height:7px;overflow:hidden;">
+              <div style="background:${stColor};width:${staminaPct}%;height:100%;border-radius:2px;"></div>
+            </div>
+            <div style="font-size:9px;color:${statusColor};text-align:center;margin-top:2px;">${status}</div>
+          </div>
+          <button onclick="fatigMoveToStarter('${p.name}')" title="선발로 이동"
+            style="border:1px solid var(--border2);background:transparent;color:var(--text3);border-radius:4px;padding:3px 7px;font-size:10px;cursor:pointer;white-space:nowrap;font-family:'Noto Sans KR';">선발↑</button>
+        </div>
+      </div>`;
+  });
+
+  if (!relieverRows) relieverRows = `<div style="padding:14px;color:var(--text3);text-align:center;font-size:12px">불펜 투수 없음</div>`;
+
+  return `
+    <div style="background:var(--panel);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:14px;">
+      <div style="padding:9px 14px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text2);">선발 로테이션</span>
+        <span style="font-size:9px;color:var(--text3);">≡ 드래그로 순서 변경</span>
+      </div>
+      <div id="rotation-list">${starterRows}</div>
+    </div>
+    <div style="background:var(--panel);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+      <div style="padding:9px 14px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text2);">불펜</span>
+        <span style="font-size:9px;color:var(--text3);">상태 · 역할 · 체력순</span>
+      </div>
+      <div>${relieverRows}</div>
+    </div>`;
 }
+
+// ── 선발 로테이션 드래그 셋업 ────────────────────────────────
+function setupRotationDrag() {
+  const list = document.getElementById('rotation-list');
+  if (!list) return;
+  let dragIdx = -1, overIdx = -1;
+
+  list.querySelectorAll('.rot-item').forEach(item => {
+    const handle = item.querySelector('.rot-handle');
+    if (!handle) return;
+
+    handle.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      dragIdx = parseInt(item.dataset.idx);
+      item.style.opacity = '0.35';
+      item.style.background = 'rgba(245,166,35,.1)';
+      item.setPointerCapture(e.pointerId);
+    });
+
+    item.addEventListener('pointermove', e => {
+      if (dragIdx === -1) return;
+      overIdx = dragIdx;
+      const y = e.clientY;
+      list.querySelectorAll('.rot-item').forEach((el, i) => {
+        el.style.outline = '';
+        if (i === dragIdx) return;
+        const r = el.getBoundingClientRect();
+        if (y >= r.top && y <= r.bottom) { el.style.outline = '2px solid var(--accent3)'; overIdx = i; }
+      });
+    });
+
+    item.addEventListener('pointerup', () => {
+      if (dragIdx === -1) return;
+      const _from = dragIdx, _over = overIdx;
+      dragIdx = -1; overIdx = -1;
+      item.style.opacity = '';
+      item.style.background = '';
+      list.querySelectorAll('.rot-item').forEach(el => el.style.outline = '');
+      if (_over !== -1 && _over !== _from) {
+        const [moved] = SS.starterRotation.splice(_from, 1);
+        SS.starterRotation.splice(_over, 0, moved);
+        saveSeasonState();
+        const fatigueEl = document.getElementById('season-fatigue');
+        if (fatigueEl) { fatigueEl.innerHTML = renderFatiguePanel(); setupRotationDrag(); }
+      }
+    });
+  });
+}
+
+window.fatigMoveToReliever = function(name) {
+  SS.starterRotation = (SS.starterRotation || []).filter(n => n !== name);
+  saveSeasonState();
+  const el = document.getElementById('season-fatigue');
+  if (el) { el.innerHTML = renderFatiguePanel(); setupRotationDrag(); }
+};
+
+window.fatigMoveToStarter = function(name) {
+  if (!SS.starterRotation) SS.starterRotation = [];
+  if (!SS.starterRotation.includes(name)) SS.starterRotation.push(name);
+  saveSeasonState();
+  const el = document.getElementById('season-fatigue');
+  if (el) { el.innerHTML = renderFatiguePanel(); setupRotationDrag(); }
+};
 
 // ── 탭 전환 로직 ────────────────────────────────────────────
 let currentSeasonTab = 3;
 
 window.switchSeasonTab = function(n) {
-  if (n < 1 || n > 4) return; // 5는 미사용
+  if (n < 1 || n > 4) return;
   currentSeasonTab = n;
-  const offset = (n - 1) * 20; // 0%, 20%, 40%, 60%
+  const offset = (n - 1) * 20;
   const slides = document.getElementById('season-slides');
   if (slides) slides.style.transform = `translateX(-${offset}%)`;
 
@@ -1066,9 +1221,43 @@ window.switchSeasonTab = function(n) {
     const btn = document.getElementById(`snav-btn-${i}`);
     if (btn) btn.classList.toggle('snav-active', i === n);
   }
-  // 스탭별 콘텐츠 렌더
   if (n === 4) renderLineupEditorTab();
+  updatePlayBtn();
 };
+
+function updatePlayBtn() {
+  const btn = document.getElementById('season-play-btn');
+  if (!btn) return;
+
+  let hasMyGame = false;
+  if (currentSeasonTab === 3 && SS.schedule && SS.gameIdx < SS.schedule.length) {
+    const turn = SS.schedule[SS.gameIdx].turn;
+    for (let i = SS.gameIdx; i < SS.schedule.length; i++) {
+      if (SS.schedule[i].turn !== turn) break;
+      if (SS.schedule[i].home === SS.myTeam || SS.schedule[i].away === SS.myTeam) {
+        hasMyGame = true; break;
+      }
+    }
+  }
+
+  if (currentSeasonTab !== 3) {
+    btn.classList.remove('visible');
+    return;
+  }
+  btn.classList.add('visible');
+
+  if (hasMyGame) {
+    // 내 경기 있음: 주황색 PLAY
+    btn.style.background = 'var(--accent)';
+    btn.onclick = () => executeGame();
+    btn.querySelector('span').style.color = '#000';
+  } else {
+    // 내 경기 없음: 흰색 + 자동 진행
+    btn.style.background = 'rgba(255,255,255,0.9)';
+    btn.onclick = () => autoTurnGames();
+    btn.querySelector('span').style.color = '#111';
+  }
+}
 
 function initSeasonSwipe() {
   const wrap = document.getElementById('season-slides-wrap');
@@ -1094,34 +1283,32 @@ function renderLineupEditorTab() {
   const el = document.getElementById('season-lineup-editor');
   if (!el) return;
 
-  // 라인업이 비어있으면 기본값으로 채우기
   if (!SS.myTeamKor) { el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:40px">시즌 시작 후 사용 가능합니다</div>'; return; }
   if (tempGameSetup.myLineup.length === 0) {
     const hH = DB.hitters.filter(r => r.team === SS.myTeamKor).map(buildHitter).sort((a,b) => b.G - a.G);
     tempGameSetup.myLineup = buildLineup(hH);
   }
 
-  let html = `<div class="season-section-title">타선 순서</div>
-    <div id="lineup-drag-list" style="display:flex;flex-direction:column;gap:8px;">`;
+  let html = `<div id="lineup-drag-list" style="display:flex;flex-direction:column;gap:8px;">`;
 
   tempGameSetup.myLineup.forEach((p, idx) => {
     html += `<div class="lnp-drag-item" data-idx="${idx}">
-      <div style="font-family:'Bebas Neue';font-size:22px;color:var(--text3);min-width:22px;text-align:center">${idx+1}</div>
+      <div class="drag-handle" data-idx="${idx}" style="display:flex;align-items:center;gap:6px;padding:0 6px;cursor:grab;color:var(--text3);">
+        <svg width="16" height="14" viewBox="0 0 16 14" fill="currentColor">
+          <rect y="0" width="16" height="2" rx="1"/>
+          <rect y="6" width="16" height="2" rx="1"/>
+          <rect y="12" width="16" height="2" rx="1"/>
+        </svg>
+        <span style="font-family:'Bebas Neue';font-size:20px;color:var(--text3);min-width:16px;text-align:center">${idx+1}</span>
+      </div>
       <div style="flex:1">
         <div style="font-weight:700;color:var(--text);font-size:14px">${p.name} <span style="font-size:10px;color:var(--text2)">${p.pos}</span></div>
         <div style="font-size:11px;color:var(--text3);font-family:'JetBrains Mono'">AVG:${p.AVG.toFixed(3)} HR:${p.HR} RBI:${p.RBI}</div>
       </div>
-      <div class="drag-handle" title="드래그하여 순서 변경">⤔</div>
     </div>`;
   });
 
-  html += `</div>
-    <div style="display:flex;gap:8px;margin-top:4px;">
-      <button class="btn" style="flex:1" onclick="lnpMoveUp()">▲ 위로</button>
-      <button class="btn" style="flex:1" onclick="lnpMoveDown()">▼ 아래</button>
-      <button class="btn primary" style="flex:1" onclick="lnpApply()">적용</button>
-    </div>`;
-
+  html += `</div>`;
   el.innerHTML = html;
   setupLnpPointerDrag();
 }
@@ -1211,6 +1398,7 @@ function setupLnpPointerDrag() {
 function showSeasonScreen() {
   document.getElementById('season-screen').style.display = 'flex';
   document.getElementById('setup-screen').style.display  = 'none';
+  initStarterRotation();  // 선발 로테이션 초기화
   currentSeasonTab = 3;
   window.switchSeasonTab(3);
   initSeasonSwipe();
@@ -1235,7 +1423,7 @@ function refreshSeasonUI() {
 
   // 내 팀 투수 피로도 패널
   const fatigueEl = document.getElementById('season-fatigue');
-  if (fatigueEl) fatigueEl.innerHTML = renderFatiguePanel();
+  if (fatigueEl) { fatigueEl.innerHTML = renderFatiguePanel(); setupRotationDrag(); }
 
   // 포스트시즌 체크
   if (SS.gameIdx >= SS.schedule.length && SS.phase === 'season') {
@@ -1243,6 +1431,7 @@ function refreshSeasonUI() {
     saveSeasonState();
     showPostseasonScreen();
   }
+  updatePlayBtn();
 }
 
 // ── 자동 1경기 진행 ──────────────────────────────────────

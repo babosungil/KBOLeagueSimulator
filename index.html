@@ -280,6 +280,13 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 .lnp-drag-item.lnp-dragging{opacity:.35;border-color:var(--accent);}
 .lnp-drag-item.lnp-over{border-color:var(--accent3);background:rgba(45,204,111,.07);}
 .drag-handle{color:var(--text3);font-size:18px;cursor:grab;padding:4px;}
+/* ── 플로팅 PLAY 버튼 ── */
+#season-play-btn{position:absolute;bottom:62px;left:50%;transform:translateX(-50%);width:80px;height:40px;border-radius:40px 40px 0 0;background:var(--accent);border:none;cursor:pointer;display:none;align-items:center;justify-content:center;flex-direction:column;gap:0;box-shadow:0 -4px 20px rgba(245,166,35,.45);transition:background .2s,transform .1s;overflow:hidden;z-index:110;}
+#season-play-btn:active{transform:translateX(-50%) scale(.96);}
+#season-play-btn.visible{display:flex;}
+.play-btn-ball{width:36px;height:36px;position:relative;margin:0 auto;}
+.play-btn-ball svg{position:absolute;inset:0;}
+.play-btn-label{font-family:'Bebas Neue';font-size:11px;color:#000;letter-spacing:2px;text-align:center;width:100%;line-height:1;margin-top:-2px;}
 </style>
 </head>
 <body>
@@ -334,7 +341,6 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
       <!-- 탭 2: 투수 상태 -->
       <div class="season-slide">
         <div class="season-slide-body">
-          <div class="season-section-title">투수 상태</div>
           <div id="season-fatigue"></div>
         </div>
       </div>
@@ -372,6 +378,18 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 
     </div><!-- /#season-slides -->
   </div><!-- /#season-slides-wrap -->
+
+  <!-- 플로팅 PLAY 버튼 (3번 탭 전용, 내 팀 경기 있을때만 표시) -->
+  <button id="season-play-btn" onclick="executeGame()" title="경기 진행">
+    <svg viewBox="0 0 80 40" xmlns="http://www.w3.org/2000/svg" width="80" height="40" style="position:absolute;inset:0;">
+      <circle cx="40" cy="40" r="36" fill="rgba(0,0,0,0.12)"/>
+      <path d="M40 4 Q52 18 52 40" fill="none" stroke="rgba(0,0,0,0.2)" stroke-width="2"/>
+      <path d="M40 4 Q28 18 28 40" fill="none" stroke="rgba(0,0,0,0.2)" stroke-width="2"/>
+      <path d="M4 40 Q18 28 40 28" fill="none" stroke="rgba(0,0,0,0.2)" stroke-width="2"/>
+      <path d="M76 40 Q62 28 40 28" fill="none" stroke="rgba(0,0,0,0.2)" stroke-width="2"/>
+    </svg>
+    <span style="font-family:'Bebas Neue';font-size:13px;color:#000;letter-spacing:3px;position:relative;z-index:1;">PLAY</span>
+  </button>
 
   <!-- 하단 탭 내비게이션 바 -->
   <div id="season-bottom-nav">

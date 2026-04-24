@@ -9,25 +9,34 @@
 :root{--bg:#0a0c10;--bg2:#111318;--bg3:#181c24;--border:#1e2430;--border2:#2a3040;--text:#e8eaf0;--text2:#8890a0;--text3:#4a5468;--accent:#f5a623;--accent2:#e8340a;--accent3:#2dcc6f;--accent4:#3b82f6;--panel:#13161e}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-serif;font-size:13px;min-height:100vh;overflow-x:hidden}
-#header{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
-#header h1{font-family:'Black Han Sans',sans-serif;font-size:20px;color:var(--accent);letter-spacing:2px;text-shadow:0 0 20px rgba(245,166,35,0.4)}
-.score-display{display:flex;align-items:center;gap:14px;font-family:'Bebas Neue',sans-serif;font-size:34px;letter-spacing:3px}
-.team-score{display:flex;flex-direction:column;align-items:center}
-.team-name{font-size:11px;font-family:'Noto Sans KR';letter-spacing:1px;color:var(--text2)}
-.score-num{line-height:1}
-.score-vs{font-size:16px;color:var(--text3);padding:0 4px}
-.inning-display{display:flex;flex-direction:column;align-items:center;font-family:'JetBrains Mono';font-size:12px;color:var(--text2);gap:2px}
-.inning-num{font-size:18px;color:var(--text);font-family:'Bebas Neue'}
-.header-right{display:flex;gap:8px;align-items:center}
-.btn{padding:7px 14px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);border-radius:6px;cursor:pointer;font-family:'Noto Sans KR';font-size:12px;transition:all .2s}
-.btn:hover{border-color:var(--accent);color:var(--accent)}
-.btn.primary{background:var(--accent);color:#000;border-color:var(--accent);font-weight:700}
-.btn.primary:hover{background:#ffc142}
-.btn.danger{border-color:var(--accent2);color:var(--accent2)}
-.btn.danger:hover{background:var(--accent2);color:#fff}
-.speed-ctrl{display:flex;align-items:center;gap:6px;color:var(--text2);font-size:11px}
-.speed-ctrl input[type=range]{width:70px;accent-color:var(--accent)}
-#main{display:flex;flex-direction:column;align-items:center;padding:14px;gap:16px;height:calc(100vh - 54px);overflow-y:auto;overflow-x:hidden}
+#header{position:fixed;top:0;left:0;width:100%;z-index:100;background:var(--bg2);border-bottom:1px solid var(--border);transition:all 0.4s ease;overflow:hidden;height:100px;}
+#header.minimized{height:70px;background:transparent;border-bottom:none;box-shadow:none;}
+
+.header-max, .header-min{width:100%;height:100%;display:flex;align-items:center;transition:opacity 0.2s, transform 0.3s;}
+.header-max{flex-direction:column;justify-content:center;padding:0 10px;}
+.header-min{position:absolute;top:0;left:0;width:100%;height:100%;padding:0 20px;display:flex;justify-content:space-between;align-items:flex-start;opacity:0;pointer-events:none;transform:translateY(15px);}
+
+#header.minimized .header-max{opacity:0;pointer-events:none;transform:translateY(-20px);}
+#header.minimized .header-min{opacity:1;pointer-events:auto;transform:translateY(0);}
+
+/* 헤더용 점수판 스타일 */
+.header-sb-table{border-collapse:collapse;width:100%;max-width:600px;font-family:'JetBrains Mono';font-size:10px;color:var(--text2);}
+.header-sb-table th, .header-sb-table td{padding:2px 4px;text-align:center;border:1px solid var(--border);min-width:22px;}
+.header-sb-table th{font-size:9px;background:rgba(255,255,255,0.03);}
+.header-sb-table .tc{text-align:center;color:var(--text);font-weight:700;min-width:60px;font-family:'Noto Sans KR';}
+.header-sb-table .tot{font-weight:700;color:var(--accent);font-size:11px;}
+.header-sb-table .current-inn{background:rgba(245,166,35,0.15);color:var(--accent);}
+
+/* 최소화 모드 팀 스코어 (세로 배치 및 이전 스타일 복원) */
+.min-team-box{display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg2);padding:6px 20px;border-radius:0 0 12px 12px;border:1px solid var(--border);border-top:none;box-shadow:0 4px 15px rgba(0,0,0,0.3);min-width:100px;transition:all 0.3s ease;text-align:center;}
+.min-team-box.attacking{background:var(--accent);border-color:var(--accent);box-shadow:0 0 20px rgba(245,166,35,0.3);}
+.min-team-name{font-size:11px;font-family:'Noto Sans KR';letter-spacing:1px;color:var(--text2);margin-bottom:2px;transition:color 0.3s ease;}
+.min-team-score{font-family:'Bebas Neue';font-size:24px;color:var(--accent);letter-spacing:1px;line-height:1;transition:color 0.3s ease;}
+
+.min-team-box.attacking .min-team-name{color:rgba(0,0,0,0.6);font-weight:700;}
+.min-team-box.attacking .min-team-score{color:#000;}
+.min-vs{font-family:'Bebas Neue';font-size:18px;color:var(--text3);margin:0 10px;}
+#main{display:flex;flex-direction:column;align-items:center;padding:14px;padding-top:114px;gap:16px;height:100vh;overflow-y:auto;overflow-x:hidden}
 .scoreboard{width:100%;max-width:800px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;overflow-x:auto;margin:0 auto}
 #field-panel{width:100%;max-width:340px;display:flex;flex-direction:column;gap:10px}
 #atbat-panel{width:100%;max-width:340px;display:flex;flex-direction:column;border:1px solid var(--border);border-radius:6px;background:var(--panel);overflow:hidden}
@@ -497,33 +506,23 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 
 <!-- ── 헤더 ── -->
 <div id="header">
-  <div>
-    <!-- 헤더 타이틀 요건 제거 -->
+  <!-- 최대화 모드: 이닝별 전광판 -->
+  <div class="header-max">
+    <table class="header-sb-table" id="header-scoreboard">
+      <!-- engine.js에서 채움 -->
+    </table>
   </div>
-  <div class="score-display">
-    <div class="team-score">
-      <div class="team-name" id="a-team-name">원정</div>
-      <div class="score-num" id="a-score">0</div>
+
+  <!-- 최소화 모드: 팀명 및 점수 (원정 좌측, 홈 우측) -->
+  <div class="header-min">
+    <div class="min-team-box" id="min-a-box">
+      <div class="min-team-name" id="min-a-name">-</div>
+      <div class="min-team-score" id="min-a-score">0</div>
     </div>
-    <div class="score-vs">:</div>
-    <div class="team-score">
-      <div class="score-num" id="h-score">0</div>
-      <div class="team-name" id="h-team-name">홈</div>
+    <div class="min-team-box" id="min-h-box">
+      <div class="min-team-score" id="min-h-score">0</div>
+      <div class="min-team-name" id="min-h-name">-</div>
     </div>
-  </div>
-  <div class="header-right">
-    <div class="inning-display">
-      <div class="inning-num" id="inning-display">1회</div>
-      <div id="half-display">초</div>
-    </div>
-    <div class="speed-ctrl">
-      <span>속도</span>
-      <input type="range" id="speed-slider" min="0" max="4" value="2" step="1">
-      <span id="speed-label">보통</span>
-    </div>
-    <button class="btn primary" id="play-btn" onclick="togglePlay()">▶ 재생</button>
-    <button class="btn" onclick="stepOnce()">1구</button>
-    <button class="btn danger" onclick="showSetup()">팀선택</button>
   </div>
 </div>
 
@@ -713,13 +712,51 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
     }
   );
 
-  // 속도 슬라이더
-  document.getElementById('speed-slider').addEventListener('input', function () {
-    speedIdx = parseInt(this.value);
-    document.getElementById('speed-label').textContent = SPEED_LABELS[speedIdx];
-    if (isPlaying) { clearTimeout(playTimer); schedNext(); }
-  });
+  // 속도 슬라이더 - 헤더에서 제거되었으나 기능 유지를 위해 내부 logic은 남겨둘 수 있음 (필요시 재배치)
+  // document.getElementById('speed-slider')?.addEventListener('input', function () { ... });
+
+  // ── 스크롤 리스너 추가 ──
+  const mainEl = document.getElementById('main');
+  const headerEl = document.getElementById('header');
+  if (mainEl) {
+    mainEl.addEventListener('scroll', () => {
+      if (mainEl.scrollTop > 10) {
+        headerEl.classList.add('minimized');
+      } else {
+        headerEl.classList.remove('minimized');
+      }
+    });
+  }
+
+  // ── 초기 빈 점수판 출력 ──
+  initHeaderScoreboard();
 })();
+
+function initHeaderScoreboard(away = '-', home = '-') {
+  const ht = document.getElementById('header-scoreboard');
+  if (!ht) return;
+  let hh = `<tr><th>팀</th>`;
+  for (let i = 1; i <= 9; i++) hh += `<th>${i}</th>`;
+  hh += '<th class="tot">R</th></tr>';
+  [away, home].forEach(team => {
+    hh += `<tr><td class="tc">${team}</td>`;
+    for (let i = 0; i < 9; i++) hh += `<td></td>`;
+    hh += `<td class="tot">0</td></tr>`;
+  });
+  ht.innerHTML = hh;
+
+  // 최소화 모드 팀명도 미리 설정
+  const an = document.getElementById('min-a-name');
+  const hn = document.getElementById('min-h-name');
+  if (an) an.textContent = away;
+  if (hn) hn.textContent = home;
+
+  // 박스 ID 참조를 위해 추가
+  const abox = document.getElementById('min-a-box');
+  const hbox = document.getElementById('min-h-box');
+  if (abox) abox.classList.remove('attacking');
+  if (hbox) hbox.classList.remove('attacking');
+}
 
 // startGame 제거 (단일경기 모드 삭제)
 

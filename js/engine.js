@@ -767,8 +767,8 @@ function addRuns(n) {
     if (gs.innings.home[i] === undefined) gs.innings.home[i] = 0;
     gs.innings.home[i] += n;
   }
-  document.getElementById('h-score').textContent = gs.homeScore;
-  document.getElementById('a-score').textContent = gs.awayScore;
+  document.getElementById('min-h-score').textContent = gs.homeScore;
+  document.getElementById('min-a-score').textContent = gs.awayScore;
 }
 
 function endHalf() {
@@ -1086,23 +1086,59 @@ function updateLnpUI() {
 }
 
 function updateSbUI() {
-  if (!gs) return;
-  const t = document.getElementById('scoreboard');
-  const maxInn = Math.min(gs.inning, 12);
-  let h = `<tr><th>팀</th>`;
-  for (let i = 1; i <= maxInn; i++) h += `<th class="${i === gs.inning ? 'ci' : ''}">${i}</th>`;
-  h += '<th class="tot">R</th></tr>';
-  ['away','home'].forEach(side => {
-    const team  = side === 'away' ? gs.awayTeam  : gs.homeTeam;
-    const score = side === 'away' ? gs.awayScore : gs.homeScore;
-    h += `<tr><td class="tc">${team}</td>`;
-    for (let i = 0; i < maxInn; i++) {
-      const v = gs.innings[side][i];
-      h += `<td class="${i + 1 === gs.inning ? 'ci' : ''}">${v || ''}</td>`;
-    }
-    h += `<td class="tot">${score}</td></tr>`;
-  });
-  t.innerHTML = h;
+  const t  = document.getElementById('scoreboard');
+  const ht = document.getElementById('header-scoreboard');
+  if (!gs) {
+    // 게임 데이터가 없는 경우 초기화 상태 유지 (index.html의 initHeaderScoreboard와 동일 로직)
+    return;
+  }
+
+  // 메인 화면 점수판 (스크롤 가능)
+  if (t) {
+    const maxInn = Math.min(gs.inning, 12);
+    let h = `<tr><th>팀</th>`;
+    for (let i = 1; i <= maxInn; i++) h += `<th class="${i === gs.inning ? 'ci' : ''}">${i}</th>`;
+    h += '<th class="tot">R</th></tr>';
+    ['away','home'].forEach(side => {
+      const team  = side === 'away' ? gs.awayTeam  : gs.homeTeam;
+      const score = side === 'away' ? gs.awayScore : gs.homeScore;
+      h += `<tr><td class="tc">${team}</td>`;
+      for (let i = 0; i < maxInn; i++) {
+        const v = gs.innings[side][i];
+        h += `<td class="${i + 1 === gs.inning ? 'ci' : ''}">${v || ''}</td>`;
+      }
+      h += `<td class="tot">${score}</td></tr>`;
+    });
+    t.innerHTML = h;
+  }
+
+  // 헤더 고정 점수판 (1~9회 고정)
+  if (ht) {
+    // 9회 이상(연장)일 경우 동적으로 늘리거나 9회까지만 표시할지 결정 (여기서는 9회 고정 또는 필요시 확장)
+    const displayInn = Math.max(9, gs.inning);
+    let hh = `<tr><th>팀</th>`;
+    for (let i = 1; i <= displayInn; i++) hh += `<th class="${i === gs.inning ? 'current-inn' : ''}">${i}</th>`;
+    hh += '<th class="tot">R</th></tr>';
+    ['away','home'].forEach(side => {
+      const team  = side === 'away' ? gs.awayTeam  : gs.homeTeam;
+      const score = side === 'away' ? gs.awayScore : gs.homeScore;
+      hh += `<tr><td class="tc">${team}</td>`;
+      for (let i = 0; i < displayInn; i++) {
+        const v = gs.innings[side][i];
+        hh += `<td class="${i + 1 === gs.inning ? 'current-inn' : ''}">${v !== undefined ? v : ''}</td>`;
+      }
+      hh += `<td class="tot">${score}</td></tr>`;
+    });
+    ht.innerHTML = hh;
+  }
+
+  // 최소화 모드 공격팀 하이라이트
+  const abox = document.getElementById('min-a-box');
+  const hbox = document.getElementById('min-h-box');
+  if (abox && hbox) {
+    abox.classList.toggle('attacking', gs.isTop);
+    hbox.classList.toggle('attacking', !gs.isTop);
+  }
 }
 
 function updateSituationBar() {

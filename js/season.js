@@ -1408,6 +1408,14 @@ function showSeasonScreen() {
 function refreshSeasonUI() {
   document.getElementById('season-standings').innerHTML = renderStandingsTable();
   document.getElementById('season-next-game').innerHTML = renderTodayGame();
+
+  // 헤더 팀명 미리 업데이트
+  const curGame = SS.schedule[SS.gameIdx];
+  if (curGame) {
+    const hKor = SS.nameKor[curGame.home] || curGame.home;
+    const aKor = SS.nameKor[curGame.away] || curGame.away;
+    initHeaderScoreboard(aKor, hKor);
+  }
   
   const trn = SS.schedule[Math.min(SS.gameIdx, SS.schedule.length - 1)];
   const curTurn = trn ? trn.turn : 144;
@@ -1542,16 +1550,14 @@ async function startSeasonGame() {
   gs._seasonGame = { gameIdx: SS.gameIdx, home: game.home, away: game.away };
 
   // 헤더·UI 초기화
-  document.getElementById('header-year').textContent        = SS.year + ' 시즌';
-  
-  const hTeamEl = document.getElementById('h-team-name');
+  const hTeamEl = document.getElementById('min-h-name');
   if (hTeamEl) hTeamEl.textContent = hKor;
-  const aTeamEl = document.getElementById('a-team-name');
+  const aTeamEl = document.getElementById('min-a-name');
   if (aTeamEl) aTeamEl.textContent = aKor;
   
-  const hScoreEl = document.getElementById('h-score');
+  const hScoreEl = document.getElementById('min-h-score');
   if (hScoreEl) hScoreEl.textContent = '0';
-  const aScoreEl = document.getElementById('a-score');
+  const aScoreEl = document.getElementById('min-a-score');
   if (aScoreEl) aScoreEl.textContent = '0';
   
   const homeLnpTitle = document.getElementById('home-lineup-title');

@@ -1565,20 +1565,19 @@ async function startSeasonGame() {
   const awayLnpTitle = document.getElementById('away-lineup-title');
   if (awayLnpTitle) awayLnpTitle.textContent = aKor + ' 라인업';
   
-  calendarWeekOffset = 0; // 플레이 후 달력 복원
+
   document.getElementById('game-log').innerHTML             = '';
   document.getElementById('game-over').classList.remove('show');
   document.getElementById('go-ext-label').innerHTML         = '';
-  document.getElementById('inning-display').textContent     = '1회';
-  document.getElementById('half-display').textContent       = '초';
+
 
   // 저장된 게임 상태 복원 (중단된 경기 이어하기)
   if (hasSavedGame()) {
     const ok = restoreGameState();
     if (ok) {
       // 스코어보드·UI 복원
-      document.getElementById('h-score').textContent = gs.homeScore;
-      document.getElementById('a-score').textContent = gs.awayScore;
+      document.getElementById('min-h-score').textContent = gs.homeScore;
+      document.getElementById('min-a-score').textContent = gs.awayScore;
       updateGameUI(); updateLnpUI(); updateSbUI(); updateSituationBar();
       addLog(`⚾ [이어하기] ${SS.year}시즌 ${SS.gameIdx + 1}번째 경기 · ${aKor} vs ${hKor}`, '');
       startPA();

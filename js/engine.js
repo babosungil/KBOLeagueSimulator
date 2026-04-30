@@ -1038,8 +1038,7 @@ function updateGameUI() {
   if (!gs) return;
   updateBasesUI(gs.bases);
   updateCntUI(gs.balls || 0, gs.strikes || 0);
-  document.getElementById('inning-display').textContent = `${gs.inning}회`;
-  document.getElementById('half-display').textContent   = gs.isTop ? '초' : '말';
+
 }
 
 function updateBasesUI(bases) {

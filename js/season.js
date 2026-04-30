@@ -69,8 +69,13 @@ function hasSavedGame() {
     const raw = localStorage.getItem(LS_GAME_KEY);
     if (!raw) return false;
     const data = JSON.parse(raw);
-    // 시즌 컨텍스트와 일치하는지 확인
-    return data._seasonGame !== undefined;
+    // 현재 진행해야 할 경기 정보와 일치하는지 확인
+    const currentGame = SS.schedule[SS.gameIdx];
+    if (!currentGame || !data._seasonGame) return false;
+    
+    return data._seasonGame.gameIdx === SS.gameIdx &&
+           data._seasonGame.home === currentGame.home &&
+           data._seasonGame.away === currentGame.away;
   } catch(e) { return false; }
 }
 
@@ -81,47 +86,56 @@ function restoreGameState() {
     if (!raw) return false;
     const snap = JSON.parse(raw);
 
-    // gs 기본 필드 복원
-    gs.homeScore   = snap.homeScore;
-    gs.awayScore   = snap.awayScore;
-    gs.inning      = snap.inning;
-    gs.isTop       = snap.isTop;
-    gs.isExtra     = snap.isExtra;
-    gs.outs        = snap.outs;
+    // gs 기본 필드 복원 (숫자 타입 강제)
+    gs.homeScore   = Number(snap.homeScore)   || 0;
+    gs.awayScore   = Number(snap.awayScore)   || 0;
+    gs.inning      = Number(snap.inning)      || 1;
+    gs.isTop       = !!snap.isTop;
+    gs.isExtra     = !!snap.isExtra;
+    gs.outs        = Number(snap.outs)        || 0;
     gs.bases       = snap.bases;
-    gs.homeOrder   = snap.homeOrder;
-    gs.awayOrder   = snap.awayOrder;
+    gs.homeOrder   = Number(snap.homeOrder)   || 0;
+    gs.awayOrder   = Number(snap.awayOrder)   || 0;
     gs.innings     = snap.innings;
-    gs.gamePitches = snap.gamePitches;
-    gs.totalAB     = snap.totalAB;
+    gs.gamePitches = Number(snap.gamePitches) || 0;
+    gs.totalAB     = Number(snap.totalAB)     || 0;
+    gs.gameOver    = !!snap.gameOver;
     gs._seasonGame = snap._seasonGame;
 
-    // 라인업 todayStats 복원
-    snap.homeLineupStats.forEach(s => {
-      const p = gs.homeLineup.find(p => p.name === s.name);
-      if (p) { p.todayStats = s.todayStats; p.pitchCount = s.pitchCount; }
-    });
-    snap.awayLineupStats.forEach(s => {
-      const p = gs.awayLineup.find(p => p.name === s.name);
-      if (p) { p.todayStats = s.todayStats; p.pitchCount = s.pitchCount; }
-    });
+    // 라인업 todayStats 복원 (데이터 존재 여부 확인 추가)
+    if (snap.homeLineupStats) {
+      snap.homeLineupStats.forEach(s => {
+        const p = gs.homeLineup.find(p => p.name === s.name);
+        if (p) { p.todayStats = s.todayStats; p.pitchCount = s.pitchCount; }
+      });
+    }
+    if (snap.awayLineupStats) {
+      snap.awayLineupStats.forEach(s => {
+        const p = gs.awayLineup.find(p => p.name === s.name);
+        if (p) { p.todayStats = s.todayStats; p.pitchCount = s.pitchCount; }
+      });
+    }
 
     // 투수 pitchCount·usedToday 복원
-    snap.homePitcherStats.forEach(s => {
-      const p = gs.homePitchers.find(p => p.name === s.name);
-      if (p) { p.pitchCount = s.pitchCount; p.usedToday = s.usedToday; }
-    });
-    snap.awayPitcherStats.forEach(s => {
-      const p = gs.awayPitchers.find(p => p.name === s.name);
-      if (p) { p.pitchCount = s.pitchCount; p.usedToday = s.usedToday; }
-    });
+    if (snap.homePitcherStats) {
+      snap.homePitcherStats.forEach(s => {
+        const p = gs.homePitchers.find(p => p.name === s.name);
+        if (p) { p.pitchCount = s.pitchCount; p.usedToday = s.usedToday; }
+      });
+    }
+    if (snap.awayPitcherStats) {
+      snap.awayPitcherStats.forEach(s => {
+        const p = gs.awayPitchers.find(p => p.name === s.name);
+        if (p) { p.pitchCount = s.pitchCount; p.usedToday = s.usedToday; }
+      });
+    }
 
     // 현재 투수 복원
     if (snap.curHPName) gs.curHP = gs.homePitchers.find(p => p.name === snap.curHPName) || gs.curHP;
     if (snap.curAPName) gs.curAP = gs.awayPitchers.find(p => p.name === snap.curAPName) || gs.curAP;
 
     return true;
-  } catch(e) { console.warn('게임 복원 실패', e); return false; }
+  } catch(e) { console.error('게임 복원 중 오류 발생:', e); return false; }
 }
 
 // 게임 저장 삭제 (경기 종료 시)
@@ -1575,8 +1589,9 @@ async function startSeasonGame() {
 
   // 저장된 게임 상태 복원 (중단된 경기 이어하기)
   if (hasSavedGame()) {
-    const ok = restoreGameState();
-    if (ok) {
+    if (confirm('진행 중인 경기가 있습니다. 이어서 하시겠습니까?\n취소하면 새로 시작합니다.')) {
+      const ok = restoreGameState();
+      if (ok) {
       // 스코어보드·UI 복원
       document.getElementById('min-h-score').textContent = gs.homeScore;
       document.getElementById('min-a-score').textContent = gs.awayScore;
@@ -1586,6 +1601,7 @@ async function startSeasonGame() {
       return;
     }
   }
+}
   updateGameUI(); updateLnpUI(); updateSbUI(); updateSituationBar();
   addLog(`⚾ ${SS.year}시즌 ${SS.gameIdx + 1}번째 경기 · ${aKor} vs ${hKor}`, '');
   startPA();

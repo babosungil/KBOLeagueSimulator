@@ -687,6 +687,9 @@ function startPA() {
 
 function processOnePitch() {
   if (!gs || gs.gameOver) return;
+  // ── 강제 종료 체크 (안전 장치) ──
+  if (gs.inning >= 9 && !gs.isTop && gs.homeScore > gs.awayScore) { endGame(); return; }
+
   if (!gs.currentPA) { startPA(); return; }
   const pa = gs.currentPA;
   if (pa.pidx >= pa.seq.length) { startPA(); return; }
@@ -759,13 +762,13 @@ function addRuns(n) {
   if (!n) return;
   const i = gs.inning - 1;
   if (gs.isTop) {
+    if (gs.innings.away[gs.inning - 1] === undefined) gs.innings.away[gs.inning - 1] = 0;
     gs.awayScore += n;
-    if (gs.innings.away[i] === undefined) gs.innings.away[i] = 0;
-    gs.innings.away[i] += n;
+    gs.innings.away[gs.inning - 1] += n;
   } else {
+    if (gs.innings.home[gs.inning - 1] === undefined) gs.innings.home[gs.inning - 1] = 0;
     gs.homeScore += n;
-    if (gs.innings.home[i] === undefined) gs.innings.home[i] = 0;
-    gs.innings.home[i] += n;
+    gs.innings.home[gs.inning - 1] += n;
   }
   document.getElementById('min-h-score').textContent = gs.homeScore;
   document.getElementById('min-a-score').textContent = gs.awayScore;
@@ -777,8 +780,8 @@ function endHalf() {
 
   if (gs.isTop) {
     gs.isTop = false;
+    gs.innings.home[gs.inning - 1] = 0; // 후공 시작 시 무조건 0으로 초기화
     if (gs.inning >= 9 && gs.homeScore > gs.awayScore) { endGame(); return; }
-    gs.innings.home[gs.inning - 1] = 0;
     addLog(`── ${gs.inning}회 말 시작 ──`, '');
   } else {
     gs.isTop = true;
@@ -792,6 +795,7 @@ function endHalf() {
         gs.innings.away[gs.inning - 1] = 0;
         addLog(`── ⚡ ${gs.inning}회 연장전 시작! ──`, 'ext');
       } else {
+        // 이닝 종료 후 점수가 다르면 게임 종료
         endGame(); return;
       }
     } else {
@@ -1220,6 +1224,12 @@ function setupGameControls() {
 
   btn.addEventListener('pointerdown', (e) => {
     e.preventDefault();
+    if (isPlaying) {
+      // 이미 진행 중이면 즉시 정지
+      togglePlay(false);
+      isLongPress = false;
+      return;
+    }
     isLongPress = false;
     progressTimer = setTimeout(() => {
       isLongPress = true;
@@ -1230,9 +1240,8 @@ function setupGameControls() {
 
   btn.addEventListener('pointerup', (e) => {
     clearTimeout(progressTimer);
-    if (isLongPress) {
-      togglePlay(false);
-    } else {
+    if (!isLongPress && !isPlaying) {
+      // 진행 중이 아니었고, 롱프레스도 아니었다면 1구 진행
       stepOnce();
     }
     isLongPress = false;
@@ -1240,7 +1249,6 @@ function setupGameControls() {
 
   btn.addEventListener('pointercancel', () => {
     clearTimeout(progressTimer);
-    if (isLongPress) togglePlay(false);
     isLongPress = false;
   });
 }
@@ -1250,9 +1258,7 @@ function schedNext() {
   playTimer = setTimeout(schedNext, SPEED_DELAYS[speedIdx]);
 }
 function stopPlay() {
-  isPlaying = false;
-  document.getElementById('play-btn').textContent = '▶ 재생';
-  clearTimeout(playTimer); playTimer = null;
+  togglePlay(false);
 }
 function stepOnce() {
   if (isPlaying) stopPlay();

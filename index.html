@@ -36,14 +36,15 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 .min-team-box.attacking .min-team-name{color:rgba(0,0,0,0.6);font-weight:700;}
 .min-team-box.attacking .min-team-score{color:#000;}
 .min-vs{font-family:'Bebas Neue';font-size:18px;color:var(--text3);margin:0 10px;}
-#main{display:flex;flex-direction:column;align-items:center;padding:14px;padding-top:114px;gap:16px;height:100vh;overflow-y:auto;overflow-x:hidden}
+#main{display:flex;flex-direction:column;align-items:center;padding:14px;padding-top:114px;padding-bottom:80px;gap:16px;height:100vh;overflow-y:auto;overflow-x:hidden}
 .scoreboard{width:100%;max-width:800px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;overflow-x:auto;margin:0 auto}
 #field-panel{width:100%;max-width:340px;display:flex;flex-direction:column;gap:10px}
 #atbat-panel{width:100%;max-width:340px;display:flex;flex-direction:column;border:1px solid var(--border);border-radius:6px;background:var(--panel);overflow:hidden}
 #lineup-panel{width:100%;max-width:340px;display:flex;flex-direction:column;border:1px solid var(--border);border-radius:6px;background:var(--panel);overflow:hidden}
 
 .diamond-svg{width:100%;height:100%}
-.last-pitch{max-width:300px;width:100%;margin:0 auto;text-align:center;height:34px;display:flex;align-items:center;justify-content:center}
+.diamond-wrap{position:relative;width:100%;max-width:340px;margin:0 auto}
+.last-pitch{position:absolute;top:53%;left:50%;transform:translate(-50%,-50%);z-index:10;width:100%;text-align:center;pointer-events:none;height:auto;display:flex;align-items:center;justify-content:center}
 .pitch-badge{display:inline-block;padding:5px 18px;border-radius:20px;font-size:13px;font-weight:700;letter-spacing:2px;animation:badgeIn .25s ease}
 @keyframes badgeIn{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
 .badge-ball{background:rgba(59,130,246,.2);border:1px solid var(--accent4);color:var(--accent4)}
@@ -279,7 +280,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 .season-slide-body{padding:16px 20px 80px;max-width:700px;margin:0 auto;display:flex;flex-direction:column;gap:20px;}
 /* ── 하단 탭 내비게이션 ── */
 #season-bottom-nav{height:62px;background:var(--bg2);border-top:1px solid var(--border);display:flex;flex-shrink:0;}
-.snav-btn{flex:1;display:flex;align-items:center;justify-content:center;font-size:26px;cursor:pointer;border:none;background:transparent;color:var(--text3);transition:color .2s,background .15s;padding:0;-webkit-tap-highlight-color:transparent;}
+.snav-btn{flex:1;display:flex;align-items:center;justify-content:center;font-size:26px;cursor:pointer;border:none;background:transparent;color:var(--text3);transition:color .2s,background .15s;padding:0;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-touch-callout:none;}
 .snav-btn.snav-active{color:var(--accent);}
 .snav-btn.snav-exit-btn{color:var(--accent2);}
 .snav-btn.snav-disabled{cursor:default;pointer-events:none;opacity:.15;}
@@ -290,12 +291,23 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 .lnp-drag-item.lnp-over{border-color:var(--accent3);background:rgba(45,204,111,.07);}
 .drag-handle{color:var(--text3);font-size:18px;cursor:grab;padding:4px;}
 /* ── 플로팅 PLAY 버튼 ── */
-#season-play-btn{position:absolute;bottom:62px;left:50%;transform:translateX(-50%);width:80px;height:40px;border-radius:40px 40px 0 0;background:var(--accent);border:none;cursor:pointer;display:none;align-items:center;justify-content:center;flex-direction:column;gap:0;box-shadow:0 -4px 20px rgba(245,166,35,.45);transition:background .2s,transform .1s;overflow:hidden;z-index:110;}
+#season-play-btn{position:absolute;bottom:62px;left:50%;transform:translateX(-50%);width:80px;height:40px;border-radius:40px 40px 0 0;background:var(--accent);border:none;cursor:pointer;display:none;align-items:center;justify-content:center;flex-direction:column;gap:0;box-shadow:0 -4px 20px rgba(245,166,35,.45);transition:background .2s,transform .1s;overflow:hidden;z-index:110;user-select:none;-webkit-touch-callout:none;}
 #season-play-btn:active{transform:translateX(-50%) scale(.96);}
 #season-play-btn.visible{display:flex;}
 .play-btn-ball{width:36px;height:36px;position:relative;margin:0 auto;}
 .play-btn-ball svg{position:absolute;inset:0;}
 .play-btn-label{font-family:'Bebas Neue';font-size:11px;color:#000;letter-spacing:2px;text-align:center;width:100%;line-height:1;margin-top:-2px;}
+
+/* ── 게임 화면 하단 내비게이션 ── */
+#game-bottom-nav{position:fixed;bottom:0;left:0;width:100%;height:62px;background:var(--bg2);border-top:1px solid var(--border);display:none;z-index:180;padding:0 10px;}
+.gnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;border:none;background:transparent;color:var(--text3);transition:all .2s;height:100%;user-select:none;-webkit-touch-callout:none;}
+.gnav-btn:active{background:var(--bg3);}
+.gnav-btn svg{color:currentColor;}
+.gnav-btn span{font-size:10px;font-weight:700;letter-spacing:1px;}
+.gnav-btn.play{color:var(--accent);transform:scale(1.1);}
+.gnav-btn.play:active{transform:scale(1.05);}
+.gnav-btn.exit{color:var(--accent2);}
+
 </style>
 </head>
 <body>
@@ -433,6 +445,23 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
   </div>
 </div>
 
+<!-- ── 게임 화면 하단 내비게이션 ── -->
+<div id="game-bottom-nav">
+  <button class="gnav-btn" onclick="openSubstitutionModal()">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    <span>선수교체</span>
+  </button>
+  <button class="gnav-btn play" id="game-play-btn">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+    <span id="game-play-label">진행</span>
+  </button>
+  <button class="gnav-btn exit" onclick="returnToSeason()">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    <span>종료</span>
+  </button>
+</div>
+
+
 <!-- ── 투수 설정 모달 ── -->
 <div id="pitcher-modal" style="position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:300;display:none;align-items:center;justify-content:center;">
   <div class="turn-modal-inner" style="min-width:320px;max-width:400px;padding:20px;">
@@ -457,11 +486,27 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
   </div>
 </div>
 
-<!-- ── 포스트시즌 화면 ── -->
-<div id="postseason-screen">
-  <div class="ps-title">🏆 포스트시즌</div>
-  <div class="ps-bracket" id="ps-bracket"></div>
-  <button class="btn danger" style="margin-top:20px" onclick="exitSeasonMode()">시즌 종료</button>
+<!-- ── 경기 중 선수 교체 모달 ── -->
+<div id="in-game-sub-modal" style="position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:300;display:none;align-items:center;justify-content:center;">
+  <div class="turn-modal-inner" style="min-width:340px;max-width:420px;padding:20px;">
+    <div class="turn-modal-title">선수 교체</div>
+    
+    <div style="margin-bottom:14px;">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:6px;letter-spacing:1px;text-transform:uppercase;">투수 교체</div>
+      <div id="sub-pitcher-list" style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px;"></div>
+    </div>
+
+    <div style="margin-bottom:20px;">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:6px;letter-spacing:1px;text-transform:uppercase;">대타 기용 (준비중)</div>
+      <div id="sub-hitter-list" style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px;opacity:0.5;pointer-events:none;">
+        <div style="padding:10px;text-align:center;font-size:12px;color:var(--text3);">준비 중인 기능입니다.</div>
+      </div>
+    </div>
+
+    <div style="text-align:center;">
+      <button class="btn" onclick="closeSubModal()">닫기</button>
+    </div>
+  </div>
 </div>
 
 <!-- ── 게임 종료 화면 ── -->
@@ -553,8 +598,8 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
         <text x="20"  y="143" fill="#2a4a20" font-size="7" font-family="monospace">3B</text>
         <text x="128" y="260" fill="#2a4a20" font-size="7" font-family="monospace">HOME</text>
       </svg>
+      <div class="last-pitch" id="last-pitch-area"></div>
     </div>
-    <div class="last-pitch" id="last-pitch-area"></div>
     <div class="count-section">
       <div class="count-box"><div class="label">볼</div>
         <div class="dots"><div class="dot" id="b0"></div><div class="dot" id="b1"></div><div class="dot" id="b2"></div><div class="dot" id="b3"></div></div>
@@ -730,6 +775,14 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 
   // ── 초기 빈 점수판 출력 ──
   initHeaderScoreboard();
+
+  // ── 게임 하단 내비게이션 컨트롤 설정 ──
+  if (typeof setupGameControls === 'function') setupGameControls();
+
+  // ── 모든 버튼의 시스템 메뉴 방지 ──
+  document.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('contextmenu', e => e.preventDefault());
+  });
 })();
 
 function initHeaderScoreboard(away = '-', home = '-') {

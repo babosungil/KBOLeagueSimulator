@@ -1398,6 +1398,7 @@ function setupLnpPointerDrag() {
 function showSeasonScreen() {
   document.getElementById('season-screen').style.display = 'flex';
   document.getElementById('setup-screen').style.display  = 'none';
+  document.getElementById('game-bottom-nav').style.display = 'none';
   initStarterRotation();  // 선발 로테이션 초기화
   currentSeasonTab = 3;
   window.switchSeasonTab(3);
@@ -1520,6 +1521,7 @@ async function startSeasonGame() {
 
   loadingEl.style.display = 'none';
   document.getElementById('season-screen').style.display = 'none';
+  document.getElementById('game-bottom-nav').style.display = 'flex';
 
   // 기존 게임 시작 함수 활용
   gs = initGame(hKor, aKor);
@@ -1588,6 +1590,18 @@ async function startSeasonGame() {
   addLog(`⚾ ${SS.year}시즌 ${SS.gameIdx + 1}번째 경기 · ${aKor} vs ${hKor}`, '');
   startPA();
 }
+
+// ── 게임 화면에서 시즌으로 돌아가기 ─────────────────────────
+window.returnToSeason = function() {
+  if (gs && !gs.gameOver) {
+    if (!confirm('경기를 중단하고 시즌 화면으로 돌아갈까요?\n현재까지의 진행 상황은 저장됩니다.')) return;
+  }
+  stopPlay();
+  if (typeof saveGameState === 'function') saveGameState();
+  
+  document.getElementById('game-bottom-nav').style.display = 'none';
+  showSeasonScreen();
+};
 
 // ── 시즌 경기 종료 후 처리 (endGame() 훅) ───────────────
 function onSeasonGameEnd(homeScore, awayScore) {

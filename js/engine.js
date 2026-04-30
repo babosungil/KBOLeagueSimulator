@@ -646,7 +646,7 @@ function initGame(home, away) {
            ? pickStarterWithFatigue(pA, getTeamCode(away) || away)
            : pickStarter(pA),
     homeOrder: 0, awayOrder: 0,
-    innings: { home: [], away: [] },
+    innings: { home: [], away: [0] },
     currentPA: null,
     balls: 0, strikes: 0,
     gamePitches: 0, totalAB: 0,
@@ -778,6 +778,7 @@ function endHalf() {
   if (gs.isTop) {
     gs.isTop = false;
     if (gs.inning >= 9 && gs.homeScore > gs.awayScore) { endGame(); return; }
+    gs.innings.home[gs.inning - 1] = 0;
     addLog(`── ${gs.inning}회 말 시작 ──`, '');
   } else {
     gs.isTop = true;
@@ -788,11 +789,13 @@ function endHalf() {
         if (gs.inning > _maxInn) { endGame(); return; }
         gs.isExtra = true;
         showExtraBanner(gs.inning);
+        gs.innings.away[gs.inning - 1] = 0;
         addLog(`── ⚡ ${gs.inning}회 연장전 시작! ──`, 'ext');
       } else {
         endGame(); return;
       }
     } else {
+      gs.innings.away[gs.inning - 1] = 0;
       addLog(`── ${gs.inning}회 초 시작 ──`, '');
     }
     checkChange();
@@ -1104,7 +1107,7 @@ function updateSbUI() {
       h += `<tr><td class="tc">${team}</td>`;
       for (let i = 0; i < maxInn; i++) {
         const v = gs.innings[side][i];
-        h += `<td class="${i + 1 === gs.inning ? 'ci' : ''}">${v || ''}</td>`;
+        h += `<td class="${i + 1 === gs.inning ? 'ci' : ''}">${v !== undefined ? v : ''}</td>`;
       }
       h += `<td class="tot">${score}</td></tr>`;
     });
@@ -1183,16 +1186,63 @@ function updateTodayStats(b) {
 //  재생 제어
 // ═══════════════════════════════════════════════════════
 
-function togglePlay() {
-  isPlaying = !isPlaying;
-  document.getElementById('play-btn').textContent = isPlaying ? '⏸ 정지' : '▶ 재생';
+function togglePlay(forceState) {
+  isPlaying = (forceState !== undefined) ? forceState : !isPlaying;
+  const btn = document.getElementById('play-btn');
+  if (btn) btn.textContent = isPlaying ? '⏸ 정지' : '▶ 재생';
+  
+  const gPlayBtn = document.getElementById('game-play-btn');
+  const gPlayLabel = document.getElementById('game-play-label');
+  if (gPlayBtn) {
+    gPlayBtn.classList.toggle('playing', isPlaying);
+    if (gPlayLabel) gPlayLabel.textContent = isPlaying ? '정지' : '진행';
+  }
+
   if (isPlaying) {
     schedNext();
   } else {
     clearTimeout(playTimer); playTimer = null;
-    // 자동 진행을 수동으로 멈춘 시점에 저장
     if (typeof saveGameState === 'function') saveGameState();
   }
+}
+
+let progressTimer = null;
+let isLongPress = false;
+
+function setupGameControls() {
+  const btn = document.getElementById('game-play-btn');
+  if (!btn) return;
+
+  // 시스템 컨텍스트 메뉴 및 선택 방지
+  btn.style.userSelect = 'none';
+  btn.style.webkitTouchCallout = 'none';
+  btn.addEventListener('contextmenu', e => e.preventDefault());
+
+  btn.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    isLongPress = false;
+    progressTimer = setTimeout(() => {
+      isLongPress = true;
+      togglePlay(true);
+    }, 300);
+    btn.setPointerCapture(e.pointerId);
+  });
+
+  btn.addEventListener('pointerup', (e) => {
+    clearTimeout(progressTimer);
+    if (isLongPress) {
+      togglePlay(false);
+    } else {
+      stepOnce();
+    }
+    isLongPress = false;
+  });
+
+  btn.addEventListener('pointercancel', () => {
+    clearTimeout(progressTimer);
+    if (isLongPress) togglePlay(false);
+    isLongPress = false;
+  });
 }
 function schedNext() {
   if (!isPlaying || (gs && gs.gameOver)) return;
@@ -1212,6 +1262,62 @@ function stepOnce() {
 }
 function showSetup()   { stopPlay(); document.getElementById('setup-screen').style.display = 'flex'; }
 function restartGame() { document.getElementById('game-over').classList.remove('show'); showSetup(); }
+window.openSubstitutionModal = function() {
+  if (!gs || gs.gameOver) return;
+  stopPlay();
+
+  const isMyHome = (gs.homeTeam === SS.myTeam);
+  const myPitchers = isMyHome ? gs.homePitchers : gs.awayPitchers;
+  const curP = isMyHome ? gs.curHP : gs.curAP;
+  
+  const pool = myPitchers.filter(p => p.name !== curP.name && !p.usedToday);
+  const listEl = document.getElementById('sub-pitcher-list');
+  if (listEl) {
+    if (pool.length === 0) {
+      listEl.innerHTML = '<div style="padding:10px;text-align:center;color:var(--text3);font-size:12px;">사용 가능한 투수가 없습니다.</div>';
+    } else {
+      listEl.innerHTML = pool.map(p => {
+        const roleLabel = { starter:'선발', middle:'계투', closer:'마무리' }[p.role] || '투수';
+        return `
+          <div onclick="changePitcherInGame('${p.name}')" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.02);">
+            <div style="display:flex;flex-direction:column;">
+              <span style="font-weight:700;font-size:13px;color:var(--text);">${p.name} <span style="font-size:10px;color:var(--accent);font-weight:normal;">${roleLabel}</span></span>
+              <span style="font-family:'JetBrains Mono';font-size:10px;color:var(--text3);">ERA ${p.ERA.toFixed(2)} · IP ${p.IP.toFixed(1)}</span>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-family:'JetBrains Mono';font-size:11px;color:var(--accent3);">교체</div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+  }
+
+  document.getElementById('in-game-sub-modal').style.display = 'flex';
+};
+
+window.closeSubModal = function() {
+  document.getElementById('in-game-sub-modal').style.display = 'none';
+};
+
+window.changePitcherInGame = function(name) {
+  const isMyHome = (gs.homeTeam === SS.myTeam);
+  const myPitchers = isMyHome ? gs.homePitchers : gs.awayPitchers;
+  const np = myPitchers.find(p => p.name === name);
+  
+  if (np) {
+    np.pitchCount = 0;
+    np.usedToday = true;
+    if (isMyHome) gs.curHP = np; else gs.curAP = np;
+    
+    const roleLabel = { starter:'선발', middle:'중간계투', closer:'마무리' }[np.role] || '계투';
+    addLog(`🔄 투수교체(사용자) → ${np.name} [${roleLabel}] (ERA ${np.ERA})`, 'change');
+    updatePitUI(np);
+    updateGameUI();
+    closeSubModal();
+    alert(`${np.name} 투수로 교체되었습니다.`);
+  }
+};
+
 function switchTab(t) {
   document.getElementById('tab-log').classList.toggle('active',     t === 'log');
   document.getElementById('tab-formula').classList.toggle('active', t === 'formula');

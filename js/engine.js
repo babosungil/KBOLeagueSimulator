@@ -680,7 +680,8 @@ function startPA() {
   gs.currentPA = { batter, pitcher, pr, seq: buildSeq(pr), pidx: 0 };
   gs.balls = 0; gs.strikes = 0;
   updateBatUI(batter); updatePitUI(pitcher); updateCntUI(0, 0); showPitch('');
-  document.getElementById('pc-ab').textContent = '0';
+  const pcab = document.getElementById('pc-ab');
+  if (pcab) pcab.textContent = '0';
   updateFml(batter, pitcher, pr);
   updateSituationBar();
 }
@@ -697,14 +698,18 @@ function processOnePitch() {
   const pitch = pa.seq[pa.pidx++];
   gs.gamePitches++;
   pa.pitcher.pitchCount++;
-  document.getElementById('pc-ab').textContent  = pa.pidx;
-  document.getElementById('pc-p').textContent   = pa.pitcher.pitchCount;
-  document.getElementById('pc-tot').textContent = gs.gamePitches;
+  const pcab = document.getElementById('pc-ab');
+  if (pcab) pcab.textContent = pa.pidx;
+  const pcp = document.getElementById('pc-p');
+  if (pcp) pcp.textContent = pa.pitcher.pitchCount;
+  const pctot = document.getElementById('pc-tot');
+  if (pctot) pctot.textContent = gs.gamePitches;
   updateStamUI(pa.pitcher);
 
   if (pa.pidx >= pa.seq.length) {
     gs.totalAB++;
-    document.getElementById('pc-avg').textContent = (gs.gamePitches / gs.totalAB).toFixed(1);
+    const pcavg = document.getElementById('pc-avg');
+    if (pcavg) pcavg.textContent = (gs.gamePitches / gs.totalAB).toFixed(1);
     handlePA(pa);
     gs.currentPA = null;
     if (gs.outs >= 3) endHalf(); else updateGameUI();
@@ -1015,9 +1020,18 @@ function updateStamUI(p) {
 }
 
 function updateCntUI(b, s) {
-  ['b0','b1','b2','b3'].forEach((id, i) => { document.getElementById(id).className = 'dot' + (i < b ? ' ab' : ''); });
-  ['s0','s1','s2'].forEach((id, i)       => { document.getElementById(id).className = 'dot' + (i < s ? ' as' : ''); });
-  ['o0','o1','o2'].forEach((id, i)       => { document.getElementById(id).className = 'dot' + (gs && i < gs.outs ? ' ao' : ''); });
+  ['b0','b1','b2'].forEach((id, i) => { 
+    const el = document.getElementById(id);
+    if (el) el.className = 'sbo-dot' + (i < b ? ' ab' : ''); 
+  });
+  ['s0','s1'].forEach((id, i) => { 
+    const el = document.getElementById(id);
+    if (el) el.className = 'sbo-dot' + (i < s ? ' as' : ''); 
+  });
+  ['o0','o1'].forEach((id, i) => { 
+    const el = document.getElementById(id);
+    if (el) el.className = 'sbo-dot' + (gs && i < gs.outs ? ' ao' : ''); 
+  });
 }
 
 function showPitch(text, type) {
@@ -1049,12 +1063,11 @@ function updateGameUI() {
 }
 
 function updateBasesUI(bases) {
-  const cols = ['#2dcc6f','#f5a623','#3b82f6'];
   [1,2,3].forEach((b, i) => {
     const r    = document.getElementById(`runner-${b}`);
     const base = document.getElementById(`base-${b}`);
     if (bases[i]) {
-      r.setAttribute('fill', cols[i]); r.setAttribute('stroke', '#fff'); r.setAttribute('stroke-width', '1.5');
+      r.setAttribute('fill', '#ffffff'); r.setAttribute('stroke', '#fff'); r.setAttribute('stroke-width', '1');
       if (base) base.setAttribute('fill', '#2a4a20');
     } else {
       r.setAttribute('fill', 'transparent'); r.removeAttribute('stroke');
@@ -1151,11 +1164,16 @@ function updateSituationBar() {
   if (!gs) return;
   const risp   = isRISP(gs.bases);
   const batter = gs.isTop ? gs.awayLineup[gs.awayOrder % 9] : gs.homeLineup[gs.homeOrder % 9];
-  document.getElementById('sit-inning').textContent   = `${gs.inning}회 ${gs.isTop?'초':'말'}${gs.isExtra?'⚡':''}`;
-  document.getElementById('sit-risp').textContent     = risp ? '있음' : '-';
-  document.getElementById('sit-risp-avg').textContent = risp ? (batter.AVG + 0.02).toFixed(3) : batter.AVG.toFixed(3);
-  document.getElementById('sit-steal').textContent    = gs.bases[0] && !gs.bases[1] ? '가능' : '-';
-  document.getElementById('sit-bunt').textContent     = (batter.SAC / Math.max(batter.G, 1) > 0.05 && gs.outs < 2 && gs.bases[0]) ? '가능' : '-';
+  const sitInn = document.getElementById('sit-inning');
+  if (sitInn) sitInn.textContent = `${gs.inning}회 ${gs.isTop?'초':'말'}${gs.isExtra?'⚡':''}`;
+  const sitRisp = document.getElementById('sit-risp');
+  if (sitRisp) sitRisp.textContent = risp ? '있음' : '-';
+  const sitRispAvg = document.getElementById('sit-risp-avg');
+  if (sitRispAvg) sitRispAvg.textContent = risp ? (batter.AVG + 0.02).toFixed(3) : batter.AVG.toFixed(3);
+  const sitSteal = document.getElementById('sit-steal');
+  if (sitSteal) sitSteal.textContent = gs.bases[0] && !gs.bases[1] ? '가능' : '-';
+  const sitBunt = document.getElementById('sit-bunt');
+  if (sitBunt) sitBunt.textContent = (batter.SAC / Math.max(batter.G, 1) > 0.05 && gs.outs < 2 && gs.bases[0]) ? '가능' : '-';
 }
 
 function updateFml(b, p, r) {

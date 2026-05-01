@@ -9,12 +9,12 @@
 :root{--bg:#0a0c10;--bg2:#111318;--bg3:#181c24;--border:#1e2430;--border2:#2a3040;--text:#e8eaf0;--text2:#8890a0;--text3:#4a5468;--accent:#f5a623;--accent2:#e8340a;--accent3:#2dcc6f;--accent4:#3b82f6;--panel:#13161e}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-serif;font-size:13px;min-height:100vh;overflow-x:hidden}
-#header{position:fixed;top:0;left:0;width:100%;z-index:100;background:var(--bg2);border-bottom:1px solid var(--border);transition:all 0.4s ease;overflow:hidden;height:100px;}
-#header.minimized{height:70px;background:transparent;border-bottom:none;box-shadow:none;}
+#header{position:fixed;top:0;left:0;width:100%;z-index:100;background:var(--bg2);border-bottom:1px solid var(--border);transition:all 0.4s ease;overflow:hidden;height:70px;}
+#header.minimized{height:60px;background:transparent;border-bottom:none;box-shadow:none;}
 
 .header-max, .header-min{width:100%;height:100%;display:flex;align-items:center;transition:opacity 0.2s, transform 0.3s;}
-.header-max{flex-direction:column;justify-content:center;padding:0 10px;}
-.header-min{position:absolute;top:0;left:0;width:100%;height:100%;padding:0 20px;display:flex;justify-content:space-between;align-items:flex-start;opacity:0;pointer-events:none;transform:translateY(15px);}
+.header-max{flex-direction:column;justify-content:center;padding:10px 10px;}
+.header-min{position:absolute;top:0;left:0;width:100%;height:100%;padding:0 20px;display:flex;justify-content:space-between;align-items:flex-start;opacity:0;pointer-events:none;transform:translateY(0);}
 
 #header.minimized .header-max{opacity:0;pointer-events:none;transform:translateY(-20px);}
 #header.minimized .header-min{opacity:1;pointer-events:auto;transform:translateY(0);}
@@ -36,15 +36,23 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 .min-team-box.attacking .min-team-name{color:rgba(0,0,0,0.6);font-weight:700;}
 .min-team-box.attacking .min-team-score{color:#000;}
 .min-vs{font-family:'Bebas Neue';font-size:18px;color:var(--text3);margin:0 10px;}
-#main{display:flex;flex-direction:column;align-items:center;padding:14px;padding-top:114px;padding-bottom:80px;gap:16px;height:100vh;overflow-y:auto;overflow-x:hidden}
-.scoreboard{width:100%;max-width:800px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;overflow-x:auto;margin:0 auto}
-#field-panel{width:100%;max-width:340px;display:flex;flex-direction:column;gap:10px}
-#atbat-panel{width:100%;max-width:340px;display:flex;flex-direction:column;border:1px solid var(--border);border-radius:6px;background:var(--panel);overflow:hidden}
-#lineup-panel{width:100%;max-width:340px;display:flex;flex-direction:column;border:1px solid var(--border);border-radius:6px;background:var(--panel);overflow:hidden}
+#main{display:flex;flex-direction:column;align-items:center;padding:0 8px;padding-top:70px;padding-bottom:80px;gap:12px;height:100vh;overflow-y:auto;overflow-x:hidden}
+.scoreboard{width:100%;max-width:800px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;overflow-x:auto;margin:10px auto}
+#field-panel{width:100%;max-width:380px;display:flex;flex-direction:column;gap:10px}
+#atbat-panel{width:100%;max-width:380px;display:flex;flex-direction:column;border:1px solid var(--border);border-radius:6px;background:var(--panel);overflow:hidden}
+#lineup-panel{width:100%;max-width:380px;display:flex;flex-direction:column;border:1px solid var(--border);border-radius:6px;background:var(--panel);overflow:hidden}
 
 .diamond-svg{width:100%;height:100%}
-.diamond-wrap{position:relative;width:100%;max-width:340px;margin:0 auto}
+.diamond-wrap{position:relative;width:100%;max-width:100%;margin:0 auto;background:#0d1a0e;border-radius:0 0 8px 8px;border:1px solid var(--border);border-top:none;overflow:hidden}
 .last-pitch{position:absolute;top:53%;left:50%;transform:translate(-50%,-50%);z-index:10;width:100%;text-align:center;pointer-events:none;height:auto;display:flex;align-items:center;justify-content:center}
+.compact-sbo{position:absolute;bottom:12px;right:12px;display:flex;flex-direction:column;gap:7px;background:rgba(0,0,0,0.7);padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);pointer-events:none}
+.sbo-row{display:flex;gap:7px;align-items:center}
+.sbo-label{font-family:'Bebas Neue';font-size:15px;width:12px;color:rgba(255,255,255,0.6);text-align:center}
+.sbo-dots{display:flex;gap:6px}
+.sbo-dot{width:13px;height:13px;border-radius:50%;background:#333;box-shadow:inset 0 0 3px rgba(0,0,0,0.5)}
+.sbo-dot.ab{background:#2dcc6f;box-shadow:0 0 8px #2dcc6f}
+.sbo-dot.as{background:#f5a623;box-shadow:0 0 8px #f5a623}
+.sbo-dot.ao{background:#e8340a;box-shadow:0 0 8px #e8340a}
 .pitch-badge{display:inline-block;padding:5px 18px;border-radius:20px;font-size:13px;font-weight:700;letter-spacing:2px;animation:badgeIn .25s ease}
 @keyframes badgeIn{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
 .badge-ball{background:rgba(59,130,246,.2);border:1px solid var(--accent4);color:var(--accent4)}
@@ -600,30 +608,20 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
         <text x="128" y="260" fill="#2a4a20" font-size="7" font-family="monospace">HOME</text>
       </svg>
       <div class="last-pitch" id="last-pitch-area"></div>
-    </div>
-    <div class="count-section">
-      <div class="count-box"><div class="label">볼</div>
-        <div class="dots"><div class="dot" id="b0"></div><div class="dot" id="b1"></div><div class="dot" id="b2"></div><div class="dot" id="b3"></div></div>
+      <div class="compact-sbo">
+        <div class="sbo-row">
+          <div class="sbo-label">S</div>
+          <div class="sbo-dots"><div class="sbo-dot" id="s0"></div><div class="sbo-dot" id="s1"></div></div>
+        </div>
+        <div class="sbo-row">
+          <div class="sbo-label">B</div>
+          <div class="sbo-dots"><div class="sbo-dot" id="b0"></div><div class="sbo-dot" id="b1"></div><div class="sbo-dot" id="b2"></div></div>
+        </div>
+        <div class="sbo-row">
+          <div class="sbo-label">O</div>
+          <div class="sbo-dots"><div class="sbo-dot" id="o0"></div><div class="sbo-dot" id="o1"></div></div>
+        </div>
       </div>
-      <div class="count-box"><div class="label">스트라이크</div>
-        <div class="dots"><div class="dot" id="s0"></div><div class="dot" id="s1"></div><div class="dot" id="s2"></div></div>
-      </div>
-      <div class="count-box"><div class="label">아웃</div>
-        <div class="dots"><div class="dot" id="o0"></div><div class="dot" id="o1"></div><div class="dot" id="o2"></div></div>
-      </div>
-    </div>
-    <div class="pitch-counter">
-      <div class="pc-item"><div class="pc-label">이번 타석</div><div class="pc-val hl" id="pc-ab">0</div></div>
-      <div class="pc-item"><div class="pc-label">투수 투구수</div><div class="pc-val" id="pc-p">0</div></div>
-      <div class="pc-item"><div class="pc-label">평균 투구수</div><div class="pc-val" id="pc-avg">-</div></div>
-      <div class="pc-item"><div class="pc-label">총 투구수</div><div class="pc-val" id="pc-tot">0</div></div>
-    </div>
-    <div class="situation-bar">
-      <div class="sit-item"><div class="sit-label">이닝</div><div class="sit-val" id="sit-inning">-</div></div>
-      <div class="sit-item"><div class="sit-label">RISP</div><div class="sit-val risp" id="sit-risp">-</div></div>
-      <div class="sit-item"><div class="sit-label">득점권 타율</div><div class="sit-val" id="sit-risp-avg">-</div></div>
-      <div class="sit-item"><div class="sit-label">도루</div><div class="sit-val" id="sit-steal">-</div></div>
-      <div class="sit-item"><div class="sit-label">번트</div><div class="sit-val" id="sit-bunt">-</div></div>
     </div>
 
   <!-- 타석 패널 -->

@@ -679,7 +679,7 @@ function startPA() {
   const pr = decidePAResult(batter, pitcher, gs.bases, gs.inning, gs.outs);
   gs.currentPA = { batter, pitcher, pr, seq: buildSeq(pr), pidx: 0 };
   gs.balls = 0; gs.strikes = 0;
-  updateBatUI(batter); updatePitUI(pitcher); updateCntUI(0, 0); showPitch('');
+  updateBatUI(batter); updatePitUI(pitcher); updateCntUI(0, 0);
   const pcab = document.getElementById('pc-ab');
   if (pcab) pcab.textContent = '0';
   updateFml(batter, pitcher, pr);
@@ -712,6 +712,7 @@ function processOnePitch() {
     if (pcavg) pcavg.textContent = (gs.gamePitches / gs.totalAB).toFixed(1);
     handlePA(pa);
     gs.currentPA = null;
+    gs.balls = 0; gs.strikes = 0; // 즉각적으로 볼/스트라이크 초기화
     if (gs.outs >= 3) endHalf(); else updateGameUI();
   } else {
     if      (pitch === 'B') { gs.balls++;   showPitch('볼',        'ball');   }
@@ -777,6 +778,7 @@ function addRuns(n) {
   }
   document.getElementById('min-h-score').textContent = gs.homeScore;
   document.getElementById('min-a-score').textContent = gs.awayScore;
+  updateSbUI();
 }
 
 function endHalf() {
@@ -809,7 +811,7 @@ function endHalf() {
     }
     checkChange();
   }
-  updateGameUI(); updateSbUI(); showPitch('');
+  updateGameUI(); updateSbUI();
 }
 
 function checkChange() {
@@ -1034,8 +1036,10 @@ function updateCntUI(b, s) {
   });
 }
 
+let pitchTimeout = null;
 function showPitch(text, type) {
   const area = document.getElementById('last-pitch-area');
+  if (pitchTimeout) { clearTimeout(pitchTimeout); pitchTimeout = null; }
   if (!text) { area.innerHTML = ''; return; }
   const cls = {
     ball:'badge-ball', strike:'badge-strike', foul:'badge-foul',
@@ -1044,6 +1048,7 @@ function showPitch(text, type) {
     bunt:'badge-bunt', ext:'badge-ext',
   }[type] || '';
   area.innerHTML = `<span class="pitch-badge ${cls}">${text}</span>`;
+  pitchTimeout = setTimeout(() => { area.innerHTML = ''; }, 1500);
 }
 
 function addLog(msg, type) {
@@ -1067,11 +1072,11 @@ function updateBasesUI(bases) {
     const r    = document.getElementById(`runner-${b}`);
     const base = document.getElementById(`base-${b}`);
     if (bases[i]) {
-      r.setAttribute('fill', '#ffffff'); r.setAttribute('stroke', '#fff'); r.setAttribute('stroke-width', '1');
-      if (base) base.setAttribute('fill', '#2a4a20');
+      if (r) { r.setAttribute('fill', '#ffffff'); r.removeAttribute('stroke'); }
+      if (base) base.setAttribute('fill', '#f5a623');
     } else {
-      r.setAttribute('fill', 'transparent'); r.removeAttribute('stroke');
-      if (base) base.setAttribute('fill', '#1a2a10');
+      if (r) { r.setAttribute('fill', 'transparent'); r.removeAttribute('stroke'); }
+      if (base) base.setAttribute('fill', '#4a5468');
     }
   });
 }

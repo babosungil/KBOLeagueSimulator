@@ -42,28 +42,32 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 #atbat-panel{width:100%;max-width:380px;display:flex;flex-direction:column;border:1px solid var(--border);border-radius:6px;background:var(--panel);overflow:hidden}
 #lineup-panel{width:100%;max-width:380px;display:flex;flex-direction:column;border:1px solid var(--border);border-radius:6px;background:var(--panel);overflow:hidden}
 
-.diamond-svg{width:100%;height:100%}
-.diamond-wrap{position:relative;width:100%;max-width:100%;margin:0 auto;background:#0d1a0e;border-radius:0 0 8px 8px;border:1px solid var(--border);border-top:none;overflow:hidden}
-.last-pitch{position:absolute;top:53%;left:50%;transform:translate(-50%,-50%);z-index:10;width:100%;text-align:center;pointer-events:none;height:auto;display:flex;align-items:center;justify-content:center}
-.compact-sbo{position:absolute;bottom:12px;right:12px;display:flex;flex-direction:column;gap:7px;background:rgba(0,0,0,0.7);padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);pointer-events:none}
-.sbo-row{display:flex;gap:7px;align-items:center}
-.sbo-label{font-family:'Bebas Neue';font-size:15px;width:12px;color:rgba(255,255,255,0.6);text-align:center}
-.sbo-dots{display:flex;gap:6px}
-.sbo-dot{width:13px;height:13px;border-radius:50%;background:#333;box-shadow:inset 0 0 3px rgba(0,0,0,0.5)}
-.sbo-dot.ab{background:#2dcc6f;box-shadow:0 0 8px #2dcc6f}
-.sbo-dot.as{background:#f5a623;box-shadow:0 0 8px #f5a623}
-.sbo-dot.ao{background:#e8340a;box-shadow:0 0 8px #e8340a}
-.pitch-badge{display:inline-block;padding:5px 18px;border-radius:20px;font-size:13px;font-weight:700;letter-spacing:2px;animation:badgeIn .25s ease}
-@keyframes badgeIn{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
-.badge-ball{background:rgba(59,130,246,.2);border:1px solid var(--accent4);color:var(--accent4)}
-.badge-strike{background:rgba(245,166,35,.2);border:1px solid var(--accent);color:var(--accent)}
-.badge-foul{background:rgba(168,85,247,.2);border:1px solid #a855f7;color:#a855f7}
-.badge-hit{background:rgba(45,204,111,.2);border:1px solid var(--accent3);color:var(--accent3)}
-.badge-out{background:rgba(232,52,10,.2);border:1px solid var(--accent2);color:var(--accent2)}
-.badge-hr{background:rgba(245,166,35,.4);border:2px solid var(--accent);color:var(--accent);font-size:15px}
-.badge-walk{background:rgba(59,130,246,.3);border:1px solid var(--accent4);color:var(--accent4)}
-.badge-k{background:rgba(232,52,10,.3);border:1px solid var(--accent2);color:var(--accent2)}
-.badge-steal{background:rgba(168,85,247,.3);border:1px solid #a855f7;color:#a855f7}
+.diamond-svg{width:100%;height:100%;display:block;}
+.diamond-wrap{position:relative;width:100%;max-width:340px;margin:10px auto;background:transparent;border:none;overflow:visible;padding:10px;}
+
+/* 가운데 정렬된 SBO */
+.center-sbo-display {position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);display:flex;flex-direction:column;gap:8px;z-index:5;}
+.sbo-row{display:flex;align-items:center;gap:10px;}
+.sbo-lbl{font-family:'Bebas Neue';font-size:24px;color:#fff;width:15px;text-align:center;text-shadow:0 2px 4px rgba(0,0,0,0.8);}
+.sbo-dots{display:flex;gap:8px;}
+.sbo-dot{width:18px;height:18px;border-radius:50%;background:#222;border:2px solid #444;box-shadow:inset 0 2px 4px rgba(0,0,0,0.5);}
+.sbo-dot.ab{background:#2dcc6f;border-color:#2dcc6f;box-shadow:0 0 12px #2dcc6f;}
+.sbo-dot.as{background:#f5a623;border-color:#f5a623;box-shadow:0 0 12px #f5a623;}
+.sbo-dot.ao{background:#e8340a;border-color:#e8340a;box-shadow:0 0 12px #e8340a;}
+
+/* 거대한 투구 결과 뱃지 */
+.last-pitch{position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);z-index:20;width:100%;display:flex;justify-content:center;pointer-events:none;}
+.pitch-badge{padding:20px 40px;border-radius:16px;font-size:36px;font-family:'Black Han Sans',sans-serif;color:#fff;background:rgba(15,20,25,0.95);box-shadow:0 15px 40px rgba(0,0,0,0.8);border:3px solid;animation:badgeIn 0.3s cubic-bezier(0.175,0.885,0.32,1.275) forwards;text-align:center;white-space:nowrap;}
+@keyframes badgeIn{from{transform:scale(0.5);opacity:0}to{transform:scale(1);opacity:1}}
+.badge-ball{border-color:var(--accent3);text-shadow:0 0 10px var(--accent3);color:var(--accent3);}
+.badge-strike{border-color:var(--accent);text-shadow:0 0 10px var(--accent);color:var(--accent);}
+.badge-foul{border-color:var(--accent2);text-shadow:0 0 10px var(--accent2);color:var(--accent2);}
+.badge-hit{border-color:var(--accent4);text-shadow:0 0 10px var(--accent4);color:var(--accent4);}
+.badge-out{border-color:var(--accent2);text-shadow:0 0 10px var(--accent2);color:var(--accent2);}
+.badge-hr{border-color:var(--accent4);text-shadow:0 0 20px var(--accent4);font-size:46px;color:var(--accent4);}
+.badge-walk{border-color:var(--accent3);text-shadow:0 0 10px var(--accent3);color:var(--accent3);}
+.badge-k{border-color:var(--accent2);text-shadow:0 0 15px var(--accent2);font-size:46px;color:var(--accent2);}
+.badge-steal{border-color:var(--accent4);text-shadow:0 0 10px var(--accent4);color:var(--accent4);}
 .badge-bunt{background:rgba(100,200,100,.2);border:1px solid #64c864;color:#64c864}
 .badge-ext{background:rgba(245,166,35,.5);border:2px solid var(--accent);color:var(--accent);font-size:14px;animation:badgeIn .3s ease}
 .count-section{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:300px;margin:0 auto;width:100%}
@@ -587,41 +591,26 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 
   <!-- 필드 패널 -->
   <div id="field-panel">
-    <div class="diamond-wrap">
-      <svg class="diamond-svg" viewBox="0 0 280 280" xmlns="http://www.w3.org/2000/svg">
-        <rect x="10" y="10" width="260" height="260" rx="4" fill="#0d1a0e" opacity="0.5"/>
-        <polygon points="140,50 230,140 140,230 50,140" fill="#1a1208" opacity="0.5"/>
-        <line x1="140" y1="240" x2="20"  y2="120" stroke="#2a3018" stroke-width="1"/>
-        <line x1="140" y1="240" x2="260" y2="120" stroke="#2a3018" stroke-width="1"/>
-        <circle cx="140" cy="148" r="7"   fill="#1e1a10" stroke="#2a2510" stroke-width="1"/>
-        <circle cx="140" cy="148" r="2.5" fill="#333020"/>
-        <polygon points="140,228 128,240 132,252 148,252 152,240" fill="#e8e0d0" opacity="0.9"/>
-        <rect id="base-1" x="217" y="129" width="18" height="18" rx="2" fill="#1a2a10" stroke="#2a3a20" stroke-width="1.5"/>
-        <g transform="rotate(45 140 50)"><rect id="base-2" x="131" y="41" width="18" height="18" rx="2" fill="#1a2a10" stroke="#2a3a20" stroke-width="1.5"/></g>
-        <rect id="base-3" x="45" y="129" width="18" height="18" rx="2" fill="#1a2a10" stroke="#2a3a20" stroke-width="1.5"/>
-        <circle id="runner-1" cx="226" cy="138" r="7" fill="transparent"/>
-        <circle id="runner-2" cx="140" cy="50"  r="7" fill="transparent"/>
-        <circle id="runner-3" cx="54"  cy="138" r="7" fill="transparent"/>
-        <text x="238" y="143" fill="#2a4a20" font-size="7" font-family="monospace">1B</text>
-        <text x="128" y="45"  fill="#2a4a20" font-size="7" font-family="monospace">2B</text>
-        <text x="20"  y="143" fill="#2a4a20" font-size="7" font-family="monospace">3B</text>
-        <text x="128" y="260" fill="#2a4a20" font-size="7" font-family="monospace">HOME</text>
+    <div class="diamond-wrap" id="diamond-wrap">
+      <svg class="diamond-svg" viewBox="0 30 200 140" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="100,47 180,100 100,153 20,100" fill="#2a2e35" stroke="#4a5468" stroke-width="3"/>
+        <polygon id="base-1" points="180,100 190,93 200,100 190,107" fill="#4a5468"/>
+        <polygon id="base-2" points="100,47 110,40 100,33 90,40" fill="#4a5468"/>
+        <polygon id="base-3" points="20,100 10,93 0,100 10,107" fill="#4a5468"/>
+        <polygon id="base-0" points="90,153 110,153 110,160 100,167 90,160" fill="#e8eaf0"/>
+        
+        <polygon id="runner-1" points="180,100 190,93 200,100 190,107" fill="transparent"/>
+        <polygon id="runner-2" points="100,47 110,40 100,33 90,40" fill="transparent"/>
+        <polygon id="runner-3" points="20,100 10,93 0,100 10,107" fill="transparent"/>
       </svg>
-      <div class="last-pitch" id="last-pitch-area"></div>
-      <div class="compact-sbo">
-        <div class="sbo-row">
-          <div class="sbo-label">S</div>
-          <div class="sbo-dots"><div class="sbo-dot" id="s0"></div><div class="sbo-dot" id="s1"></div></div>
-        </div>
-        <div class="sbo-row">
-          <div class="sbo-label">B</div>
-          <div class="sbo-dots"><div class="sbo-dot" id="b0"></div><div class="sbo-dot" id="b1"></div><div class="sbo-dot" id="b2"></div></div>
-        </div>
-        <div class="sbo-row">
-          <div class="sbo-label">O</div>
-          <div class="sbo-dots"><div class="sbo-dot" id="o0"></div><div class="sbo-dot" id="o1"></div></div>
-        </div>
+      
+      <div class="center-sbo-display">
+        <div class="sbo-row"><span class="sbo-lbl">B</span><div class="sbo-dots"><div class="sbo-dot" id="b0"></div><div class="sbo-dot" id="b1"></div><div class="sbo-dot" id="b2"></div></div></div>
+        <div class="sbo-row"><span class="sbo-lbl">S</span><div class="sbo-dots"><div class="sbo-dot" id="s0"></div><div class="sbo-dot" id="s1"></div></div></div>
+        <div class="sbo-row"><span class="sbo-lbl">O</span><div class="sbo-dots"><div class="sbo-dot" id="o0"></div><div class="sbo-dot" id="o1"></div></div></div>
       </div>
+      
+      <div class="last-pitch" id="last-pitch-area"></div>
     </div>
 
   <!-- 타석 패널 -->

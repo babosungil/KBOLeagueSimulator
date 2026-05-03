@@ -36,6 +36,64 @@ let gs        = null;
 let isPlaying = false;
 let playTimer = null;
 let speedIdx  = 2;
+let isAnimating = false;
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+async function doHREffect() {
+  const mw = document.getElementById('diamond-wrap');
+  if(mw) mw.classList.add('hr-celebration-active');
+  await sleep(1500);
+  if(mw) mw.classList.remove('hr-celebration-active');
+}
+
+async function doScoreEffect(runsScored) {
+  const overlay = document.getElementById('score-overlay');
+  if (!overlay) return;
+  const oldAway = gs.awayScore;
+  const oldHome = gs.homeScore;
+  const newAway = gs.isTop ? oldAway + runsScored : oldAway;
+  const newHome = !gs.isTop ? oldHome + runsScored : oldHome;
+
+  document.getElementById('se-away-name').textContent = gs.awayTeam;
+  document.getElementById('se-home-name').textContent = gs.homeTeam;
+  document.getElementById('se-away-old').textContent = oldAway;
+  document.getElementById('se-away-new').textContent = newAway;
+  document.getElementById('se-home-old').textContent = oldHome;
+  document.getElementById('se-home-new').textContent = newHome;
+
+  const awayInner = document.getElementById('se-away-inner');
+  const homeInner = document.getElementById('se-home-inner');
+
+  awayInner.classList.remove('score-animate-up');
+  homeInner.classList.remove('score-animate-up');
+  
+  overlay.classList.add('show');
+  await sleep(100);
+
+  if (gs.isTop && runsScored > 0) awayInner.classList.add('score-animate-up');
+  if (!gs.isTop && runsScored > 0) homeInner.classList.add('score-animate-up');
+  
+  await sleep(1500);
+  overlay.classList.remove('show');
+}
+
+async function doGameOverEffect() {
+  const overlay = document.getElementById('game-over-overlay');
+  if (!overlay) return;
+  document.getElementById('go-overlay-score').textContent = `${gs.awayTeam} ${gs.awayScore} : ${gs.homeScore} ${gs.homeTeam}`;
+  overlay.classList.add('show');
+  await sleep(2500);
+  overlay.classList.remove('show');
+}
+
+function blinkBase(bIdx) {
+  const b = document.getElementById(`base-${bIdx}`);
+  if (!b) return;
+  b.classList.remove('blink-anim');
+  void b.offsetWidth;
+  b.classList.add('blink-anim');
+}
 
 // ═══════════════════════════════════════════════════════
 //  데이터 로더 (CSV 기반)
@@ -686,10 +744,10 @@ function startPA() {
   updateSituationBar();
 }
 
-function processOnePitch() {
-  if (!gs || gs.gameOver) return;
+async function processOnePitch() {
+  if (!gs || gs.gameOver || isAnimating) return;
   // ── 강제 종료 체크 (안전 장치) ──
-  if (gs.inning >= 9 && !gs.isTop && gs.homeScore > gs.awayScore) { endGame(); return; }
+  if (gs.inning >= 9 && !gs.isTop && gs.homeScore > gs.awayScore) { await endGame(); return; }
 
   if (!gs.currentPA) { startPA(); return; }
   const pa = gs.currentPA;
@@ -710,10 +768,10 @@ function processOnePitch() {
     gs.totalAB++;
     const pcavg = document.getElementById('pc-avg');
     if (pcavg) pcavg.textContent = (gs.gamePitches / gs.totalAB).toFixed(1);
-    handlePA(pa);
+    await handlePA(pa);
     gs.currentPA = null;
     gs.balls = 0; gs.strikes = 0; // 즉각적으로 볼/스트라이크 초기화
-    if (gs.outs >= 3) endHalf(); else updateGameUI();
+    if (gs.outs >= 3) await endHalf(); else updateGameUI();
   } else {
     if      (pitch === 'B') { gs.balls++;   showPitch('볼',        'ball');   }
     else if (pitch === 'S') { gs.strikes++; showPitch('스트라이크', 'strike'); }
@@ -724,7 +782,8 @@ function processOnePitch() {
   updateLnpUI();
 }
 
-function handlePA(pa) {
+async function handlePA(pa) {
+  isAnimating = true;
   const r = pa.pr, b = pa.batter, n = pa.pidx;
   if (r === 'k') {
     gs.outs = Math.min(gs.outs + 1, 3);
@@ -734,21 +793,33 @@ function handlePA(pa) {
   } else if (r === 'bb') {
     b.todayStats.BB++;
     showPitch('볼넷', 'walk');
+    blinkBase(1);
     const res = advRunners(gs.bases, 'bb'); gs.bases = res.bases;
-    if (res.scored) { b.todayStats.RBI += res.scored; addRuns(res.scored); }
+    if (res.scored) {
+      await doScoreEffect(res.scored);
+      b.todayStats.RBI += res.scored; addRuns(res.scored);
+    }
     addLog(`🔵 ${b.name} 볼넷${res.scored ? ` (${res.scored}점)` : ''}`, res.scored ? 'score' : '');
   } else if (r === 'hr') {
     b.todayStats.H++; b.todayStats.HR++;
     showPitch('홈런!', 'hr');
+    await doHREffect();
     const res = advRunners(gs.bases, 'hr'); gs.bases = res.bases;
+    if (res.scored) await doScoreEffect(res.scored);
     b.todayStats.RBI += res.scored; addRuns(res.scored);
     addLog(`🏠 ${b.name} ${res.scored}런 홈런!! (${n}구)`, 'hr');
   } else if (r === '1b' || r === '2b' || r === '3b') {
     b.todayStats.H++;
     const lbl = { '1b': '단타', '2b': '2루타', '3b': '3루타' }[r];
     showPitch(lbl, 'hit');
+    if (r === '1b') blinkBase(1);
+    else if (r === '2b') blinkBase(2);
+    else if (r === '3b') blinkBase(3);
     const res = advRunners(gs.bases, r); gs.bases = res.bases;
-    if (res.scored) { b.todayStats.RBI += res.scored; addRuns(res.scored); }
+    if (res.scored) {
+      await doScoreEffect(res.scored);
+      b.todayStats.RBI += res.scored; addRuns(res.scored);
+    }
     addLog(`✅ ${b.name} ${lbl}${res.scored ? ` (${res.scored}점)` : ''}`, res.scored ? 'score' : 'hit');
   } else if (r === 'dp') {
     gs.outs = Math.min(gs.outs + 2, 3);
@@ -762,6 +833,7 @@ function handlePA(pa) {
   }
   gs.isTop ? gs.awayOrder++ : gs.homeOrder++;
   updateTodayStats(b);
+  isAnimating = false;
 }
 
 function addRuns(n) {
@@ -781,14 +853,14 @@ function addRuns(n) {
   updateSbUI();
 }
 
-function endHalf() {
+async function endHalf() {
   gs.outs = 0; gs.bases = [null, null, null];
   gs.balls = 0; gs.strikes = 0; gs.currentPA = null;
 
   if (gs.isTop) {
     gs.isTop = false;
     gs.innings.home[gs.inning - 1] = 0; // 후공 시작 시 무조건 0으로 초기화
-    if (gs.inning >= 9 && gs.homeScore > gs.awayScore) { endGame(); return; }
+    if (gs.inning >= 9 && gs.homeScore > gs.awayScore) { await endGame(); return; }
     addLog(`── ${gs.inning}회 말 시작 ──`, '');
   } else {
     gs.isTop = true;
@@ -796,14 +868,14 @@ function endHalf() {
     if (gs.inning > 9) {
       if (gs.homeScore === gs.awayScore) {
         const _maxInn = (typeof SS !== 'undefined' && SS.phase === 'postseason') ? 999 : 11;
-        if (gs.inning > _maxInn) { endGame(); return; }
+        if (gs.inning > _maxInn) { await endGame(); return; }
         gs.isExtra = true;
         showExtraBanner(gs.inning);
         gs.innings.away[gs.inning - 1] = 0;
         addLog(`── ⚡ ${gs.inning}회 연장전 시작! ──`, 'ext');
       } else {
         // 이닝 종료 후 점수가 다르면 게임 종료
-        endGame(); return;
+        await endGame(); return;
       }
     } else {
       gs.innings.away[gs.inning - 1] = 0;
@@ -847,8 +919,9 @@ function showExtraBanner(inning) {
   setTimeout(() => ov.style.display = 'none', 1800);
 }
 
-function endGame() {
+async function endGame() {
   gs.gameOver = true; stopPlay();
+  await doGameOverEffect();
   const w = gs.homeScore > gs.awayScore ? gs.homeTeam
           : gs.awayScore > gs.homeScore ? gs.awayTeam : '무승부';
   document.getElementById('go-score').textContent  = `${gs.awayTeam} ${gs.awayScore} : ${gs.homeScore} ${gs.homeTeam}`;
@@ -1275,18 +1348,20 @@ function setupGameControls() {
     isLongPress = false;
   });
 }
-function schedNext() {
+async function schedNext() {
   if (!isPlaying || (gs && gs.gameOver)) return;
-  processOnePitch();
-  playTimer = setTimeout(schedNext, SPEED_DELAYS[speedIdx]);
+  await processOnePitch();
+  if (isPlaying && (!gs || !gs.gameOver)) {
+    playTimer = setTimeout(schedNext, SPEED_DELAYS[speedIdx]);
+  }
 }
 function stopPlay() {
   togglePlay(false);
 }
-function stepOnce() {
+async function stepOnce() {
+  if (isAnimating) return;
   if (isPlaying) stopPlay();
-  processOnePitch();
-  // 1구 실행 직후 저장
+  await processOnePitch();
   if (typeof saveGameState === 'function') saveGameState();
 }
 function showSetup()   { stopPlay(); document.getElementById('setup-screen').style.display = 'flex'; }

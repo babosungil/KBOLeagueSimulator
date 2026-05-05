@@ -172,6 +172,12 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 .btn-start{background:var(--accent);color:#000;border:none;padding:13px 44px;border-radius:8px;font-family:'Black Han Sans';font-size:15px;letter-spacing:2px;cursor:pointer;transition:all .2s;box-shadow:0 4px 20px rgba(245,166,35,.3)}
 .btn-start:hover{background:#ffc142;transform:translateY(-1px)}
 .btn-start:disabled{background:var(--border2);color:var(--text3);cursor:not-allowed;transform:none;box-shadow:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 24px;border-radius:8px;font-family:'Black Han Sans';font-size:14px;letter-spacing:1px;cursor:pointer;transition:all .2s;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);text-decoration:none;user-select:none}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:var(--accent);color:#000;border:none;box-shadow:0 4px 15px rgba(245,166,35,.2)}
+.btn.primary:hover{background:#ffc142;transform:translateY(-1px)}
+.btn.danger{background:rgba(232,52,10,.15);color:var(--accent2);border-color:var(--accent2)}
+.btn.danger:hover{background:var(--accent2);color:#fff}
 .setup-notice{color:var(--text3);font-size:11px;margin-top:10px}
 .mode-tabs{display:flex;gap:8px;margin-bottom:20px}
 .mode-tab{padding:8px 20px;border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-family:'Noto Sans KR';font-size:13px;background:var(--bg3);color:var(--text2);transition:all .2s}
@@ -576,7 +582,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
   <div class="go-score"  id="go-score"></div>
   <div id="go-ext-label"></div>
   <div class="go-winner" id="go-winner"></div>
-  <div class="sb-full">
+  <div class="sb-full" style="display:none">
     <div class="bs-title">이닝별 스코어</div>
     <table class="sb-full-table" id="final-scoreboard"></table>
   </div>
@@ -587,7 +593,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
   </div>
   <div style="display:flex;gap:10px;margin-top:4px;margin-bottom:20px">
     <button class="btn primary" id="go-restart-btn" onclick="restartGame()">다시 시작</button>
-    <button class="btn primary" id="go-season-btn" style="display:none" onclick="returnToSeason()">시즌으로 돌아가기</button>
+    <button class="btn primary" id="go-season-btn" style="display:none; padding:20px 60px; font-size:24px; width:100%;" onclick="returnToSeason()">시즌으로 돌아가기</button>
   </div>
 </div>
 

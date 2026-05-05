@@ -690,7 +690,7 @@ window.closePitcherModal = function() {
   document.getElementById('pitcher-modal').style.display = 'none';
 };
 
-window.confirmPitcher = function() {
+window.confirmPitcher = async function confirmPitcher() {
   closePitcherModal();
   if (tempGameSetup.wizardMode) openLineupModal(true);
 };
@@ -795,17 +795,17 @@ function showTurnResultsModalForAutoSkipped(turn) {
   // 별도의 [휴식] 버튼 클릭 시 모달
   const turnGames = SS.schedule.filter(g => g.turn === turn);
   let trs = turnGames.map(g => {
-    const h = SS.nameKor[g.home] || g.home;
-    const a = SS.nameKor[g.away] || g.away;
-    const res = g.result || {homeScore:0, awayScore:0};
-    return `<tr><td style="text-align:right">${a}</td><td style="font-weight:700;text-align:center">${res.awayScore} : ${res.homeScore}</td><td style="text-align:left">${h}</td></tr>`;
+    const myTeamKor = SS.myTeamKor;
+    const aStyled = (a === myTeamKor) ? `<span style="color:var(--accent)">${a}</span>` : a;
+    const hStyled = (h === myTeamKor) ? `<span style="color:var(--accent)">${h}</span>` : h;
+    return `<tr><td style="text-align:right">${aStyled}</td><td style="font-weight:700;text-align:center">${res.awayScore} : ${res.homeScore}</td><td style="text-align:left">${hStyled}</td></tr>`;
   }).join('');
   let html = `<div style="text-align:center;">
-    <div style="font-size:18px;margin-bottom:12px;font-family:'Black Han Sans'">종료된 경기 결과 (${turn}턴)</div>
+    <div style="font-size:18px;margin-bottom:12px;font-family:'Black Han Sans'">종료된 경기 결과</div>
     <table class="standings-table" style="font-size:13px;width:100%;margin-bottom:20px;">
       ${trs}
     </table>
-    <button class="btn primary" onclick="closeTurnModal()">확인</button>
+    <button class="btn primary" style="width:100%; padding:14px; font-size:16px;" onclick="closeTurnModal()">확인</button>
   </div>`;
   const m = document.getElementById('turn-modal');
   m.querySelector('.turn-modal-inner').innerHTML = html;
@@ -895,9 +895,7 @@ async function showTurnResults(myGameIdx) {
   const myGame = SS.schedule[myGameIdx];
   const myTurn = myGame.turn;
 
-  const turnGames = SS.schedule.filter(g =>
-    g.turn === myTurn && g !== myGame
-  );
+  const turnGames = SS.schedule.filter(g => g.turn === myTurn);
 
   const results = [];
   for (const game of turnGames) {
@@ -929,25 +927,25 @@ async function showTurnResults(myGameIdx) {
 
   let otherRows = '';
   results.forEach(g => {
-    const hKor = SS.nameKor[g.home];
-    const aKor = SS.nameKor[g.away];
-    const { homeScore, awayScore } = g.result;
+    const myTeamKor = SS.myTeamKor;
+    const aStyled = (aKor === myTeamKor) ? `<span style="color:var(--accent)">${aKor}</span>` : aKor;
+    const hStyled = (hKor === myTeamKor) ? `<span style="color:var(--accent)">${hKor}</span>` : hKor;
+
     otherRows += `
       <tr>
-        <td style="text-align:right">${aKor}</td>
+        <td style="text-align:right">${aStyled}</td>
         <td style="font-weight:700;text-align:center">${awayScore} : ${homeScore}</td>
-        <td style="text-align:left">${hKor}</td>
+        <td style="text-align:left">${hStyled}</td>
       </tr>`;
   });
 
   const modal = document.getElementById('turn-modal');
   let html = `<div style="text-align:center;">
-    <div style="font-size:18px;margin-bottom:12px;font-family:'Black Han Sans'">종료된 경기 결과 (${myTurn}턴)</div>
-    <div style="margin-bottom:8px;font-weight:700;color:var(--accent);font-size:14px;">내 팀: <span style="color:#fff">${myAKor} ${myResult.awayScore} : ${myResult.homeScore} ${myHKor}</span></div>
+    <div style="font-size:18px;margin-bottom:12px;font-family:'Black Han Sans'">종료된 경기 결과</div>
     <table class="standings-table" style="font-size:13px;width:100%;margin-bottom:20px;">
       ${otherRows}
     </table>
-    <button class="btn primary" onclick="closeTurnModal()">확인</button>
+    <button class="btn primary" style="width:100%; padding:14px; font-size:16px;" onclick="closeTurnModal()">확인</button>
   </div>`;
   modal.querySelector('.turn-modal-inner').innerHTML = html;
 
@@ -1634,8 +1632,19 @@ function onSeasonGameEnd(homeScore, awayScore) {
   recordPitcherFatigue(homePitched, home);
   recordPitcherFatigue(awayPitched, away);
 
-  SS.gameIdx = gameIdx + 1;
-  clearGameState();   // 경기 종료 → 게임 저장 삭제
+  // 턴 내의 모든 경기 완료 처리 및 인덱스 이동
+  const currentTurn = game.turn;
+  for (let i = gameIdx; i < SS.schedule.length; i++) {
+    if (SS.schedule[i].turn === currentTurn) {
+      SS.gameIdx = i + 1;
+    } else {
+      break;
+    }
+  }
+
+  clearGameState();   // 경기 종료 → 게임 저장 확실히 삭제
+  saveSeasonState();  // 시즌 데이터 즉시 저장
+  
   // 턴 결과 모달 표시 (같은 턴 타 팀 경기 자동 시뮬 포함)
   showTurnResults(gameIdx);
 }

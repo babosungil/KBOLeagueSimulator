@@ -452,6 +452,7 @@ function buildPitcher(r) {
     ...r,
     K9: (r.SO / ip) * 9, BB9: (r.BB / ip) * 9,
     avgIP, pitchCount: 0, isStarter: avgIP >= 4.5, role, usedToday: false,
+    todayStats: { IP_out: 0, H: 0, R: 0, ER: 0, BB: 0, K: 0 },
   };
 }
 
@@ -830,14 +831,19 @@ async function processOnePitch() {
 
 async function handlePA(pa) {
   isAnimating = true;
-  const r = pa.pr, b = pa.batter, n = pa.pidx;
+  const r = pa.pr, b = pa.batter, p = pa.pitcher, n = pa.pidx;
+  if (!p.todayStats) p.todayStats = { IP_out: 0, H: 0, R: 0, ER: 0, BB: 0, K: 0 };
+
   if (r === 'k') {
     gs.outs = Math.min(gs.outs + 1, 3);
     b.todayStats.K++;
+    p.todayStats.K++;
+    p.todayStats.IP_out++;
     showPitch('삼진', 'k');
     addLog(`🔴 ${b.name} 삼진 (${n}구)`, 'out');
   } else if (r === 'bb') {
     b.todayStats.BB++;
+    p.todayStats.BB++;
     showPitch('볼넷', 'walk');
     const prevBases_bb = [...gs.bases];
     const res = advRunners(gs.bases, 'bb'); gs.bases = res.bases;
@@ -845,20 +851,28 @@ async function handlePA(pa) {
     popBases(gs.bases, prevBases_bb);
     if (res.scored) {
       await doScoreEffect(res.scored);
-      b.todayStats.RBI += res.scored; addRuns(res.scored);
+      b.todayStats.RBI += res.scored; 
+      p.todayStats.R += res.scored;
+      addRuns(res.scored);
     }
     addLog(`🔵 ${b.name} 볼넷${res.scored ? ` (${res.scored}점)` : ''}`, res.scored ? 'score' : '');
   } else if (r === 'hr') {
     b.todayStats.H++; b.todayStats.HR++;
+    p.todayStats.H++;
     showPitch('홈런!', 'hr');
     await doHREffect();
     const res = advRunners(gs.bases, 'hr'); gs.bases = res.bases;
     updateBasesUI(gs.bases);
-    if (res.scored) await doScoreEffect(res.scored);
-    b.todayStats.RBI += res.scored; addRuns(res.scored);
+    if (res.scored) {
+      await doScoreEffect(res.scored);
+      b.todayStats.RBI += res.scored; 
+      p.todayStats.R += res.scored;
+      addRuns(res.scored);
+    }
     addLog(`🏠 ${b.name} ${res.scored}런 홈런!! (${n}구)`, 'hr');
   } else if (r === '1b' || r === '2b' || r === '3b') {
     b.todayStats.H++;
+    p.todayStats.H++;
     const lbl = { '1b': '단타', '2b': '2루타', '3b': '3루타' }[r];
     showPitch(lbl, 'hit');
     const prevBases_hit = [...gs.bases];
@@ -867,11 +881,15 @@ async function handlePA(pa) {
     popBases(gs.bases, prevBases_hit);
     if (res.scored) {
       await doScoreEffect(res.scored);
-      b.todayStats.RBI += res.scored; addRuns(res.scored);
+      b.todayStats.RBI += res.scored; 
+      p.todayStats.R += res.scored;
+      addRuns(res.scored);
     }
     addLog(`✅ ${b.name} ${lbl}${res.scored ? ` (${res.scored}점)` : ''}`, res.scored ? 'score' : 'hit');
   } else if (r === 'dp') {
-    gs.outs = Math.min(gs.outs + 2, 3);
+    const doublePlayOuts = Math.min(2, 3 - gs.outs);
+    gs.outs += doublePlayOuts;
+    p.todayStats.IP_out += doublePlayOuts;
     showPitch('병살', 'out');
     const prevBases_dp = [...gs.bases];
     const res = advRunners(gs.bases, 'dp'); gs.bases = res.bases;
@@ -880,6 +898,7 @@ async function handlePA(pa) {
     addLog(`⛔ ${b.name} 병살 (${n}구)`, 'out');
   } else {
     gs.outs = Math.min(gs.outs + 1, 3);
+    p.todayStats.IP_out++;
     showPitch('범타', 'out');
     addLog(`🔴 ${b.name} 아웃 (${n}구)`, 'out');
   }
@@ -978,14 +997,35 @@ function showExtraBanner(inning) {
 }
 
 async function endGame() {
-  gs.gameOver = true; stopPlay();
+  gs.gameOver = true; 
+  stopPlay();
+  if (typeof clearGameState === 'function') clearGameState(); // 즉시 저장된 게임 삭제 (12이닝 재시작 방지)
+  
   await doGameOverEffect();
   const w = gs.homeScore > gs.awayScore ? gs.homeTeam
           : gs.awayScore > gs.homeScore ? gs.awayTeam : '무승부';
-  document.getElementById('go-score').textContent  = `${gs.awayTeam} ${gs.awayScore} : ${gs.homeScore} ${gs.homeTeam}`;
+  const hKor = gs.homeTeam;
+  const aKor = gs.awayTeam;
+  document.getElementById('go-score').innerHTML = `
+    <div style="display:flex; flex-direction:column; align-items:center; width:100%;">
+      <div style="display:flex; justify-content:space-between; width:100%; max-width:400px; font-family:'Black Han Sans'; font-size:24px; color:var(--text2); margin-bottom:10px;">
+        <span style="flex:1; text-align:center;">${hKor}</span>
+        <span style="flex:1; text-align:center;">${aKor}</span>
+      </div>
+      <div style="display:flex; justify-content:center; align-items:center; gap:30px; font-family:'Bebas Neue'; font-size:80px; letter-spacing:4px;">
+        <span>${gs.homeScore}</span>
+        <span style="font-size:40px; color:var(--text3);">:</span>
+        <span>${gs.awayScore}</span>
+      </div>
+    </div>
+  `;
   document.getElementById('go-winner').textContent = w === '무승부' ? '⚾ 무승부!' : '🏆 ' + w + ' 승!';
   if (gs.isExtra) {
-    const lastInn = gs.isTop ? gs.inning : gs.inning - 1;
+    // 실제 종료된 이닝 계산: 초 공격 시작 전(0아웃, 해당이닝 득점없음)이면 이전 이닝 종료임
+    let lastInn = gs.inning;
+    if (gs.isTop && gs.outs === 0 && (gs.innings.away[gs.inning - 1] === undefined)) {
+      lastInn = gs.inning - 1;
+    }
     document.getElementById('go-ext-label').innerHTML =
       `<span class="go-ext-badge">${lastInn}회 연장전 종료</span>`;
   }
@@ -1056,24 +1096,55 @@ function buildBoxScore() {
 
 function buildMVP() {
   const body = document.getElementById('mvp-body');
+  if (!body) return;
   body.innerHTML = '';
-  const getBest = lineup => lineup.slice().sort((a, b) => {
-    const sc = p => (p.todayStats.H||0)*1 + (p.todayStats.HR||0)*4 + (p.todayStats.RBI||0)*1.5 + (p.todayStats.BB||0)*0.3;
-    return sc(b) - sc(a);
-  })[0];
-  [gs.awayLineup, gs.homeLineup].forEach((lineup, i) => {
-    const best = getBest(lineup), ts = best.todayStats;
-    const div = document.createElement('div'); div.className = 'mvp-card';
-    div.innerHTML = `<div class="mvp-tag">${i === 0 ? gs.awayTeam : gs.homeTeam} MVP</div>
-      <div class="mvp-name">${best.name}</div>
-      <div class="mvp-stats">
-        <span>${ts.PA}</span>타석 <span>${ts.H}</span>안타
-        ${ts.HR  ? `<span>${ts.HR}</span>홈런 ` : ''}
-        <span>${ts.RBI||0}</span>타점
-        ${ts.SB  ? `<span>${ts.SB}</span>도루 ` : ''}
-      </div>`;
-    body.appendChild(div);
+
+  const winner = gs.homeScore > gs.awayScore ? 'home' : (gs.awayScore > gs.homeScore ? 'away' : 'draw');
+  const candidates = [];
+
+  // 타자 후보
+  [...gs.homeLineup, ...gs.awayLineup].forEach(p => {
+    const ts = p.todayStats;
+    const score = (ts.H||0)*1.5 + (ts.HR||0)*4.5 + (ts.RBI||0)*2.0 + (ts.BB||0)*0.8 + (ts.SB||0)*1.2 - (ts.K||0)*0.3;
+    const isWinner = (winner === 'home' && gs.homeLineup.includes(p)) || (winner === 'away' && gs.awayLineup.includes(p));
+    candidates.push({ player: p, score: score + (isWinner ? 5 : 0), type: 'hitter', team: gs.homeLineup.includes(p) ? gs.homeTeam : gs.awayTeam });
   });
+
+  // 투수 후보
+  [...gs.homePitchers, ...gs.awayPitchers].forEach(p => {
+    if (!p.todayStats || p.todayStats.IP_out === 0) return;
+    const ts = p.todayStats;
+    const ip = ts.IP_out / 3;
+    const score = (ip * 3.5) + (ts.K * 1.5) - (ts.R * 3.0) - (ts.H * 0.8) - (ts.BB * 0.8);
+    const isWinner = (winner === 'home' && gs.homePitchers.includes(p)) || (winner === 'away' && gs.awayPitchers.includes(p));
+    candidates.push({ player: p, score: score + (isWinner ? 10 : 0), type: 'pitcher', team: gs.homePitchers.includes(p) ? gs.homeTeam : gs.awayTeam });
+  });
+
+  candidates.sort((a, b) => b.score - a.score);
+  const mvp = candidates[0];
+
+  if (mvp) {
+    const p = mvp.player;
+    const ts = p.todayStats;
+    let statsHtml = '';
+    if (mvp.type === 'hitter') {
+      statsHtml = `<span>${ts.PA}</span>타석 <span>${ts.H}</span>안타 ${ts.HR ? `<span>${ts.HR}</span>홈런 ` : ''}<span>${ts.RBI}</span>타점`;
+    } else {
+      const ip = (ts.IP_out / 3).toFixed(1);
+      statsHtml = `<span>${ip}</span>이닝 <span>${ts.K}</span>탈삼진 <span>${ts.R}</span>실점 <span>${p.pitchCount}</span>구`;
+    }
+
+    body.innerHTML = `
+      <div class="mvp-card overall-mvp">
+        <div class="mvp-tag">${mvp.team}</div>
+        <div class="mvp-name">${p.name}</div>
+        <div class="mvp-stats">${statsHtml}</div>
+        <div style="margin-top:12px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.1); font-size:10px; color:var(--text3); line-height:1.4;">
+          <strong>선정 기준:</strong> 타자는 안타(1.5), 홈런(4.5), 타점(2.0) 등을 가중 합산하며, 투수는 이닝(3.5), 탈삼진(1.5) 가점 및 실점(-3.0) 감점을 적용합니다. 승리 팀 선수에게는 추가 가산점이 부여됩니다.
+        </div>
+      </div>
+    `;
+  }
 }
 
 // ═══════════════════════════════════════════════════════

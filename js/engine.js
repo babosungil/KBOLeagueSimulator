@@ -818,7 +818,12 @@ async function processOnePitch() {
     await handlePA(pa);
     gs.currentPA = null;
     gs.balls = 0; gs.strikes = 0; // 즉각적으로 볼/스트라이크 초기화
-    if (gs.outs >= 3) await endHalf(); else updateGameUI();
+    if (gs.outs >= 3) {
+      await sleep(1000); // 투구 결과 연출을 볼 시간을 줌
+      await endHalf();
+    } else {
+      updateGameUI();
+    }
   } else {
     if      (pitch === 'B') { gs.balls++;   showPitch('볼',        'ball');   }
     else if (pitch === 'S') { gs.strikes++; showPitch('스트라이크', 'strike'); }

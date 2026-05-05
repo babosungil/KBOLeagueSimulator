@@ -927,14 +927,16 @@ async function showTurnResults(myGameIdx) {
 
   let otherRows = '';
   results.forEach(g => {
+    const hName = SS.nameKor[g.home] || g.home;
+    const aName = SS.nameKor[g.away] || g.away;
     const myTeamKor = SS.myTeamKor;
-    const aStyled = (aKor === myTeamKor) ? `<span style="color:var(--accent)">${aKor}</span>` : aKor;
-    const hStyled = (hKor === myTeamKor) ? `<span style="color:var(--accent)">${hKor}</span>` : hKor;
+    const aStyled = (aName === myTeamKor) ? `<span style="color:var(--accent)">${aName}</span>` : aName;
+    const hStyled = (hName === myTeamKor) ? `<span style="color:var(--accent)">${hName}</span>` : hName;
 
     otherRows += `
       <tr>
         <td style="text-align:right">${aStyled}</td>
-        <td style="font-weight:700;text-align:center">${awayScore} : ${homeScore}</td>
+        <td style="font-weight:700;text-align:center">${g.result.awayScore} : ${g.result.homeScore}</td>
         <td style="text-align:left">${hStyled}</td>
       </tr>`;
   });

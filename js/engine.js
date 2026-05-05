@@ -74,7 +74,7 @@ async function doScoreEffect(runsScored) {
   if (gs.isTop && runsScored > 0) awayInner.classList.add('score-animate-up');
   if (!gs.isTop && runsScored > 0) homeInner.classList.add('score-animate-up');
   
-  await sleep(1500);
+  await sleep(2500);
   overlay.classList.remove('show');
 }
 
@@ -87,12 +87,58 @@ async function doGameOverEffect() {
   overlay.classList.remove('show');
 }
 
-function blinkBase(bIdx) {
-  const b = document.getElementById(`base-${bIdx}`);
-  if (!b) return;
-  b.classList.remove('blink-anim');
-  void b.offsetWidth;
-  b.classList.add('blink-anim');
+function popBases(bases, prevBases) {
+  [1, 2, 3].forEach((b, i) => {
+    if (bases[i]) {
+      const r = document.getElementById(`runner-${b}`);
+      if (r) {
+        r.classList.remove('pop-anim');
+        void r.getBoundingClientRect(); // SVG 요소 reflow 강제 (offsetWidth는 SVG에서 동작 안 함)
+        r.classList.add('pop-anim');
+      }
+      // 새로 점유된 베이스: 흰색 플래시 → 주황 전환
+      if (prevBases && !prevBases[i]) {
+        const baseEl = document.getElementById(`base-${b}`);
+        if (baseEl) {
+          baseEl.setAttribute('fill', '#ffffff');
+          setTimeout(() => baseEl.setAttribute('fill', '#f5a623'), 260);
+        }
+      }
+    }
+  });
+}
+
+async function doInningEffect(oldTeam, newTeam) {
+  const overlay = document.getElementById('inning-overlay');
+  if (!overlay) return;
+
+  const oldEl = document.getElementById('io-old-team');
+  const newEl = document.getElementById('io-new-team');
+
+  // 초기화: 구 팀 즉시 표시, 신 팀 숨김
+  oldEl.textContent = oldTeam;
+  newEl.textContent = newTeam;
+  oldEl.className = 'inning-team-text old';
+  newEl.className = 'inning-team-text new';
+  oldEl.style.opacity = '1';
+  newEl.style.opacity = '0';
+
+  // 오버레이 즉시 표시 (구 팀명 동시 노출)
+  overlay.classList.add('show');
+
+  // 구 팀명 유지 구간
+  await sleep(500);
+
+  // 1단계: 이전 팀 → 위로 사라짐 (0.55s)
+  oldEl.classList.add('io-old-anim');
+  await sleep(550);
+
+  // 2단계: 새 팀 → 아래서 올라옴 (0.55s + 유지)
+  newEl.style.opacity = '';
+  newEl.classList.add('io-new-anim');
+  await sleep(900);
+
+  overlay.classList.remove('show');
 }
 
 // ═══════════════════════════════════════════════════════
@@ -793,8 +839,10 @@ async function handlePA(pa) {
   } else if (r === 'bb') {
     b.todayStats.BB++;
     showPitch('볼넷', 'walk');
-    blinkBase(1);
+    const prevBases_bb = [...gs.bases];
     const res = advRunners(gs.bases, 'bb'); gs.bases = res.bases;
+    updateBasesUI(gs.bases);
+    popBases(gs.bases, prevBases_bb);
     if (res.scored) {
       await doScoreEffect(res.scored);
       b.todayStats.RBI += res.scored; addRuns(res.scored);
@@ -805,6 +853,7 @@ async function handlePA(pa) {
     showPitch('홈런!', 'hr');
     await doHREffect();
     const res = advRunners(gs.bases, 'hr'); gs.bases = res.bases;
+    updateBasesUI(gs.bases);
     if (res.scored) await doScoreEffect(res.scored);
     b.todayStats.RBI += res.scored; addRuns(res.scored);
     addLog(`🏠 ${b.name} ${res.scored}런 홈런!! (${n}구)`, 'hr');
@@ -812,10 +861,10 @@ async function handlePA(pa) {
     b.todayStats.H++;
     const lbl = { '1b': '단타', '2b': '2루타', '3b': '3루타' }[r];
     showPitch(lbl, 'hit');
-    if (r === '1b') blinkBase(1);
-    else if (r === '2b') blinkBase(2);
-    else if (r === '3b') blinkBase(3);
+    const prevBases_hit = [...gs.bases];
     const res = advRunners(gs.bases, r); gs.bases = res.bases;
+    updateBasesUI(gs.bases);
+    popBases(gs.bases, prevBases_hit);
     if (res.scored) {
       await doScoreEffect(res.scored);
       b.todayStats.RBI += res.scored; addRuns(res.scored);
@@ -824,7 +873,10 @@ async function handlePA(pa) {
   } else if (r === 'dp') {
     gs.outs = Math.min(gs.outs + 2, 3);
     showPitch('병살', 'out');
+    const prevBases_dp = [...gs.bases];
     const res = advRunners(gs.bases, 'dp'); gs.bases = res.bases;
+    updateBasesUI(gs.bases);
+    popBases(gs.bases, prevBases_dp);
     addLog(`⛔ ${b.name} 병살 (${n}구)`, 'out');
   } else {
     gs.outs = Math.min(gs.outs + 1, 3);
@@ -858,11 +910,17 @@ async function endHalf() {
   gs.balls = 0; gs.strikes = 0; gs.currentPA = null;
 
   if (gs.isTop) {
+    // 초 → 말 공수 교대
+    const prevTeam = gs.awayTeam;
     gs.isTop = false;
-    gs.innings.home[gs.inning - 1] = 0; // 후공 시작 시 무조건 0으로 초기화
+    gs.innings.home[gs.inning - 1] = 0;
     if (gs.inning >= 9 && gs.homeScore > gs.awayScore) { await endGame(); return; }
+    updateGameUI(); updateSbUI();
+    await doInningEffect(prevTeam, gs.homeTeam);
     addLog(`── ${gs.inning}회 말 시작 ──`, '');
   } else {
+    // 말 → 다음 회 초 공수 교대
+    const prevTeam = gs.homeTeam;
     gs.isTop = true;
     gs.inning++;
     if (gs.inning > 9) {
@@ -874,7 +932,6 @@ async function endHalf() {
         gs.innings.away[gs.inning - 1] = 0;
         addLog(`── ⚡ ${gs.inning}회 연장전 시작! ──`, 'ext');
       } else {
-        // 이닝 종료 후 점수가 다르면 게임 종료
         await endGame(); return;
       }
     } else {
@@ -882,8 +939,9 @@ async function endHalf() {
       addLog(`── ${gs.inning}회 초 시작 ──`, '');
     }
     checkChange();
+    updateGameUI(); updateSbUI();
+    await doInningEffect(prevTeam, gs.awayTeam);
   }
-  updateGameUI(); updateSbUI();
 }
 
 function checkChange() {
@@ -1121,7 +1179,7 @@ function showPitch(text, type) {
     bunt:'badge-bunt', ext:'badge-ext',
   }[type] || '';
   area.innerHTML = `<span class="pitch-badge ${cls}">${text}</span>`;
-  pitchTimeout = setTimeout(() => { area.innerHTML = ''; }, 1500);
+  pitchTimeout = setTimeout(() => { area.innerHTML = ''; }, 1000);
 }
 
 function addLog(msg, type) {

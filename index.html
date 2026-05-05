@@ -282,8 +282,27 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 @keyframes scaleUp { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-@keyframes blinkBase { 0%, 100% { fill: #f5a623; } 50% { fill: #ffffff; stroke: #fff; stroke-width: 2px; } }
-.blink-anim { animation: blinkBase 0.25s ease 2; }
+@keyframes popRunner {
+  0%   { transform: scale(0.4); fill: #f5a623; opacity: 0.6; }
+  40%  { transform: scale(2.1); fill: #ffffff;  opacity: 1; }
+  70%  { transform: scale(1.15); fill: #ffffff; }
+  100% { transform: scale(1);   fill: #ffffff; }
+}
+.pop-anim { animation: popRunner 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); transform-origin: center; transform-box: fill-box; }
+
+/* 공수 교대 연출 - 세로형 */
+#inning-overlay { overflow: hidden; transition: opacity 0s; }
+.inning-stage { display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; width: 100%; height: 100%; }
+.inning-label { font-family: 'Black Han Sans'; letter-spacing: 2px; color: var(--text2); font-size: 14px; text-transform: uppercase; margin-bottom: 16px; opacity: 0.7; }
+.inning-team-slot { position: absolute; display: flex; align-items: center; justify-content: center; width: 100%; }
+.inning-team-text { font-family: 'Black Han Sans'; font-size: 84px; letter-spacing: 4px; padding: 14px 32px; border-radius: 16px; }
+.inning-team-text.old { color: var(--text2); background: rgba(255,255,255,0.05); }
+.inning-team-text.new { color: var(--accent); background: rgba(245,166,35,0.12); }
+
+@keyframes ioOldOut { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-80px) scale(0.55); opacity: 0; } }
+@keyframes ioNewIn  { 0% { transform: translateY(80px) scale(0.55); opacity: 0; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
+.io-old-anim { animation: ioOldOut 0.55s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+.io-new-anim { animation: ioNewIn  0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
 
 @keyframes hrCelebration {
   0% { box-shadow: inset 0 0 50px rgba(245, 166, 35, 0.5); border-color: #f5a623; }
@@ -926,6 +945,18 @@ function returnToSeason() {
   <div id="game-over-overlay" class="fullscreen-overlay">
     <div class="go-overlay-text">경기 종료</div>
     <div class="go-overlay-score" id="go-overlay-score"></div>
+  </div>
+
+  <div id="inning-overlay" class="fullscreen-overlay">
+    <div class="inning-stage">
+      <div class="inning-label">공수 교대</div>
+      <div class="inning-team-slot">
+        <div class="inning-team-text old" id="io-old-team">AWAY</div>
+      </div>
+      <div class="inning-team-slot">
+        <div class="inning-team-text new" id="io-new-team" style="opacity:0">HOME</div>
+      </div>
+    </div>
   </div>
 </body>
 </html>

@@ -481,9 +481,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 
   <!-- 하단 탭 내비게이션 바 -->
   <div id="season-bottom-nav">
-    <button class="snav-btn snav-exit-btn" id="snav-btn-1" onclick="switchSeasonTab(1)">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-    </button>
+    <button class="snav-btn snav-disabled" id="snav-btn-5"></button>
     <button class="snav-btn" id="snav-btn-2" onclick="switchSeasonTab(2)">
       <svg width="26" height="26" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect x="4" y="18" width="28" height="4" rx="2" fill="currentColor" opacity=".7"/>
@@ -508,7 +506,9 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
         <rect x="46" y="76" width="8" height="14" rx="4" fill="currentColor" opacity=".6"/>
       </svg>
     </button>
-    <button class="snav-btn snav-disabled" id="snav-btn-5"></button>
+    <button class="snav-btn snav-exit-btn" id="snav-btn-1" onclick="switchSeasonTab(1)">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
   </div>
 </div>
 

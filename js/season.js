@@ -412,7 +412,7 @@ function getSortedStandings() {
   return Object.entries(SS.standings)
     .map(([team, s]) => {
       const games = s.w + s.l + s.d;
-      const pct   = games > 0 ? s.w / (s.w + s.l) : 0;
+      const pct   = (s.w + s.l) > 0 ? s.w / (s.w + s.l) : 0;
       return { team, ...s, games, pct };
     })
     .sort((a, b) => {

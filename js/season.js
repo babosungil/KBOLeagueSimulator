@@ -403,7 +403,7 @@ function buildSchedule(teams, myTeam) {
 // ── 순위표 초기화 ────────────────────────────────────────
 function initStandings(teams) {
   const st = {};
-  teams.forEach(t => { st[t] = { w: 0, l: 0, d: 0, rs: 0, ra: 0 }; });
+  teams.forEach(t => { st[t] = { w: 0, l: 0, d: 0, rs: 0, ra: 0, streak: 0 }; });
   return st;
 }
 
@@ -528,9 +528,19 @@ function applyResult(game) {
   const hs = SS.standings[home], as = SS.standings[away];
   hs.rs += result.homeScore; hs.ra += result.awayScore;
   as.rs += result.awayScore; as.ra += result.homeScore;
-  if (result.homeScore > result.awayScore)      { hs.w++; as.l++; }
-  else if (result.awayScore > result.homeScore) { as.w++; hs.l++; }
-  else                                          { hs.d++; as.d++; }
+  
+  if (result.homeScore > result.awayScore) {
+    hs.w++; as.l++;
+    hs.streak = hs.streak > 0 ? hs.streak + 1 : 1;
+    as.streak = as.streak < 0 ? as.streak - 1 : -1;
+  } else if (result.awayScore > result.homeScore) {
+    as.w++; hs.l++;
+    as.streak = as.streak > 0 ? as.streak + 1 : 1;
+    hs.streak = hs.streak < 0 ? hs.streak - 1 : -1;
+  } else {
+    hs.d++; as.d++;
+    hs.streak = 0; as.streak = 0;
+  }
 }
 
 // ── 선수 누적 스탯 기록 ──────────────────────────────────
@@ -577,14 +587,26 @@ function simSeriesGame(series, myTeam) {
 function renderStandingsTable() {
   const sorted = getGamesBehind(getSortedStandings());
   let h = `<table class="standings-table">
-    <tr><th>순위</th><th>팀</th><th>승</th><th>패</th><th>무</th><th>승률</th><th>GB</th><th>득점</th><th>실점</th></tr>`;
+    <thead>
+      <tr>
+        <th style="width:40px">순위</th>
+        <th style="text-align:left">팀명</th>
+        <th>경기</th>
+        <th>승</th>
+        <th>패</th>
+        <th>무</th>
+        <th>승률</th>
+        <th>GB</th>
+        <th>연속</th>
+      </tr>
+    </thead>
+    <tbody>`;
   
   let currentRank = 1;
   let previousPct = -1;
   let displayedRank = 1;
 
   sorted.forEach((t, i) => {
-    // 동순위 측정
     if (t.pct !== previousPct) {
       displayedRank = currentRank;
     }
@@ -592,16 +614,25 @@ function renderStandingsTable() {
     currentRank++;
 
     const isMine = t.team === SS.myTeam;
+    const streak = t.streak || 0;
+    const streakTxt = streak === 0 ? '-' : (streak > 0 ? `${streak}승` : `${Math.abs(streak)}패`);
+    const streakClass = streak > 0 ? 'streak-win' : (streak < 0 ? 'streak-loss' : '');
+
     h += `<tr class="${isMine ? 'my-team-row' : ''}">
-      <td>${displayedRank}</td>
-      <td><b>${SS.nameKor[t.team] || t.team}</b></td>
-      <td>${t.w}</td><td>${t.l}</td><td>${t.d}</td>
+      <td class="rank-cell">${displayedRank}</td>
+      <td style="text-align:left">
+        <b>${SS.nameKor[t.team] || t.team}</b>
+      </td>
+      <td>${t.games || (t.w+t.l+t.d)}</td>
+      <td>${t.w}</td>
+      <td>${t.l}</td>
+      <td>${t.d}</td>
       <td>${t.pct.toFixed(3)}</td>
       <td>${t.gb}</td>
-      <td>${t.rs}</td><td>${t.ra}</td>
+      <td class="${streakClass}">${streakTxt}</td>
     </tr>`;
   });
-  h += '</table>';
+  h += '</tbody></table>';
   return h;
 }
 

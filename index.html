@@ -190,11 +190,17 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 .progress-bar-wrap{background:var(--bg3);border-radius:4px;height:6px;margin-bottom:4px;overflow:hidden}
 .progress-bar-fill{height:100%;background:var(--accent);border-radius:4px;transition:width .3s}
 .progress-label{font-size:10px;color:var(--text3);margin-bottom:16px}
-.standings-table{width:100%;border-collapse:collapse;font-size:11px;font-family:'JetBrains Mono'}
-.standings-table th{padding:5px 8px;text-align:center;color:var(--text2);font-size:9px;background:var(--bg3);border-bottom:1px solid var(--border)}
-.standings-table td{padding:5px 8px;text-align:center;border-bottom:1px solid var(--border);color:var(--text)}
-.standings-table td:nth-child(2){text-align:left}
-.standings-table .my-team-row td{color:var(--accent)}
+.standings-table{width:100%;border-collapse:collapse;font-size:12px;font-family:'JetBrains Mono';background:var(--bg2);border-radius:10px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.25);}
+.standings-table th{padding:10px 8px;text-align:center;color:var(--text2);font-size:10px;background:var(--bg3);border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:1px;}
+.standings-table td{padding:10px 8px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.03);color:var(--text);transition:background 0.2s;}
+.standings-table tr:hover td{background:rgba(255,255,255,0.02);}
+.standings-table td:nth-child(2){text-align:left;font-family:'Noto Sans KR';font-weight:500;}
+.standings-table .my-team-row{background:rgba(245,166,35,0.08);}
+.standings-table .my-team-row td{color:var(--accent);font-weight:700;}
+.standings-table .rank-cell{font-family:'Bebas Neue';font-size:16px;color:var(--text3);}
+.standings-table .my-team-row .rank-cell{color:var(--accent);}
+.streak-win{color:var(--accent3);font-weight:700;}
+.streak-loss{color:var(--accent2);font-weight:700;}
 .next-game-card{background:var(--panel);border:1px solid var(--border2);border-radius:8px;padding:14px;margin-bottom:12px}
 .next-game-card.my-game{border-color:var(--accent);background:rgba(245,166,35,.06)}
 .ng-label{font-size:10px;color:var(--text2);letter-spacing:1px;margin-bottom:6px}
@@ -375,6 +381,25 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 .gnav-btn.play:active{transform:scale(1.05);}
 .gnav-btn.exit{color:var(--accent2);}
 
+/* 내비게이션 아이콘 스타일 */
+.snav-btn img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  filter: invert(1);
+  opacity: 0.5;
+  transition: all 0.2s ease;
+}
+.snav-btn.snav-active img {
+  opacity: 1;
+  filter: invert(1) brightness(1.5) drop-shadow(0 0 8px var(--accent));
+  transform: scale(1.1);
+}
+.snav-btn:hover img {
+  opacity: 0.8;
+  transform: scale(1.05);
+}
+
 </style>
 </head>
 <body>
@@ -483,12 +508,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
   <div id="season-bottom-nav">
     <button class="snav-btn snav-disabled" id="snav-btn-5"></button>
     <button class="snav-btn" id="snav-btn-2" onclick="switchSeasonTab(2)">
-      <svg width="26" height="26" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="4" y="18" width="28" height="4" rx="2" fill="currentColor" opacity=".7"/>
-        <ellipse cx="18" cy="18" rx="14" ry="5" fill="none" stroke="currentColor" stroke-width="2"/>
-        <path d="M4 18 Q18 6 32 18" fill="currentColor" opacity=".85"/>
-        <circle cx="18" cy="18" r="3" fill="var(--bg)"/>
-      </svg>
+      <img src="assets/baseball_icon_1_transparent.png" alt="Pitcher">
     </button>
     <button class="snav-btn snav-active" id="snav-btn-3" onclick="switchSeasonTab(3)">
       <svg width="26" height="26" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
@@ -500,11 +520,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
       </svg>
     </button>
     <button class="snav-btn" id="snav-btn-4" onclick="switchSeasonTab(4)">
-      <svg width="26" height="26" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-        <rect x="44" y="10" width="12" height="55" rx="6" fill="currentColor"/>
-        <ellipse cx="50" cy="70" rx="22" ry="10" fill="currentColor" opacity=".8"/>
-        <rect x="46" y="76" width="8" height="14" rx="4" fill="currentColor" opacity=".6"/>
-      </svg>
+      <img src="assets/baseball_icon_2_transparent.png" alt="Batter">
     </button>
     <button class="snav-btn snav-exit-btn" id="snav-btn-1" onclick="switchSeasonTab(1)">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>

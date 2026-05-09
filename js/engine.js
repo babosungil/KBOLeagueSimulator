@@ -108,37 +108,52 @@ function popBases(bases, prevBases) {
   });
 }
 
-async function doInningEffect(oldTeam, newTeam) {
+async function doInningEffect(oldInning, newInning, oldTeam, newTeam, onMidway) {
+  isAnimating = true;
   const overlay = document.getElementById('inning-overlay');
   if (!overlay) return;
 
+  const labelOld = document.getElementById('io-label-old');
+  const labelNew = document.getElementById('io-label-new');
   const oldEl = document.getElementById('io-old-team');
   const newEl = document.getElementById('io-new-team');
 
-  // 초기화: 구 팀 즉시 표시, 신 팀 숨김
+  // 초기화
+  if (labelOld) labelOld.textContent = oldInning;
+  if (labelNew) labelNew.textContent = newInning;
   oldEl.textContent = oldTeam;
   newEl.textContent = newTeam;
+
+  labelOld.className = 'inning-label old';
+  labelNew.className = 'inning-label new';
   oldEl.className = 'inning-team-text old';
   newEl.className = 'inning-team-text new';
+
+  labelOld.style.opacity = '0.7';
+  labelNew.style.opacity = '0';
   oldEl.style.opacity = '1';
   newEl.style.opacity = '0';
 
-  // 오버레이 즉시 표시 (구 팀명 동시 노출)
+  // 오버레이 표시 시작
   overlay.classList.add('show');
+  await sleep(300);
 
-  // 구 팀명 유지 구간
-  await sleep(500);
+  if (onMidway) onMidway();
 
-  // 1단계: 이전 팀 → 위로 사라짐 (0.55s)
+  // 1단계: 이전 정보 사라짐 (0.4s)
   oldEl.classList.add('io-old-anim');
-  await sleep(550);
+  if (labelOld) labelOld.classList.add('io-label-old-anim');
+  await sleep(400);
 
-  // 2단계: 새 팀 → 아래서 올라옴 (0.55s + 유지)
+  // 2단계: 다음 정보 등장 (0.4s + 유지)
   newEl.style.opacity = '';
+  if (labelNew) labelNew.style.opacity = '';
   newEl.classList.add('io-new-anim');
-  await sleep(900);
+  if (labelNew) labelNew.classList.add('io-label-new-anim');
+  await sleep(700);
 
   overlay.classList.remove('show');
+  isAnimating = false;
 }
 
 // ═══════════════════════════════════════════════════════
@@ -793,45 +808,50 @@ function startPA() {
 
 async function processOnePitch() {
   if (!gs || gs.gameOver || isAnimating) return;
-  // ── 강제 종료 체크 (안전 장치) ──
-  if (gs.inning >= 9 && !gs.isTop && gs.homeScore > gs.awayScore) { await endGame(); return; }
+  isAnimating = true;
+  try {
+    // ── 강제 종료 체크 (안전 장치) ──
+    if (gs.inning >= 9 && !gs.isTop && gs.homeScore > gs.awayScore) { await endGame(); return; }
 
-  if (!gs.currentPA) { startPA(); return; }
-  const pa = gs.currentPA;
-  if (pa.pidx >= pa.seq.length) { startPA(); return; }
+    if (!gs.currentPA) { startPA(); return; }
+    const pa = gs.currentPA;
+    if (pa.pidx >= pa.seq.length) { startPA(); return; }
 
-  const pitch = pa.seq[pa.pidx++];
-  gs.gamePitches++;
-  pa.pitcher.pitchCount++;
-  const pcab = document.getElementById('pc-ab');
-  if (pcab) pcab.textContent = pa.pidx;
-  const pcp = document.getElementById('pc-p');
-  if (pcp) pcp.textContent = pa.pitcher.pitchCount;
-  const pctot = document.getElementById('pc-tot');
-  if (pctot) pctot.textContent = gs.gamePitches;
-  updateStamUI(pa.pitcher);
+    const pitch = pa.seq[pa.pidx++];
+    gs.gamePitches++;
+    pa.pitcher.pitchCount++;
+    const pcab = document.getElementById('pc-ab');
+    if (pcab) pcab.textContent = pa.pidx;
+    const pcp = document.getElementById('pc-p');
+    if (pcp) pcp.textContent = pa.pitcher.pitchCount;
+    const pctot = document.getElementById('pc-tot');
+    if (pctot) pctot.textContent = gs.gamePitches;
+    updateStamUI(pa.pitcher);
 
-  if (pa.pidx >= pa.seq.length) {
-    gs.totalAB++;
-    const pcavg = document.getElementById('pc-avg');
-    if (pcavg) pcavg.textContent = (gs.gamePitches / gs.totalAB).toFixed(1);
-    await handlePA(pa);
-    gs.currentPA = null;
-    gs.balls = 0; gs.strikes = 0; // 즉각적으로 볼/스트라이크 초기화
-    if (gs.outs >= 3) {
-      await sleep(1000); // 투구 결과 연출을 볼 시간을 줌
-      await endHalf();
+    if (pa.pidx >= pa.seq.length) {
+      gs.totalAB++;
+      const pcavg = document.getElementById('pc-avg');
+      if (pcavg) pcavg.textContent = (gs.gamePitches / gs.totalAB).toFixed(1);
+      await handlePA(pa);
+      gs.currentPA = null;
+      gs.balls = 0; gs.strikes = 0; // 즉각적으로 볼/스트라이크 초기화
+      if (gs.outs >= 3) {
+        await sleep(1000); // 투구 결과 연출을 볼 시간을 줌
+        await endHalf();
+      } else {
+        updateGameUI();
+      }
     } else {
+      if      (pitch === 'B') { gs.balls++;   showPitch('볼',        'ball');   }
+      else if (pitch === 'S') { gs.strikes++; showPitch('스트라이크', 'strike'); }
+      else if (pitch === 'F')                 showPitch('파울',       'foul');
+      updateCntUI(gs.balls, gs.strikes);
       updateGameUI();
     }
-  } else {
-    if      (pitch === 'B') { gs.balls++;   showPitch('볼',        'ball');   }
-    else if (pitch === 'S') { gs.strikes++; showPitch('스트라이크', 'strike'); }
-    else if (pitch === 'F')                 showPitch('파울',       'foul');
-    updateCntUI(gs.balls, gs.strikes);
-    updateGameUI();
+    updateLnpUI();
+  } finally {
+    isAnimating = false;
   }
-  updateLnpUI();
 }
 
 async function handlePA(pa) {
@@ -909,7 +929,6 @@ async function handlePA(pa) {
   }
   gs.isTop ? gs.awayOrder++ : gs.homeOrder++;
   updateTodayStats(b);
-  isAnimating = false;
 }
 
 function addRuns(n) {
@@ -930,23 +949,35 @@ function addRuns(n) {
 }
 
 async function endHalf() {
+  const prevInningText = `${gs.inning}회 ${gs.isTop ? '초' : '말'}`;
+  const prevTeam = gs.isTop ? gs.awayTeam : gs.homeTeam;
+  let nextInningText = "";
+
+  // 1. 내부 상태만 먼저 변경 (UI 업데이트는 애니메이션 중간으로 예약)
   gs.outs = 0; gs.bases = [null, null, null];
   gs.balls = 0; gs.strikes = 0; gs.currentPA = null;
 
+  const updateUI = () => {
+    updateGameUI();
+    updateSbUI();
+    updateLnpUI();
+    updateSituationBar();
+  };
+
   if (gs.isTop) {
     // 초 → 말 공수 교대
-    const prevTeam = gs.awayTeam;
     gs.isTop = false;
     gs.innings.home[gs.inning - 1] = 0;
+    nextInningText = `${gs.inning}회 말`;
     if (gs.inning >= 9 && gs.homeScore > gs.awayScore) { await endGame(); return; }
-    updateGameUI(); updateSbUI();
-    await doInningEffect(prevTeam, gs.homeTeam);
+    
+    await doInningEffect(prevInningText, nextInningText, prevTeam, gs.homeTeam, updateUI);
     addLog(`── ${gs.inning}회 말 시작 ──`, '');
   } else {
     // 말 → 다음 회 초 공수 교대
-    const prevTeam = gs.homeTeam;
     gs.isTop = true;
     gs.inning++;
+    nextInningText = `${gs.inning}회 초`;
     if (gs.inning > 9) {
       if (gs.homeScore === gs.awayScore) {
         const _maxInn = (typeof SS !== 'undefined' && SS.phase === 'postseason') ? 999 : 11;
@@ -960,11 +991,11 @@ async function endHalf() {
       }
     } else {
       gs.innings.away[gs.inning - 1] = 0;
-      addLog(`── ${gs.inning}회 초 시작 ──`, '');
     }
+    
     checkChange();
-    updateGameUI(); updateSbUI();
-    await doInningEffect(prevTeam, gs.awayTeam);
+    await doInningEffect(prevInningText, nextInningText, prevTeam, gs.awayTeam, updateUI);
+    addLog(`── ${gs.inning}회 초 시작 ──`, '');
   }
 }
 

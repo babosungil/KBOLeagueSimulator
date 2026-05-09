@@ -278,7 +278,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 @keyframes extIn{0%{transform:scale(.5);opacity:0}80%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
 
 /* ── 연출 이펙트 ── */
-.fullscreen-overlay { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(10, 12, 16, 0.95); z-index: 500; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+.fullscreen-overlay { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(10, 12, 16, 1); z-index: 500; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
 .fullscreen-overlay.show { opacity: 1; pointer-events: all; }
 .score-vs-container { display: flex; align-items: center; gap: 40px; animation: scaleUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 .score-team-col { display: flex; flex-direction: column; align-items: center; gap: 15px; }
@@ -305,16 +305,25 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 /* 공수 교대 연출 - 세로형 */
 #inning-overlay { overflow: hidden; transition: opacity 0s; }
 .inning-stage { display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; width: 100%; height: 100%; }
-.inning-label { font-family: 'Black Han Sans'; letter-spacing: 2px; color: var(--text2); font-size: 14px; text-transform: uppercase; margin-bottom: 16px; opacity: 0.7; }
+
+.inning-label-slot { position: absolute; top: 15%; height: 30px; width: 100%; display: flex; justify-content: center; align-items: center; overflow: visible; }
+.inning-label { position: absolute; font-family: 'Black Han Sans'; letter-spacing: 2px; color: var(--text2); font-size: 22px; text-transform: uppercase; opacity: 0.7; white-space: nowrap; }
+.inning-label.new { color: var(--accent); opacity: 0.9; }
+
 .inning-team-slot { position: absolute; display: flex; align-items: center; justify-content: center; width: 100%; }
 .inning-team-text { font-family: 'Black Han Sans'; font-size: 84px; letter-spacing: 4px; padding: 14px 32px; border-radius: 16px; }
 .inning-team-text.old { color: var(--text2); background: rgba(255,255,255,0.05); }
 .inning-team-text.new { color: var(--accent); background: rgba(245,166,35,0.12); }
 
-@keyframes ioOldOut { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-80px) scale(0.55); opacity: 0; } }
-@keyframes ioNewIn  { 0% { transform: translateY(80px) scale(0.55); opacity: 0; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
-.io-old-anim { animation: ioOldOut 0.55s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
-.io-new-anim { animation: ioNewIn  0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+@keyframes ioOldOut { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-80px) scale(0.6); opacity: 0; } }
+@keyframes ioNewIn  { 0% { transform: translateY(80px) scale(0.6); opacity: 0; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
+@keyframes ioLabelOldOut { 0% { transform: translateY(0); opacity: 0.7; } 100% { transform: translateY(-30px); opacity: 0; } }
+@keyframes ioLabelNewIn  { 0% { transform: translateY(30px); opacity: 0; } 100% { transform: translateY(0); opacity: 0.9; } }
+
+.io-old-anim { animation: ioOldOut 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+.io-new-anim { animation: ioNewIn  0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+.io-label-old-anim { animation: ioLabelOldOut 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+.io-label-new-anim { animation: ioLabelNewIn  0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
 
 @keyframes hrCelebration {
   0% { box-shadow: inset 0 0 50px rgba(245, 166, 35, 0.5); border-color: #f5a623; }
@@ -971,14 +980,20 @@ function returnToSeason() {
 
   <div id="inning-overlay" class="fullscreen-overlay">
     <div class="inning-stage">
-      <div class="inning-label">공수 교대</div>
-      <div class="inning-team-slot">
-        <div class="inning-team-text old" id="io-old-team">AWAY</div>
+      <div class="inning-label-slot">
+        <div class="inning-label old" id="io-label-old"></div>
+        <div class="inning-label new" id="io-label-new" style="opacity:0"></div>
       </div>
       <div class="inning-team-slot">
-        <div class="inning-team-text new" id="io-new-team" style="opacity:0">HOME</div>
+        <div class="inning-team-text old" id="io-old-team"></div>
+      </div>
+      <div class="inning-team-slot">
+        <div class="inning-team-text new" id="io-new-team" style="opacity:0"></div>
       </div>
     </div>
+  </div>
+  <div id="extra-overlay" class="extra-overlay" style="display:none">
+    <div id="extra-banner" class="extra-banner"></div>
   </div>
 </body>
 </html>

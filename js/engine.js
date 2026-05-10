@@ -714,7 +714,7 @@ function trySteal(batter, bases, outs) {
   return true;
 }
 
-function trySacBunt(batter, bases, outs) {
+async function trySacBunt(batter, bases, outs, pitcher) {
   if (outs >= 2)  return false;
   if (!bases[0])  return false;
   const sacRate = batter.SAC / Math.max(batter.G, 1);
@@ -730,7 +730,12 @@ function trySacBunt(batter, bases, outs) {
       gs.outs  = Math.min(gs.outs + 1, 3);
       gs.bases = nb;
       batter.todayStats.SAC++;
-      if (scored) addRuns(scored);
+      if (scored) {
+        await doScoreEffect(scored);
+        batter.todayStats.RBI += scored;
+        pitcher.todayStats.R += scored;
+        addRuns(scored);
+      }
       addLog(`🟢 ${batter.name} 희생번트 성공` + (scored ? ` (${scored}점)` : ''), 'bunt');
       showPitch('희생번트', 'bunt');
     } else {
@@ -774,7 +779,7 @@ function initGame(home, away) {
   };
 }
 
-function startPA() {
+async function startPA() {
   const lineup  = gs.isTop ? gs.awayLineup  : gs.homeLineup;
   const order   = gs.isTop ? gs.awayOrder   : gs.homeOrder;
   const pitcher = gs.isTop ? gs.curHP       : gs.curAP;
@@ -782,14 +787,22 @@ function startPA() {
 
   // 도루 시도 (PA 소비 없음)
   if (trySteal(batter, gs.bases, gs.outs)) {
-    if (gs.outs >= 3) { endHalf(); return; }
+    if (gs.outs >= 3) {
+      await sleep(1000);
+      await endHalf();
+      return;
+    }
     updateGameUI(); updateLnpUI(); updateSbUI();
     return;
   }
   // 희생번트 시도 (PA 소비)
-  if (trySacBunt(batter, gs.bases, gs.outs)) {
+  if (await trySacBunt(batter, gs.bases, gs.outs, pitcher)) {
     batter.todayStats.PA++;
-    if (gs.outs >= 3) { endHalf(); return; }
+    if (gs.outs >= 3) {
+      await sleep(1000);
+      await endHalf();
+      return;
+    }
     gs.isTop ? gs.awayOrder++ : gs.homeOrder++;
     updateGameUI(); updateLnpUI(); updateSbUI();
     return;
@@ -813,9 +826,9 @@ async function processOnePitch() {
     // ── 강제 종료 체크 (안전 장치) ──
     if (gs.inning >= 9 && !gs.isTop && gs.homeScore > gs.awayScore) { await endGame(); return; }
 
-    if (!gs.currentPA) { startPA(); return; }
+    if (!gs.currentPA) { await startPA(); return; }
     const pa = gs.currentPA;
-    if (pa.pidx >= pa.seq.length) { startPA(); return; }
+    if (pa.pidx >= pa.seq.length) { await startPA(); return; }
 
     const pitch = pa.seq[pa.pidx++];
     gs.gamePitches++;
@@ -834,8 +847,12 @@ async function processOnePitch() {
       if (pcavg) pcavg.textContent = (gs.gamePitches / gs.totalAB).toFixed(1);
       await handlePA(pa);
       gs.currentPA = null;
-      gs.balls = 0; gs.strikes = 0; // 즉각적으로 볼/스트라이크 초기화
-      if (gs.outs >= 3) {
+      gs.balls = 0; gs.strikes = 0;
+      // ── 이닝/경기 종료 판정 ──
+      if (gs.inning >= 9 && !gs.isTop && gs.homeScore > gs.awayScore) {
+        await sleep(1000); // 득점 연출을 볼 시간을 줌
+        await endGame();
+      } else if (gs.outs >= 3) {
         await sleep(1000); // 투구 결과 연출을 볼 시간을 줌
         await endHalf();
       } else {

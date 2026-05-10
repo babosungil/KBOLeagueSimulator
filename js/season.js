@@ -1646,6 +1646,7 @@ window.returnToSeason = function() {
   stopPlay();
   if (typeof saveGameState === 'function') saveGameState();
   
+  document.getElementById('game-over').classList.remove('show');
   document.getElementById('game-bottom-nav').style.display = 'none';
   showSeasonScreen();
 };

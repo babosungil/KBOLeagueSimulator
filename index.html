@@ -38,12 +38,12 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 .min-vs{font-family:'Bebas Neue';font-size:18px;color:var(--text3);margin:0 10px;}
 #main{display:flex;flex-direction:column;align-items:center;padding:0 8px;padding-top:70px;padding-bottom:80px;gap:4px;height:100vh;overflow-y:auto;overflow-x:hidden}
 .scoreboard{width:100%;max-width:800px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;overflow-x:auto;margin:0 auto}
-#field-panel{width:100%;max-width:380px;display:flex;flex-direction:column;gap:10px}
-#atbat-panel{width:100%;max-width:380px;display:flex;flex-direction:column;border:1px solid var(--border);border-radius:6px;background:var(--panel);overflow:hidden}
-#lineup-panel{width:100%;max-width:380px;display:flex;flex-direction:column;border:1px solid var(--border);border-radius:6px;background:var(--panel);overflow:hidden}
+#field-panel{width:100%;max-width:800px;display:flex;flex-direction:column;gap:10px}
+#atbat-panel{width:100%;max-width:800px;display:flex;flex-direction:column;border:1px solid var(--border);border-radius:6px;background:var(--panel);overflow:hidden}
+#lineup-panel{width:100%;max-width:800px;display:flex;flex-direction:row;flex-wrap:wrap;border:1px solid var(--border);border-radius:6px;background:var(--panel);overflow:hidden}
 
 .diamond-svg{width:100%;height:100%;display:block;}
-.diamond-wrap{position:relative;width:100%;max-width:340px;margin:10px auto;background:transparent;border:none;overflow:visible;padding:10px;}
+.diamond-wrap{position:relative;width:100%;max-width:500px;margin:10px auto;background:transparent;border:none;overflow:visible;padding:10px;}
 
 /* 가운데 정렬된 SBO */
 .center-sbo-display {position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);display:flex;flex-direction:column;gap:8px;z-index:5;}
@@ -143,8 +143,8 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 .fs-title{color:var(--accent);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;border-bottom:1px solid var(--border);padding-bottom:3px}
 .fr{display:flex;justify-content:space-between;padding:1px 0}
 .fk{color:var(--text2)}.fv{font-family:'JetBrains Mono';color:var(--text)}
-#lineup-panel{display:flex;flex-direction:column;overflow:hidden}
-.lineup-half{flex:1;overflow-y:auto;border-bottom:1px solid var(--border)}
+#lineup-panel{display:flex;flex-direction:row;flex-wrap:wrap;overflow:hidden}
+.lineup-half{flex:1 1 300px;overflow-y:auto;border-bottom:1px solid var(--border)}
 .lineup-half:last-child{border-bottom:none}
 .lineup-title{padding:7px 12px;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text2);border-bottom:1px solid var(--border);background:var(--bg2);position:sticky;top:0}
 .lr{display:flex;align-items:center;padding:5px 10px;border-bottom:1px solid var(--border);gap:7px;transition:background .15s}
@@ -695,30 +695,32 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
   <!-- 타석 패널 -->
   <div id="atbat-panel">
     <div class="panel-header"><span>현재 타석</span><span id="pitcher-role-display"></span></div>
-    <div class="pitcher-card">
-      <div class="role"><span>⚾ 투수</span><span class="pitcher-role-badge" id="p-role-badge"></span></div>
-      <div class="pname" id="p-name">-</div>
-      <div class="pteam" id="p-team">-</div>
-      <div class="pstats">
-        <div class="pstat"><div class="pval" id="p-era">-</div><div class="plabel">ERA</div></div>
-        <div class="pstat"><div class="pval" id="p-k9">-</div><div class="plabel">K/9</div></div>
-        <div class="pstat"><div class="pval" id="p-whip">-</div><div class="plabel">WHIP</div></div>
-        <div class="pstat"><div class="pval" id="p-bb9">-</div><div class="plabel">BB/9</div></div>
+    <div style="display: flex; border-bottom: 1px solid var(--border);">
+      <div class="pitcher-card" style="flex: 1; border-right: 1px solid var(--border); border-bottom: none;">
+        <div class="role"><span>⚾ 투수</span><span class="pitcher-role-badge" id="p-role-badge"></span></div>
+        <div class="pname" id="p-name">-</div>
+        <div class="pteam" id="p-team">-</div>
+        <div class="pstats" style="grid-template-columns: repeat(2, 1fr); gap: 8px;">
+          <div class="pstat"><div class="pval" id="p-era">-</div><div class="plabel">ERA</div></div>
+          <div class="pstat"><div class="pval" id="p-k9">-</div><div class="plabel">K/9</div></div>
+          <div class="pstat"><div class="pval" id="p-whip">-</div><div class="plabel">WHIP</div></div>
+          <div class="pstat"><div class="pval" id="p-bb9">-</div><div class="plabel">BB/9</div></div>
+        </div>
+        <div class="stamina-wrap">
+          <div class="stamina-label"><span>체력</span><span id="stamina-pct">100%</span></div>
+          <div class="stamina-bar"><div class="stamina-fill" id="stamina-fill" style="width:100%;background:var(--accent3)"></div></div>
+        </div>
       </div>
-      <div class="stamina-wrap">
-        <div class="stamina-label"><span>체력</span><span id="stamina-pct">100%</span></div>
-        <div class="stamina-bar"><div class="stamina-fill" id="stamina-fill" style="width:100%;background:var(--accent3)"></div></div>
-      </div>
-    </div>
-    <div class="batter-card">
-      <div class="role">🏏 타자</div>
-      <div class="bname" id="b-name">-</div>
-      <div class="binfo" id="b-info">-</div>
-      <div class="bstats">
-        <div class="bstat"><div class="bval" id="b-avg" style="color:var(--accent3)">-</div><div class="blabel">AVG</div></div>
-        <div class="bstat"><div class="bval" id="b-hr">-</div><div class="blabel">HR</div></div>
-        <div class="bstat"><div class="bval" id="b-rbi">-</div><div class="blabel">RBI</div></div>
-        <div class="bstat"><div class="bval" id="b-ops">-</div><div class="blabel">OPS</div></div>
+      <div class="batter-card" style="flex: 1; border-bottom: none;">
+        <div class="role">🏏 타자</div>
+        <div class="bname" id="b-name">-</div>
+        <div class="binfo" id="b-info">-</div>
+        <div class="bstats" style="grid-template-columns: repeat(2, 1fr); gap: 8px;">
+          <div class="bstat"><div class="bval" id="b-avg" style="color:var(--accent3)">-</div><div class="blabel">AVG</div></div>
+          <div class="bstat"><div class="bval" id="b-hr">-</div><div class="blabel">HR</div></div>
+          <div class="bstat"><div class="bval" id="b-rbi">-</div><div class="blabel">RBI</div></div>
+          <div class="bstat"><div class="bval" id="b-ops">-</div><div class="blabel">OPS</div></div>
+        </div>
       </div>
     </div>
     <div class="today-stats">

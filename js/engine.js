@@ -1207,14 +1207,11 @@ function buildMVP() {
 // 선수 프로필 툴팁 HTML 생성
 function buildProfileTooltip(p, type) {
   const jersey  = p.jerseyNumber ? `#${p.jerseyNumber} ` : '';
-  const age     = p.age     ? `${p.age}세` : '';
-  const body    = (p.height && p.weight) ? `${p.height}cm / ${p.weight}kg` : '';
   const sbInfo  = (type === 'hitter' && p.SBA > 0)
     ? `도루 ${p.SB}/${p.SBA} (${p.sbPct}%)` : '';
   const csInfo  = (type === 'hitter' && p.csPct !== null && p.pos === 'C')
     ? `도루저지 ${p.csPct}%` : '';
   const rows = [
-    age && body ? `${age} · ${body}` : (age || body),
     sbInfo, csInfo
   ].filter(Boolean);
   return `<div class="profile-tooltip">
@@ -1241,7 +1238,7 @@ function updateBatUI(b) {
           ? 'background:rgba(45,204,111,.2);color:#2dcc6f;border:1px solid #2dcc6f'
           : 'background:rgba(232,52,10,.2);color:#e8340a;border:1px solid #e8340a'}">
         ${pl.advantage === 'batter' ? '타자유리' : '투수유리'}</span>` : '';
-  document.getElementById('b-info').innerHTML = `${b.team}·${b.order||'-'}번·${b.pos||''}·<b>${b.hand||'R'}타</b>${platoonTag}`;
+  document.getElementById('b-info').innerHTML = `${b.order||'-'}번·${b.pos||''}·<b>${b.hand||'R'}타</b>${platoonTag}`;
   document.getElementById('b-avg').textContent = b.AVG.toFixed(3);
   document.getElementById('b-hr').textContent  = b.HR;
   document.getElementById('b-rbi').textContent = Math.round(b.RBI);
@@ -1257,7 +1254,7 @@ function updatePitUI(p) {
   if (existTip) existTip.remove();
   nameEl.parentNode.insertAdjacentHTML('beforeend', buildProfileTooltip(p, 'pitcher'));
 
-  document.getElementById('p-team').textContent  = `${p.team} · ${p.hand||'R'}투`;
+  document.getElementById('p-team').innerHTML  = `${p.hand||'R'}투 · <span style="color:var(--text2);">투구</span> <span style="color:var(--accent);font-family:'JetBrains Mono';font-weight:700;">${p.pitchCount}</span>`;
   document.getElementById('p-era').textContent   = p.ERA.toFixed(2);
   document.getElementById('p-k9').textContent    = p.K9.toFixed(1);
   document.getElementById('p-whip').textContent  = p.WHIP.toFixed(2);

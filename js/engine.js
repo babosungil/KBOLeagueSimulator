@@ -1228,13 +1228,11 @@ function updateBatUI(b) {
 
   const pitcher = (gs && gs.curHP && gs.curAP) ? (gs.isTop ? gs.curHP : gs.curAP) : null;
   const pl = pitcher ? calcPlatoon(b.hand, pitcher.hand) : null;
-  const platoonTag = pl
-    ? `<span style="margin-left:6px;font-size:9px;padding:1px 5px;border-radius:8px;
-        ${pl.advantage === 'batter'
-          ? 'background:rgba(45,204,111,.2);color:#2dcc6f;border:1px solid #2dcc6f'
-          : 'background:rgba(232,52,10,.2);color:#e8340a;border:1px solid #e8340a'}">
-        ${pl.advantage === 'batter' ? '타자유리' : '투수유리'}</span>` : '';
-  document.getElementById('b-info').innerHTML = `${b.order||'-'}번·${b.pos||''}·<b>${b.hand||'R'}타</b>${platoonTag}`;
+  const platoonTag = (pl && pl.advantage === 'batter')
+    ? `<span style="margin-left:6px;font-size:9px;padding:1px 5px;border-radius:8px;background:rgba(45,204,111,.2);color:#2dcc6f;border:1px solid #2dcc6f">유리</span>` : '';
+  
+  const bHandKR = b.hand === 'L' ? '좌' : '우';
+  document.getElementById('b-info').innerHTML = `${bHandKR}타${platoonTag}`;
   document.getElementById('b-avg').textContent = b.AVG.toFixed(3);
   document.getElementById('b-hr').textContent  = b.HR;
   document.getElementById('b-rbi').textContent = Math.round(b.RBI);
@@ -1257,7 +1255,13 @@ function updatePitUI(p) {
   nameEl.textContent = p.name;
   // 프로필 툴팁 사용 안 함
 
-  document.getElementById('p-team').innerHTML  = `${p.hand||'R'}투 · <span style="color:var(--text2);">투구</span> <span style="color:var(--accent);font-family:'JetBrains Mono';font-weight:700;">${p.pitchCount}</span>`;
+  const batter = (gs && gs.curHB && gs.curAB) ? (gs.isTop ? gs.curAB : gs.curHB) : null;
+  const plPit = batter ? calcPlatoon(batter.hand, p.hand) : null;
+  const platoonTagPit = (plPit && plPit.advantage === 'pitcher')
+    ? `<span style="margin-left:6px;font-size:9px;padding:1px 5px;border-radius:8px;background:rgba(45,204,111,.2);color:#2dcc6f;border:1px solid #2dcc6f">유리</span>` : '';
+  
+  const pHandKR = p.hand === 'L' ? '좌' : '우';
+  document.getElementById('p-team').innerHTML  = `투구 <span style="color:var(--accent);font-family:'JetBrains Mono';font-weight:700;">${p.pitchCount}</span> · ${pHandKR}투${platoonTagPit}`;
   document.getElementById('p-era').textContent   = p.ERA.toFixed(2);
   document.getElementById('p-k9').textContent    = p.K9.toFixed(1);
   document.getElementById('p-whip').textContent  = p.WHIP.toFixed(2);

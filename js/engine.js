@@ -1224,11 +1224,7 @@ function buildProfileTooltip(p, type) {
 function updateBatUI(b) {
   const nameEl = document.getElementById('b-name');
   nameEl.textContent = b.name;
-  // 프로필 툴팁
-  nameEl.title = '';
-  const existTip = nameEl.parentNode.querySelector('.profile-tooltip');
-  if (existTip) existTip.remove();
-  nameEl.parentNode.insertAdjacentHTML('beforeend', buildProfileTooltip(b, 'hitter'));
+  // 프로필 툴팁 사용 안 함
 
   const pitcher = (gs && gs.curHP && gs.curAP) ? (gs.isTop ? gs.curHP : gs.curAP) : null;
   const pl = pitcher ? calcPlatoon(b.hand, pitcher.hand) : null;
@@ -1259,10 +1255,7 @@ function updateBatUI(b) {
 function updatePitUI(p) {
   const nameEl = document.getElementById('p-name');
   nameEl.textContent = p.name;
-  // 프로필 툴팁
-  const existTip = nameEl.parentNode.querySelector('.profile-tooltip');
-  if (existTip) existTip.remove();
-  nameEl.parentNode.insertAdjacentHTML('beforeend', buildProfileTooltip(p, 'pitcher'));
+  // 프로필 툴팁 사용 안 함
 
   document.getElementById('p-team').innerHTML  = `${p.hand||'R'}투 · <span style="color:var(--text2);">투구</span> <span style="color:var(--accent);font-family:'JetBrains Mono';font-weight:700;">${p.pitchCount}</span>`;
   document.getElementById('p-era').textContent   = p.ERA.toFixed(2);

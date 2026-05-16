@@ -1243,6 +1243,16 @@ function updateBatUI(b) {
   document.getElementById('b-hr').textContent  = b.HR;
   document.getElementById('b-rbi').textContent = Math.round(b.RBI);
   document.getElementById('b-ops').textContent = (b.ops || 0).toFixed(3);
+  // 타자 체력: PA 기반 (9타석 기준, 최소 20%)
+  const bPA = (b.todayStats && b.todayStats.PA) || 0;
+  const bStam = Math.max(20, 100 - bPA * (80 / 9));
+  const bStamFill = document.getElementById('b-stamina-fill');
+  const bStamPct  = document.getElementById('b-stamina-pct');
+  if (bStamFill) {
+    bStamFill.style.width      = bStam + '%';
+    bStamFill.style.background = bStam > 70 ? 'var(--accent3)' : bStam > 40 ? 'var(--accent)' : 'var(--accent2)';
+  }
+  if (bStamPct) bStamPct.textContent = Math.round(bStam) + '%';
   updateTodayStats(b);
 }
 
@@ -1262,8 +1272,10 @@ function updatePitUI(p) {
   updateStamUI(p);
   const badge = document.getElementById('p-role-badge');
   const role  = p.role || 'middle';
-  badge.textContent  = { starter:'선발', middle:'중간계투', closer:'마무리' }[role] || '계투';
-  badge.className    = 'pitcher-role-badge ' + ({ starter:'role-starter', middle:'role-middle', closer:'role-closer' }[role] || 'role-middle');
+  if (badge) {
+    badge.textContent  = { starter:'선발', middle:'중간계투', closer:'마무리' }[role] || '계투';
+    badge.className    = 'pitcher-role-badge ' + ({ starter:'role-starter', middle:'role-middle', closer:'role-closer' }[role] || 'role-middle');
+  }
 }
 
 function updateStamUI(p) {

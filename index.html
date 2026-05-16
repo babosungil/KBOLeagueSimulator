@@ -97,15 +97,15 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 .sit-val.risp{color:var(--accent3)}
 .sit-val.risp{color:var(--accent3)}
 .panel-header{padding:8px 14px;background:var(--bg2);border-bottom:1px solid var(--border);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text2);display:flex;justify-content:space-between;align-items:center}
-.pitcher-card{padding:10px 14px;border-bottom:1px solid var(--border);background:var(--panel)}
-.pitcher-card .role{font-size:10px;color:var(--accent);letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;display:flex;justify-content:space-between;align-items:center}
-.pitcher-card .pname{font-family:'Black Han Sans';font-size:17px;letter-spacing:1px}
-.pitcher-card .pteam{color:var(--text2);font-size:11px}
-.pstats,.bstats{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:8px}
+.pitcher-card{padding:10px 14px;border-bottom:1px solid var(--border);background:var(--panel);position:relative;overflow:hidden;z-index:1;text-align:right}
+.pitcher-card::after{content:'';position:absolute;top:50%;right:-10%;transform:translateY(-50%);width:110px;height:110px;background:url('assets/baseball_icon_1_transparent.png') no-repeat center / contain;opacity:0.15;z-index:0;filter:invert(1);pointer-events:none}
+.pitcher-card .pname{font-family:'Black Han Sans';font-size:26px;letter-spacing:1px;position:relative;z-index:1}
+.pitcher-card .pteam{color:var(--text2);font-size:11px;position:relative;z-index:1}
+.pstats,.bstats{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:8px;position:relative;z-index:1}
 .pstat,.bstat{text-align:center}
 .pval,.bval{font-family:'JetBrains Mono';font-size:13px;color:var(--text)}
 .plabel,.blabel{font-size:9px;color:var(--text3);letter-spacing:1px;margin-top:1px}
-.stamina-wrap{margin-top:7px}
+.stamina-wrap{margin-top:7px;position:relative;z-index:1}
 .stamina-label{display:flex;justify-content:space-between;font-size:10px;color:var(--text2);margin-bottom:3px}
 .stamina-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden}
 .stamina-fill{height:100%;border-radius:2px;transition:width .5s,background .5s}
@@ -113,14 +113,16 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 .role-starter{background:rgba(59,130,246,.2);color:var(--accent4);border:1px solid rgba(59,130,246,.4)}
 .role-middle{background:rgba(100,100,100,.2);color:var(--text2);border:1px solid rgba(100,100,100,.4)}
 .role-closer{background:rgba(232,52,10,.2);color:var(--accent2);border:1px solid rgba(232,52,10,.4)}
-.batter-card{padding:10px 14px;border-bottom:1px solid var(--border)}
+.batter-card{padding:10px 14px;border-bottom:1px solid var(--border);position:relative;overflow:hidden;z-index:1}
+.batter-card::after{content:'';position:absolute;top:50%;left:-10%;transform:translateY(-50%);width:110px;height:110px;background:url('assets/baseball_icon_2_transparent.png') no-repeat center / contain;opacity:0.15;z-index:0;filter:invert(1);pointer-events:none}
 .profile-tooltip{margin-top:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;font-size:10px;line-height:1.8;color:var(--text2)}
 .pt-name{font-family:'Black Han Sans';font-size:14px;color:var(--text);letter-spacing:1px}
 .pt-pos{font-size:10px;color:var(--accent);letter-spacing:1px;margin-bottom:3px}
 .pt-row{color:var(--text2)}
-.batter-card .role{font-size:10px;color:var(--accent3);letter-spacing:2px;text-transform:uppercase;margin-bottom:3px}
-.batter-card .bname{font-family:'Black Han Sans';font-size:17px}
-.batter-card .binfo{color:var(--text2);font-size:11px}
+.batter-card .bname{font-family:'Black Han Sans';font-size:26px;position:relative;z-index:1}
+.batter-card .binfo{color:var(--text2);font-size:11px;position:relative;z-index:1}
+.atbat-vs-wrap{position:relative;display:flex;border-bottom:1px solid var(--border)}
+.atbat-vs-overlay{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'Bebas Neue';font-size:clamp(70px,9vw,110px);color:rgba(255,255,255,0.08);letter-spacing:6px;pointer-events:none;z-index:10;line-height:1;white-space:nowrap;user-select:none}
 .today-stats{padding:8px 14px;border-bottom:1px solid var(--border);font-size:11px}
 .today-stats .ts-title{color:var(--text2);font-size:10px;letter-spacing:1px;margin-bottom:5px}
 .ts-row{display:flex;justify-content:space-between;padding:2px 0}
@@ -665,9 +667,6 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 
 <!-- ── 메인 ── -->
 <div id="main">
-  <!-- 점수판 (스크롤 가능하게 독립적으로 최상단) -->
-  <div class="scoreboard"><table class="sb-table" id="scoreboard"></table></div>
-
   <!-- 필드 패널 -->
   <div id="field-panel">
     <div class="diamond-wrap" id="diamond-wrap">
@@ -692,34 +691,35 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
       <div class="last-pitch" id="last-pitch-area"></div>
     </div>
 
-  <!-- 타석 패널 -->
   <div id="atbat-panel">
-    <div class="panel-header"><span>현재 타석</span><span id="pitcher-role-display"></span></div>
-    <div style="display: flex; border-bottom: 1px solid var(--border);">
+    <div class="atbat-vs-wrap">
+      <div class="atbat-vs-overlay">VS</div>
       <div class="pitcher-card" style="flex: 1; border-right: 1px solid var(--border); border-bottom: none;">
-        <div class="role"><span>⚾ 투수</span><span class="pitcher-role-badge" id="p-role-badge"></span></div>
         <div class="pname" id="p-name">-</div>
         <div class="pteam" id="p-team">-</div>
-        <div class="pstats" style="grid-template-columns: repeat(2, 1fr); gap: 8px;">
-          <div class="pstat"><div class="pval" id="p-era">-</div><div class="plabel">ERA</div></div>
-          <div class="pstat"><div class="pval" id="p-k9">-</div><div class="plabel">K/9</div></div>
-          <div class="pstat"><div class="pval" id="p-whip">-</div><div class="plabel">WHIP</div></div>
-          <div class="pstat"><div class="pval" id="p-bb9">-</div><div class="plabel">BB/9</div></div>
+        <div class="pstats">
+          <div class="pstat"><div class="plabel">ERA</div><div class="pval" id="p-era">-</div></div>
+          <div class="pstat"><div class="plabel">K/9</div><div class="pval" id="p-k9">-</div></div>
+          <div class="pstat"><div class="plabel">WHIP</div><div class="pval" id="p-whip">-</div></div>
+          <div class="pstat"><div class="plabel">BB/9</div><div class="pval" id="p-bb9">-</div></div>
         </div>
         <div class="stamina-wrap">
-          <div class="stamina-label"><span>체력</span><span id="stamina-pct">100%</span></div>
+          <div class="stamina-label" style="justify-content: flex-end;"><span>체력</span><span id="stamina-pct" style="margin-left:8px;">100%</span></div>
           <div class="stamina-bar"><div class="stamina-fill" id="stamina-fill" style="width:100%;background:var(--accent3)"></div></div>
         </div>
       </div>
       <div class="batter-card" style="flex: 1; border-bottom: none;">
-        <div class="role">🏏 타자</div>
         <div class="bname" id="b-name">-</div>
         <div class="binfo" id="b-info">-</div>
-        <div class="bstats" style="grid-template-columns: repeat(2, 1fr); gap: 8px;">
-          <div class="bstat"><div class="bval" id="b-avg" style="color:var(--accent3)">-</div><div class="blabel">AVG</div></div>
-          <div class="bstat"><div class="bval" id="b-hr">-</div><div class="blabel">HR</div></div>
-          <div class="bstat"><div class="bval" id="b-rbi">-</div><div class="blabel">RBI</div></div>
-          <div class="bstat"><div class="bval" id="b-ops">-</div><div class="blabel">OPS</div></div>
+        <div class="bstats">
+          <div class="bstat"><div class="blabel">AVG</div><div class="bval" id="b-avg" style="color:var(--accent3)">-</div></div>
+          <div class="bstat"><div class="blabel">HR</div><div class="bval" id="b-hr">-</div></div>
+          <div class="bstat"><div class="blabel">RBI</div><div class="bval" id="b-rbi">-</div></div>
+          <div class="bstat"><div class="blabel">OPS</div><div class="bval" id="b-ops">-</div></div>
+        </div>
+        <div class="stamina-wrap">
+          <div class="stamina-label"><span>체력</span><span id="b-stamina-pct" style="margin-left:8px;">-</span></div>
+          <div class="stamina-bar"><div class="stamina-fill" id="b-stamina-fill" style="width:100%;background:var(--accent3)"></div></div>
         </div>
       </div>
     </div>

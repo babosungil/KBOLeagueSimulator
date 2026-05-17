@@ -1283,7 +1283,15 @@ function updatePitUI(p) {
   nameEl.textContent = p.name;
   // 프로필 툴팁 사용 안 함
 
-  const batter = (gs && gs.curHB && gs.curAB) ? (gs.isTop ? gs.curAB : gs.curHB) : null;
+  let batter = null;
+  if (gs) {
+    const lineup = gs.isTop ? gs.awayLineup : gs.homeLineup;
+    const order  = gs.isTop ? gs.awayOrder : gs.homeOrder;
+    if (lineup && lineup.length > 0) {
+      batter = lineup[order % lineup.length];
+    }
+  }
+
   const plPit = batter ? calcPlatoon(batter.hand, p.hand) : null;
   const platoonTagPit = (plPit && plPit.advantage === 'pitcher')
     ? `<span style="margin-left:6px;font-size:9px;padding:1px 5px;border-radius:8px;background:rgba(45,204,111,.2);color:#2dcc6f;border:1px solid #2dcc6f">유리</span>` : '';

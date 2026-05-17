@@ -190,16 +190,110 @@ function recordPitcherFatigue(pitchers, teamCode) {
   pitchers.forEach(p => {
     if (!p.pitchCount || p.pitchCount === 0) return; // 미등판 제외
     const key  = `${p.name}_${teamCode}`;
-    const prev = SS.pitcherFatigue[key];
-    const isConsec = prev && (SS.gameIdx - prev.lastGame <= 1);
-    SS.pitcherFatigue[key] = {
-      lastGame:   SS.gameIdx,
-      consecDays: isConsec ? (prev.consecDays || 1) + 1 : 1,
-      type:       p.isStarter ? 'starter' : 'reliever',
-      pitchCount: p.pitchCount,
+    const prev = SS.pitcherFatigue[key] || { 
+      stamina: 100, 
+      lastGame: -99, 
+      consecDays: 0, 
+      type: p.isStarter ? 'starter' : 'reliever' 
     };
+    
+    // 차감량 = 투구 수 * 1%
+    prev.stamina = Math.max(0, prev.stamina - p.pitchCount);
+    prev.lastGame = SS.gameIdx;
+    
+    // 연투 기록 (당일 여러 번 호출 방지용 방어 로직 포함)
+    if (prev.lastGame !== SS.gameIdx) {
+      prev.consecDays = (SS.gameIdx - prev.lastGame <= 1) ? prev.consecDays + 1 : 1;
+    }
+    
+    prev.type = p.isStarter ? 'starter' : 'reliever';
+    SS.pitcherFatigue[key] = prev;
   });
 }
+
+/**
+ * 경기 종료 후 해당 경기에 수비로 출장한 포수의 피로도를 기록.
+ */
+function recordCatcherFatigue(hitters, teamCode, innings) {
+  if (!SS.catcherFatigue) SS.catcherFatigue = {};
+  hitters.forEach(h => {
+    const key = `${h.name}_${teamCode}`;
+    const prev = SS.catcherFatigue[key] || { stamina: 100, lastDefGame: -99 };
+    
+    // 이닝당 5% 차감
+    prev.stamina = Math.max(0, prev.stamina - (innings * 5));
+    prev.lastDefGame = SS.gameIdx;
+    
+    SS.catcherFatigue[key] = prev;
+  });
+}
+
+/**
+ * 턴 단위 글로벌 체력 회복 프로세스
+ * (모든 팀의 턴 종료 시점에서 호출됨)
+ */
+window.processTurnFatigueRecovery = function() {
+  if (!SS.pitcherFatigue) SS.pitcherFatigue = {};
+  if (!SS.catcherFatigue) SS.catcherFatigue = {};
+
+  // 방금 시뮬레이션 된 턴(어제 턴) 확인
+  const justFinishedTurn = SS.schedule[SS.gameIdx - 1] ? SS.schedule[SS.gameIdx - 1].turn : -1;
+
+  // 1. 투수 회복
+  DB.pitchers.forEach(p => {
+    const teamCode = getTeamCode(p.team);
+    if (!teamCode) return;
+    const key = `${p.name}_${teamCode}`;
+    const f = SS.pitcherFatigue[key] || { stamina: 100, consecDays: 0, lastGame: -99, type: p.isStarter ? 'starter' : 'reliever' };
+    
+    const lastPitchedTurn = (f.lastGame >= 0 && SS.schedule[f.lastGame]) ? SS.schedule[f.lastGame].turn : -99;
+
+    if (lastPitchedTurn === justFinishedTurn) {
+      // 방금 끝난 턴에 등판했으면 회복 없음
+    } else {
+      // 휴식일: 회복 및 연투 초기화
+      f.consecDays = 0;
+      
+      let modifier = 1.0;
+      const age = p.age || 28;
+      if (age <= 25) modifier += 0.1;
+      else if (age >= 33) modifier -= 0.1;
+
+      if (f.type === 'starter') {
+        const avgIP = p.avgIP || 5;
+        if (avgIP >= 6.0) modifier += 0.05;
+        else if (avgIP < 4.0) modifier -= 0.05;
+        
+        const baseRec = 20;
+        const rand = (Math.random() * 10 - 5);
+        f.stamina = Math.min(100, f.stamina + (baseRec * modifier) + rand);
+      } else {
+        const baseRec = 35;
+        const rand = (Math.random() * 10 - 5);
+        f.stamina = Math.min(100, f.stamina + (baseRec * modifier) + rand);
+      }
+    }
+    SS.pitcherFatigue[key] = f;
+  });
+
+  // 2. 포수 회복
+  DB.hitters.forEach(c => {
+    if (c.position !== 'C' && c.position !== '포수' && c.defPos !== '포수') return;
+    const teamCode = getTeamCode(c.team);
+    if (!teamCode) return;
+    const key = `${c.name}_${teamCode}`;
+    const f = SS.catcherFatigue[key] || { stamina: 100, lastDefGame: -99 };
+    
+    const lastDefTurn = (f.lastDefGame >= 0 && SS.schedule[f.lastDefGame]) ? SS.schedule[f.lastDefGame].turn : -99;
+
+    if (lastDefTurn !== justFinishedTurn) {
+      // 휴식일 -> 60% 회복 + 난수
+      const rand = (Math.random() * 10 - 5);
+      f.stamina = Math.min(100, f.stamina + 60 + rand);
+    }
+    SS.catcherFatigue[key] = f;
+  });
+};
 
 /**
  * 피로도를 반영한 ERA 보정 계수 반환.
@@ -212,22 +306,20 @@ function recordPitcherFatigue(pitchers, teamCode) {
 function getFatigueMult(pitcherName, teamCode, isStarter) {
   const key  = `${pitcherName}_${teamCode}`;
   const f    = SS.pitcherFatigue[key];
-  if (!f) return 1.0; // 피로도 기록 없음 = 정상
+  if (!f) return 1.0; // 피로도 기록 없음 = 정상 (스태미너 100%)
 
-  const daysSince = SS.gameIdx - f.lastGame; // 마지막 등판 이후 경기 수
+  // 이제 연투일(daysSince)이 아닌 실제 계산된 stamina 값을 기반으로 작동합니다.
+  const st = f.stamina;
 
+  if (st >= 80) return 1.0;
+  if (st >= 50) return 1.15;
+  if (st >= 30) return 1.3;
+  
+  // 30 미만인 경우
   if (isStarter) {
-    // 선발: 등판 후 4경기 휴식이 이상적 (5선발 로테이션)
-    if (daysSince <= 3) return 99;  // 등판 불가 (99 = 사실상 무한대)
-    if (daysSince === 4) return 1.2; // 4일 휴식: 80% 컨디션
-    return 1.0;                      // 5일+ 휴식: 정상
+    return 99; // 등판 불가
   } else {
-    // 불펜: 연속 등판일 수에 따라 피로 누적
-    if (daysSince > 1) return 1.0;   // 하루라도 쉬면 회복
-    const c = f.consecDays || 1;
-    if (c >= 3) return 1.5;          // 3일 연속: ERA +50%
-    if (c === 2) return 1.3;         // 2일 연속: ERA +30%
-    return 1.15;                     // 1일 연속: ERA +15%
+    return 1.5; // 방어율 대폭 하락
   }
 }
 
@@ -518,6 +610,13 @@ function simGameFast(homeTeam, awayTeam) {
   [curAP, ...pA.filter(p => p.usedToday)].forEach(p => {
     if (p) { p.pitchCount = p.pitchCount || 1; recordPitcherFatigue([p], awayTeam); }
   });
+
+  // 포수 피로도 기록 (라인업의 첫 번째 포수를 찾아서 차감)
+  const homeCatcher = hH.find(h => h.position === 'C' || h.position === '포수' || h.defPos === '포수');
+  if (homeCatcher) recordCatcherFatigue([homeCatcher], homeTeam, innings);
+  
+  const awayCatcher = hA.find(h => h.position === 'C' || h.position === '포수' || h.defPos === '포수');
+  if (awayCatcher) recordCatcherFatigue([awayCatcher], awayTeam, innings);
 
   return { homeScore, awayScore, innings };
 }
@@ -983,6 +1082,12 @@ async function showTurnResults(myGameIdx) {
   modal.querySelector('.turn-modal-inner').innerHTML = html;
 
   modal.style.display = 'flex';
+  
+  // 턴 내 모든 경기가 종료(시뮬)되었으므로 여기서 글로벌 회복 로직 실행
+  if (typeof processTurnFatigueRecovery === 'function') {
+    processTurnFatigueRecovery();
+  }
+  
   saveSeasonState();
 }
 
@@ -1032,32 +1137,23 @@ function getPitcherFatigueInfo(p, teamCode, isStarter) {
   const f         = SS.pitcherFatigue[key];
   const mult      = getFatigueMult(p.name, teamCode, isStarter);
   const daysSince = f ? SS.gameIdx - f.lastGame : 99;
-
-  let staminaPct = 100;
-  if (mult >= 99) staminaPct = 0;
-  else if (mult > 1.0) {
-    if (isStarter) {
-      staminaPct = daysSince === 4 ? 80 : 30;
-    } else {
-      if (f && f.consecDays >= 3) staminaPct = 10;
-      else if (f && f.consecDays === 2) staminaPct = 50;
-      else staminaPct = 80;
-    }
-  }
+  
+  // 실제 추적 중인 스태미너 사용
+  let staminaPct = f ? Math.round(f.stamina) : 100;
 
   let status = '', statusColor = 'var(--accent3)';
   if (isStarter) {
-    if (staminaPct === 0)      { status = '등판불가'; statusColor = 'var(--accent2)'; }
-    else if (staminaPct < 100) { status = `휴식 ${daysSince}일`; statusColor = 'var(--accent)'; }
+    if (staminaPct < 30)       { status = '등판불가'; statusColor = 'var(--accent2)'; }
+    else if (staminaPct < 100) { status = `체력 ${staminaPct}%`; statusColor = 'var(--accent)'; }
     else                       { status = '정상';       statusColor = 'var(--accent3)'; }
   } else {
-    if (staminaPct <= 10)      { status = '3연투';  statusColor = 'var(--accent2)'; }
-    else if (staminaPct <= 50) { status = '2연투';  statusColor = 'var(--accent)'; }
-    else if (staminaPct <= 80) { status = '1연투';  statusColor = 'var(--accent)'; }
+    // 연투일은 단순 표시용으로 사용
+    if (staminaPct < 50)       { status = (f && f.consecDays >= 2) ? `${f.consecDays}연투` : '체력 저하'; statusColor = 'var(--accent2)'; }
+    else if (staminaPct < 80)  { status = (f && f.consecDays >= 1) ? `${f.consecDays}연투` : '보통'; statusColor = 'var(--accent)'; }
     else                       { status = '정상';   statusColor = 'var(--accent3)'; }
   }
 
-  const stColor = staminaPct > 50 ? 'var(--accent3)' : staminaPct > 0 ? 'var(--accent)' : 'var(--accent2)';
+  const stColor = staminaPct >= 80 ? 'var(--accent3)' : staminaPct >= 50 ? 'var(--accent)' : 'var(--accent2)';
   return { staminaPct, status, statusColor, stColor, mult, daysSince };
 }
 

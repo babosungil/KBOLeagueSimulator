@@ -581,7 +581,20 @@ function calcPlatoon(bHand, pHand) {
 
 function decidePAResult(b, p, bases, inning, outs) {
   const era = adjERA(p), pq = Math.max(0.5, Math.min(1.8, era / 4.30));
-  let hit = b.hit_rate * (0.85 * pq + 0.15),
+  
+  // 포수 피로도 타격 페널티 (시즌 모드)
+  let batterHitRate = b.hit_rate;
+  if (typeof SS !== 'undefined' && SS.catcherFatigue && (b.position === 'C' || b.position === '포수' || b.defPos === '포수' || b.pos === 'C')) {
+    const teamCode = typeof getTeamCode === 'function' ? getTeamCode(b.team) : null;
+    if (teamCode) {
+      const cf = SS.catcherFatigue[`${b.name}_${teamCode}`];
+      if (cf && cf.stamina < 50) {
+        batterHitRate *= 0.9; // 체력 50 미만 시 안타 확률 10% 하락
+      }
+    }
+  }
+
+  let hit = batterHitRate * (0.85 * pq + 0.15),
       bb  = b.bb_rate  * (0.5 + 0.5 * pq),
       k   = b.k_rate   * (0.5 + 0.5 / pq);
   const kb = (p.K9 - 7.5) * 0.006, bp = (p.BB9 - 3.5) * 0.004;
@@ -693,8 +706,21 @@ function trySteal(batter, bases, outs) {
   const defLineup = gs.isTop ? gs.homeLineup : gs.awayLineup;
   const catcher   = defLineup.find(p => p.pos === 'C');
   if (catcher && catcher.csPct > 0) {
+    let baseCsPct = catcher.csPct;
+    
+    // 포수 피로도 수비 페널티 (시즌 모드)
+    if (typeof SS !== 'undefined' && SS.catcherFatigue) {
+      const teamCode = typeof getTeamCode === 'function' ? getTeamCode(catcher.team) : null;
+      if (teamCode) {
+        const cf = SS.catcherFatigue[`${catcher.name}_${teamCode}`];
+        if (cf && cf.stamina < 50) {
+          baseCsPct = Math.max(0, baseCsPct - 15); // 체력 50 미만 시 도루 저지율 15%p 하락
+        }
+      }
+    }
+
     // 포수 CS%가 높을수록 성공률 감소 (리그 평균 25% 기준 보정)
-    const catcherAdj = (catcher.csPct - 25) / 100;
+    const catcherAdj = (baseCsPct - 25) / 100;
     successRate = Math.max(0.40, Math.min(0.90, successRate - catcherAdj));
   }
 
@@ -1026,6 +1052,7 @@ function checkChange() {
   const allPitchers = isHomePitching ? gs.homePitchers : gs.awayPitchers;
   const needChange  = s < 30 || (gs.inning >= 6 && p.pitchCount > 80) || (gs.inning >= 9 && p.isStarter);
 
+  /*
   if (needChange) {
     if (gs.isExtra) allPitchers.forEach(p => { if (!p.isStarter) p.usedToday = false; });
     const teamCode = isHomePitching ? getTeamCode(gs.homeTeam) : getTeamCode(gs.awayTeam);
@@ -1039,6 +1066,7 @@ function checkChange() {
       addLog(`🔄 투수교체 → ${np.name} [${roleLabel}] (ERA ${np.ERA})`, 'change');
     }
   }
+  */
 }
 
 function showExtraBanner(inning) {
@@ -1326,6 +1354,13 @@ function updateGameUI() {
   updateBasesUI(gs.bases);
   updateCntUI(gs.balls || 0, gs.strikes || 0);
 
+  const lineup  = gs.isTop ? gs.awayLineup  : gs.homeLineup;
+  const order   = gs.isTop ? gs.awayOrder   : gs.homeOrder;
+  const pitcher = gs.isTop ? gs.curHP       : gs.curAP;
+  const batter  = lineup[order % lineup.length];
+  
+  if (pitcher) updatePitUI(pitcher);
+  if (batter) updateBatUI(batter);
 }
 
 function updateBasesUI(bases) {

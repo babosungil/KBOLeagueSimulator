@@ -90,21 +90,20 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 .sb-table .tc{text-align:left;color:var(--text);font-weight:700;min-width:52px;font-size:11px}
 .sb-table .tot{font-weight:700;color:var(--accent)}
 .sb-table .ci{background:rgba(245,166,35,.08)}
-.situation-bar{max-width:300px;width:100%;margin:0 auto;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:7px 12px;display:flex;gap:12px;align-items:center;font-size:11px}
-.sit-item{display:flex;flex-direction:column;align-items:center;gap:2px}
-.sit-label{font-size:9px;color:var(--text3);letter-spacing:1px}
-.sit-val{font-family:'JetBrains Mono';font-size:12px;color:var(--text)}
+.situation-bar{max-width:320px;width:100%;margin:0 auto;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:8px 14px;display:flex;gap:14px;align-items:center;font-size:12px}
+.sit-item{display:flex;flex-direction:column;align-items:center;gap:3px}
+.sit-label{font-size:10px;color:var(--text2);letter-spacing:1px;font-weight:500}
+.sit-val{font-family:'JetBrains Mono';font-size:14px;color:var(--text);font-weight:700}
 .sit-val.risp{color:var(--accent3)}
-.sit-val.risp{color:var(--accent3)}
-.panel-header{padding:8px 14px;background:var(--bg2);border-bottom:1px solid var(--border);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text2);display:flex;justify-content:space-between;align-items:center}
+.panel-header{padding:10px 14px;background:var(--bg2);border-bottom:1px solid var(--border);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--text2);display:flex;justify-content:space-between;align-items:center;font-weight:700}
 .pitcher-card{padding:10px 14px;border-bottom:1px solid var(--border);background:var(--panel);position:relative;overflow:hidden;z-index:1;text-align:right}
 .pitcher-card::after{content:'';position:absolute;top:50%;right:40%;transform:translateY(-50%);width:110px;height:110px;background:url('assets/baseball_icon_1_transparent.png') no-repeat center / contain;opacity:0.15;z-index:0;filter:invert(1);pointer-events:none}
 .pitcher-card .pname{font-family:'Black Han Sans';font-size:26px;letter-spacing:1px;position:relative;z-index:1}
-.pitcher-card .pteam{color:var(--text2);font-size:11px;position:relative;z-index:1}
-.pstats,.bstats{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:8px;position:relative;z-index:1}
-.pstat,.bstat{text-align:center}
-.pval,.bval{font-family:'JetBrains Mono';font-size:13px;color:var(--text)}
-.plabel,.blabel{font-size:9px;color:var(--text3);letter-spacing:1px;margin-top:1px}
+.pitcher-card .pteam{color:var(--text);font-size:12px;position:relative;z-index:1;font-weight:500;margin-top:2px}
+.pstats,.bstats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px;position:relative;z-index:1}
+.pstat,.bstat{text-align:center;background:rgba(255,255,255,0.03);padding:6px;border-radius:6px;border:1px solid var(--border)}
+.pval,.bval{font-family:'JetBrains Mono';font-size:15px;color:var(--text);font-weight:700}
+.plabel,.blabel{font-size:10px;color:var(--text2);letter-spacing:1px;margin-top:2px}
 .stamina-wrap{margin-top:7px;position:relative;z-index:1}
 .stamina-label{display:flex;justify-content:space-between;font-size:10px;color:var(--text2);margin-bottom:3px}
 .stamina-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden}
@@ -120,31 +119,31 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 .pt-pos{font-size:10px;color:var(--accent);letter-spacing:1px;margin-bottom:3px}
 .pt-row{color:var(--text2)}
 .batter-card .bname{font-family:'Black Han Sans';font-size:26px;position:relative;z-index:1}
-.batter-card .binfo{color:var(--text2);font-size:11px;position:relative;z-index:1}
+.batter-card .binfo{color:var(--text);font-size:12px;position:relative;z-index:1;font-weight:500;margin-top:2px}
 .atbat-vs-wrap{position:relative;display:flex;border-bottom:1px solid var(--border)}
 .atbat-vs-overlay{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'Bebas Neue';font-size:clamp(70px,9vw,110px);color:rgba(128,128,128,0.15);letter-spacing:6px;pointer-events:none;z-index:10;line-height:1;white-space:nowrap;user-select:none}
-.today-stats{padding:8px 14px;border-bottom:1px solid var(--border);font-size:11px}
-.today-stats .ts-title{color:var(--text2);font-size:10px;letter-spacing:1px;margin-bottom:5px}
+.today-stats{padding:10px 14px;border-bottom:1px solid var(--border);font-size:12px}
+.today-stats .ts-title{color:var(--text2);font-size:11px;letter-spacing:1px;margin-bottom:6px;font-weight:700}
 .ts-row{display:flex;justify-content:space-between;padding:2px 0}
 .ts-k{color:var(--text2)}.ts-v{font-family:'JetBrains Mono';color:var(--text)}
 .tab-bar{display:flex;border-bottom:1px solid var(--border)}
 .tab{flex:1;padding:8px;text-align:center;font-size:11px;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
 .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
 .tab-content{flex:1;overflow-y:auto}
-.log-panel{padding:6px 0}
-.log-entry{padding:5px 14px;border-bottom:1px solid var(--border);font-size:11px;display:flex;gap:7px;align-items:flex-start;animation:logIn .2s ease}
+.log-panel{padding:8px 0}
+.log-entry{padding:8px 14px;border-bottom:1px solid var(--border);font-size:12px;display:flex;gap:10px;align-items:flex-start;animation:logIn .2s ease;line-height:1.4}
 @keyframes logIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
-.log-inn{color:var(--text3);font-family:'JetBrains Mono';font-size:10px;min-width:28px}
-.log-msg{color:var(--text);flex:1}
+.log-inn{color:var(--text2);font-family:'JetBrains Mono';font-size:11px;min-width:32px;font-weight:700;margin-top:1px}
+.log-msg{color:var(--text);flex:1;font-weight:500}
 .log-msg.hit{color:var(--accent3)}.log-msg.hr{color:var(--accent);font-weight:700}
 .log-msg.out{color:var(--text2)}.log-msg.score{color:var(--accent);font-weight:700}
 .log-msg.steal{color:#a855f7}.log-msg.bunt{color:#64c864}
 .log-msg.change{color:var(--accent4)}.log-msg.ext{color:var(--accent);font-weight:700}
-.formula-panel{padding:10px 14px;font-size:11px;line-height:1.8}
-.fs-section{margin-bottom:12px}
-.fs-title{color:var(--accent);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;border-bottom:1px solid var(--border);padding-bottom:3px}
-.fr{display:flex;justify-content:space-between;padding:1px 0}
-.fk{color:var(--text2)}.fv{font-family:'JetBrains Mono';color:var(--text)}
+.formula-panel{padding:12px 14px;font-size:12px;line-height:1.8}
+.fs-section{margin-bottom:14px}
+.fs-title{color:var(--accent);font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;border-bottom:1px solid var(--border);padding-bottom:4px;font-weight:700}
+.fr{display:flex;justify-content:space-between;padding:2px 0}
+.fk{color:var(--text2)}.fv{font-family:'JetBrains Mono';color:var(--text);font-weight:700}
 #lineup-panel{display:flex;flex-direction:row;flex-wrap:wrap;overflow:hidden}
 .lineup-half{flex:1 1 300px;overflow-y:auto;border-bottom:1px solid var(--border)}
 .lineup-half:last-child{border-bottom:none}
@@ -712,7 +711,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
         <div class="bname" id="b-name">-</div>
         <div class="binfo" id="b-info">-</div>
         <div class="bstats">
-          <div class="bstat"><div class="blabel">AVG</div><div class="bval" id="b-avg" style="color:var(--accent3)">-</div></div>
+          <div class="bstat"><div class="blabel">AVG</div><div class="bval" id="b-avg">-</div></div>
           <div class="bstat"><div class="blabel">HR</div><div class="bval" id="b-hr">-</div></div>
           <div class="bstat"><div class="blabel">RBI</div><div class="bval" id="b-rbi">-</div></div>
           <div class="bstat"><div class="blabel">OPS</div><div class="bval" id="b-ops">-</div></div>

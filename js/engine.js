@@ -971,7 +971,7 @@ async function handlePA(pa) {
     addLog(`🔴 ${b.name} 아웃 (${n}구)`, 'out');
   }
   gs.isTop ? gs.awayOrder++ : gs.homeOrder++;
-  updateTodayStats(b);
+  updateTodayStats();
 }
 
 function addRuns(n) {
@@ -1272,7 +1272,7 @@ function updateBatUI(b) {
     bStamFill.style.background = bStam > 70 ? 'var(--accent3)' : bStam > 40 ? 'var(--accent)' : 'var(--accent2)';
   }
   if (bStamPct) bStamPct.textContent = Math.round(bStam) + '%';
-  updateTodayStats(b);
+  updateTodayStats();
 }
 
 function updatePitUI(p) {
@@ -1291,10 +1291,10 @@ function updatePitUI(p) {
 
   const plPit = batter ? calcPlatoon(batter.hand, p.hand) : null;
   const platoonTagPit = (plPit && plPit.advantage === 'pitcher')
-    ? `<span style="margin-left:6px;font-size:9px;padding:1px 5px;border-radius:8px;background:rgba(45,204,111,.2);color:#2dcc6f;border:1px solid #2dcc6f">유리</span>` : '';
+    ? `<span style="margin-right:6px;font-size:9px;padding:1px 5px;border-radius:8px;background:rgba(45,204,111,.2);color:#2dcc6f;border:1px solid #2dcc6f">유리</span>` : '';
   
   const pHandKR = p.hand === 'L' ? '좌' : '우';
-  document.getElementById('p-team').innerHTML  = `투구 <span style="color:var(--accent);font-family:'JetBrains Mono';font-weight:700;">${p.pitchCount}</span> · ${pHandKR}투${platoonTagPit}`;
+  document.getElementById('p-team').innerHTML  = `${platoonTagPit}${pHandKR}투`;
   document.getElementById('p-era').textContent   = p.ERA.toFixed(2);
   document.getElementById('p-k9').textContent    = p.K9.toFixed(1);
   document.getElementById('p-whip').textContent  = p.WHIP.toFixed(2);
@@ -1366,6 +1366,8 @@ function updateGameUI() {
   
   if (pitcher) updatePitUI(pitcher);
   if (batter) updateBatUI(batter);
+  
+  updateTodayStats();
 }
 
 function updateBasesUI(bases) {
@@ -1500,14 +1502,33 @@ function updateFml(b, p, r) {
     `<div class="fr" style="color:var(--accent);margin-top:4px"><span class="fk">결과</span><span class="fv">${lbl}</span></div>`;
 }
 
-function updateTodayStats(b) {
-  const ts = b.todayStats;
-  document.getElementById('ts-pa').textContent  = ts.PA;
-  document.getElementById('ts-h').textContent   = ts.H;
-  document.getElementById('ts-hr').textContent  = ts.HR  || 0;
-  document.getElementById('ts-rbi').textContent = ts.RBI || 0;
-  document.getElementById('ts-k').textContent   = ts.K   || 0;
-  document.getElementById('ts-bb').textContent  = ts.BB  || 0;
+function updateTodayStats() {
+  if (!gs) return;
+  const lineup  = gs.isTop ? gs.awayLineup  : gs.homeLineup;
+  const order   = gs.isTop ? gs.awayOrder   : gs.homeOrder;
+  const b  = lineup[order % lineup.length];
+  const p = gs.isTop ? gs.curHP : gs.curAP;
+
+  if (b) {
+    const ts = b.todayStats || {};
+    document.getElementById('ts-pa').textContent  = ts.PA || 0;
+    document.getElementById('ts-h').textContent   = ts.H || 0;
+    document.getElementById('ts-hr').textContent  = ts.HR  || 0;
+    document.getElementById('ts-rbi').textContent = ts.RBI || 0;
+    document.getElementById('ts-k').textContent   = ts.K   || 0;
+    document.getElementById('ts-bb').textContent  = ts.BB  || 0;
+  }
+  
+  if (p) {
+    const tsP = p.todayStats || {};
+    const ip = ((tsP.IP_out || 0) / 3).toFixed(1);
+    document.getElementById('ts-p-pc').textContent = p.pitchCount || 0;
+    document.getElementById('ts-p-ip').textContent = ip;
+    document.getElementById('ts-p-rer').textContent = `${tsP.R || 0}/${tsP.ER || 0}`;
+    document.getElementById('ts-p-k').textContent = tsP.K || 0;
+    document.getElementById('ts-p-h').textContent = tsP.H || 0;
+    document.getElementById('ts-p-bb').textContent = tsP.BB || 0;
+  }
 }
 
 // ═══════════════════════════════════════════════════════

@@ -1220,9 +1220,6 @@ function buildMVP() {
         <div class="mvp-tag">${mvp.team}</div>
         <div class="mvp-name">${p.name}</div>
         <div class="mvp-stats">${statsHtml}</div>
-        <div style="margin-top:12px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.1); font-size:10px; color:var(--text3); line-height:1.4;">
-          <strong>선정 기준:</strong> 타자는 안타(1.5), 홈런(4.5), 타점(2.0) 등을 가중 합산하며, 투수는 이닝(3.5), 탈삼진(1.5) 가점 및 실점(-3.0) 감점을 적용합니다. 승리 팀 선수에게는 추가 가산점이 부여됩니다.
-        </div>
       </div>
     `;
   }

@@ -196,16 +196,17 @@ function recordPitcherFatigue(pitchers, teamCode) {
       consecDays: 0, 
       type: p.isStarter ? 'starter' : 'reliever' 
     };
+    const lastGame = prev.lastGame;
     
     // 차감량 = 투구 수 * 1%
     prev.stamina = Math.max(0, prev.stamina - p.pitchCount);
-    prev.lastGame = SS.gameIdx;
     
     // 연투 기록 (당일 여러 번 호출 방지용 방어 로직 포함)
-    if (prev.lastGame !== SS.gameIdx) {
-      prev.consecDays = (SS.gameIdx - prev.lastGame <= 1) ? prev.consecDays + 1 : 1;
+    if (lastGame !== SS.gameIdx) {
+      prev.consecDays = (SS.gameIdx - lastGame <= 1) ? prev.consecDays + 1 : 1;
     }
     
+    prev.lastGame = SS.gameIdx;
     prev.type = p.isStarter ? 'starter' : 'reliever';
     SS.pitcherFatigue[key] = prev;
   });
@@ -216,12 +217,15 @@ function recordPitcherFatigue(pitchers, teamCode) {
  */
 function recordCatcherFatigue(hitters, teamCode, innings) {
   if (!SS.catcherFatigue) SS.catcherFatigue = {};
+  const inningCount = typeof innings === 'number'
+    ? innings
+    : Math.max((innings && innings.home && innings.home.length) || 0, (innings && innings.away && innings.away.length) || 0);
   hitters.forEach(h => {
     const key = `${h.name}_${teamCode}`;
     const prev = SS.catcherFatigue[key] || { stamina: 100, lastDefGame: -99 };
     
     // 이닝당 5% 차감
-    prev.stamina = Math.max(0, prev.stamina - (innings * 5));
+    prev.stamina = Math.max(0, prev.stamina - (inningCount * 5));
     prev.lastDefGame = SS.gameIdx;
     
     SS.catcherFatigue[key] = prev;

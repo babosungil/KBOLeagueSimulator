@@ -959,12 +959,6 @@ async function loadAllTeamData(year, teams, nameKor) {
 // ── 시즌 종료 ──────────────────────────────────────────
 // exitSeasonMode → season.js로 이동
 
-// ── 경기 종료 후 시즌으로 복귀 ─────────────────────────
-function returnToSeason() {
-  document.getElementById('game-over').classList.remove('show');
-  if (SS.phase === 'postseason') showPostseasonScreen();
-  else showSeasonScreen();
-}
 </script>
 
   <div id="score-overlay" class="fullscreen-overlay">

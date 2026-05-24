@@ -1834,3 +1834,15 @@ async function playPsSeries(stage) {
     renderPostseasonUI();
   }
 }
+
+if (typeof globalThis !== 'undefined') {
+  globalThis.__KBO_TEST__ = Object.assign(globalThis.__KBO_TEST__ || {}, {
+    SS,
+    buildSchedule,
+    initStandings,
+    applyResult,
+    recordPitcherFatigue,
+    recordCatcherFatigue,
+    getSortedStandings,
+  });
+}

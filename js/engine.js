@@ -1677,3 +1677,15 @@ function switchTab(t) {
   document.getElementById('content-log').style.display     = t === 'log'     ? '' : 'none';
   document.getElementById('content-formula').style.display = t === 'formula' ? '' : 'none';
 }
+
+if (typeof globalThis !== 'undefined') {
+  globalThis.__KBO_TEST__ = Object.assign(globalThis.__KBO_TEST__ || {}, {
+    DB,
+    parseCSV,
+    parseIP,
+    buildHitter,
+    buildPitcher,
+    advRunners,
+    calcPlatoon,
+  });
+}

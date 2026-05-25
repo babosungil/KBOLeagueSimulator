@@ -1410,6 +1410,8 @@ function updateLnpUI() {
   }
   render(gs.homeLineup, gs.homeOrder, 'home-lineup');
   render(gs.awayLineup, gs.awayOrder, 'away-lineup');
+  render(gs.homeLineup, gs.homeOrder, 'mobile-home-lineup');
+  render(gs.awayLineup, gs.awayOrder, 'mobile-away-lineup');
 }
 
 function updateSbUI() {
@@ -1650,6 +1652,31 @@ window.openSubstitutionModal = function() {
 
 window.closeSubModal = function() {
   document.getElementById('in-game-sub-modal').style.display = 'none';
+};
+
+window.openMobileLineupSheet = function() {
+  if (!gs) return;
+  updateLnpUI();
+  switchMobileLineupTab(gs.isTop ? 'away' : 'home');
+  const sheet = document.getElementById('mobile-lineup-sheet');
+  if (sheet) sheet.classList.add('open');
+};
+
+window.closeMobileLineupSheet = function() {
+  const sheet = document.getElementById('mobile-lineup-sheet');
+  if (sheet) sheet.classList.remove('open');
+};
+
+window.switchMobileLineupTab = function(side) {
+  const isAway = side === 'away';
+  const awayTab = document.getElementById('mobile-away-lineup-tab');
+  const homeTab = document.getElementById('mobile-home-lineup-tab');
+  const awayList = document.getElementById('mobile-away-lineup');
+  const homeList = document.getElementById('mobile-home-lineup');
+  if (awayTab) awayTab.classList.toggle('active', isAway);
+  if (homeTab) homeTab.classList.toggle('active', !isAway);
+  if (awayList) awayList.classList.toggle('active', isAway);
+  if (homeList) homeList.classList.toggle('active', !isAway);
 };
 
 window.changePitcherInGame = function(name) {

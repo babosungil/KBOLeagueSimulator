@@ -1711,6 +1711,10 @@ async function startSeasonGame() {
   if (homeLnpTitle) homeLnpTitle.textContent = hKor + ' 라인업';
   const awayLnpTitle = document.getElementById('away-lineup-title');
   if (awayLnpTitle) awayLnpTitle.textContent = aKor + ' 라인업';
+  const mobileHomeLnpTab = document.getElementById('mobile-home-lineup-tab');
+  if (mobileHomeLnpTab) mobileHomeLnpTab.textContent = hKor;
+  const mobileAwayLnpTab = document.getElementById('mobile-away-lineup-tab');
+  if (mobileAwayLnpTab) mobileAwayLnpTab.textContent = aKor;
   
 
   document.getElementById('game-log').innerHTML             = '';
@@ -1748,6 +1752,7 @@ window.returnToSeason = function() {
   
   document.getElementById('game-over').classList.remove('show');
   document.getElementById('game-bottom-nav').style.display = 'none';
+  if (typeof closeMobileLineupSheet === 'function') closeMobileLineupSheet();
   showSeasonScreen();
 };
 

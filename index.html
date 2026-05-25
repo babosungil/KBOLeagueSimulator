@@ -383,6 +383,8 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 /* ── 게임 화면 하단 내비게이션 ── */
 #game-bottom-nav{position:fixed;bottom:0;left:0;width:100%;height:62px;background:var(--bg2);border-top:1px solid var(--border);display:none;z-index:180;padding:0 10px;}
 .gnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;border:none;background:transparent;color:var(--text3);transition:all .2s;height:100%;user-select:none;-webkit-touch-callout:none;}
+.gnav-btn.gnav-lineup{display:none;}
+.gnav-spacer{display:none;flex:1;height:100%;}
 .gnav-btn:active{background:var(--bg3);}
 .gnav-btn svg{color:currentColor;}
 .gnav-btn span{font-size:10px;font-weight:700;letter-spacing:1px;}
@@ -390,6 +392,21 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 .gnav-btn.play.playing{color:var(--accent2);}
 .gnav-btn.play:active{transform:scale(1.05);}
 .gnav-btn.exit{color:var(--accent2);}
+#mobile-lineup-sheet{position:fixed;inset:0;z-index:260;display:none;align-items:flex-end;background:rgba(0,0,0,.58);}
+#mobile-lineup-sheet.open{display:flex;}
+.lineup-sheet-panel{width:100%;max-height:76vh;background:var(--panel);border-top:1px solid var(--border2);border-radius:12px 12px 0 0;box-shadow:0 -14px 35px rgba(0,0,0,.45);overflow:hidden;transform:translateY(100%);animation:lineupSheetIn .2s ease forwards;}
+@keyframes lineupSheetIn{to{transform:translateY(0)}}
+.lineup-sheet-head{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-bottom:1px solid var(--border);background:var(--bg2);}
+.lineup-sheet-title{font-family:'Black Han Sans';font-size:15px;letter-spacing:2px;color:var(--text);}
+.lineup-sheet-close{width:36px;height:36px;border:none;background:transparent;color:var(--text2);display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:6px;}
+.lineup-sheet-close:active{background:var(--bg3);color:var(--text);}
+.lineup-sheet-tabs{display:flex;background:var(--bg2);border-bottom:1px solid var(--border);}
+.lineup-sheet-tab{flex:1;height:40px;border:none;background:transparent;color:var(--text2);font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer;border-bottom:2px solid transparent;}
+.lineup-sheet-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.lineup-sheet-body{max-height:calc(76vh - 85px);overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.mobile-lineup-list{display:none;}
+.mobile-lineup-list.active{display:block;}
+@media(max-width:880px){.gnav-spacer{display:block}.gnav-btn.gnav-lineup{display:flex}}
 
 /* 내비게이션 아이콘 스타일 */
 .snav-btn img {
@@ -540,6 +557,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 
 <!-- ── 게임 화면 하단 내비게이션 ── -->
 <div id="game-bottom-nav">
+  <div class="gnav-spacer" aria-hidden="true"></div>
   <button class="gnav-btn" onclick="openSubstitutionModal()">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
     <span>선수교체</span>
@@ -548,10 +566,33 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
     <span id="game-play-label">진행</span>
   </button>
+  <button class="gnav-btn gnav-lineup" onclick="openMobileLineupSheet()">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+    <span>라인업</span>
+  </button>
   <button class="gnav-btn exit" onclick="returnToSeason()">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
     <span>종료</span>
   </button>
+</div>
+
+<div id="mobile-lineup-sheet" onclick="closeMobileLineupSheet()">
+  <div class="lineup-sheet-panel" onclick="event.stopPropagation()">
+    <div class="lineup-sheet-head">
+      <div class="lineup-sheet-title">라인업</div>
+      <button class="lineup-sheet-close" onclick="closeMobileLineupSheet()" aria-label="닫기">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="lineup-sheet-tabs">
+      <button class="lineup-sheet-tab active" id="mobile-away-lineup-tab" onclick="switchMobileLineupTab('away')">원정</button>
+      <button class="lineup-sheet-tab" id="mobile-home-lineup-tab" onclick="switchMobileLineupTab('home')">홈</button>
+    </div>
+    <div class="lineup-sheet-body">
+      <div class="mobile-lineup-list active" id="mobile-away-lineup"></div>
+      <div class="mobile-lineup-list" id="mobile-home-lineup"></div>
+    </div>
+  </div>
 </div>
 
 

@@ -415,6 +415,26 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 .lineup-nav-blocker{position:fixed;left:0;right:0;bottom:0;height:62px;background:#000;display:flex;align-items:center;justify-content:center;color:var(--text);}
 .lineup-nav-close{width:42px;height:42px;display:flex;align-items:center;justify-content:center;border-radius:50%;color:var(--text);}
 @media(max-width:880px){.gnav-spacer{display:block}.gnav-btn.gnav-lineup{display:flex}}
+.sub-sheet-panel{position:fixed;left:0;right:0;bottom:62px;width:100%;height:calc(100vh - 62px);background:var(--panel);border-top:1px solid var(--border2);border-radius:12px 12px 0 0;box-shadow:0 -14px 35px rgba(0,0,0,.45);overflow:hidden;display:flex;flex-direction:column;}
+.sub-sheet-head{height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0;}
+.sub-sheet-title{font-family:'Black Han Sans';font-size:16px;letter-spacing:2px;color:var(--text);}
+.sub-sheet-context{font-size:11px;color:var(--text2);text-align:right;line-height:1.4;}
+.sub-sheet-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 10px 14px;}
+.sub-card{display:flex;align-items:center;gap:10px;padding:12px 10px;border-bottom:1px solid var(--border);background:rgba(255,255,255,.02);cursor:pointer;}
+.sub-card:active{background:var(--bg3);}
+.sub-rank{font-family:'JetBrains Mono';font-size:15px;color:var(--text3);min-width:24px;text-align:right;}
+.sub-main{flex:1;min-width:0;}
+.sub-name-row{display:flex;align-items:center;gap:7px;margin-bottom:5px;}
+.sub-name{font-size:17px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sub-badge{font-size:10px;color:var(--accent);border:1px solid rgba(245,166,35,.45);background:rgba(245,166,35,.12);border-radius:10px;padding:1px 6px;white-space:nowrap;}
+.sub-badge.good{color:var(--accent3);border-color:rgba(45,204,111,.45);background:rgba(45,204,111,.12);}
+.sub-badge.warn{color:var(--accent2);border-color:rgba(232,52,10,.45);background:rgba(232,52,10,.12);}
+.sub-meta{font-family:'JetBrains Mono';font-size:12px;color:var(--text2);line-height:1.5;}
+.sub-reason{font-size:11px;color:var(--text3);margin-top:3px;line-height:1.35;}
+.sub-score{font-family:'JetBrains Mono';font-size:13px;color:var(--accent3);text-align:right;min-width:42px;}
+.sub-empty{padding:28px 12px;text-align:center;color:var(--text3);font-size:13px;}
+.sub-stamina{height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:7px;}
+.sub-stamina-fill{height:100%;border-radius:2px;}
 
 /* 내비게이션 아이콘 스타일 */
 .snav-btn img {
@@ -634,24 +654,17 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 </div>
 
 <!-- ── 경기 중 선수 교체 모달 ── -->
-<div id="in-game-sub-modal" style="position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:300;display:none;align-items:center;justify-content:center;">
-  <div class="turn-modal-inner" style="min-width:340px;max-width:420px;padding:20px;">
-    <div class="turn-modal-title">선수 교체</div>
-    
-    <div style="margin-bottom:14px;">
-      <div style="font-size:11px;color:var(--text2);margin-bottom:6px;letter-spacing:1px;text-transform:uppercase;">투수 교체</div>
-      <div id="sub-pitcher-list" style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px;"></div>
+<div id="in-game-sub-modal" onclick="closeSubModal()" style="position:fixed;inset:0;background:rgba(0,0,0,0.58);z-index:300;display:none;">
+  <div class="sub-sheet-panel" onclick="event.stopPropagation()">
+    <div class="sub-sheet-head">
+      <div class="sub-sheet-title" id="sub-sheet-title">선수 교체</div>
+      <div class="sub-sheet-context" id="sub-sheet-context"></div>
     </div>
-
-    <div style="margin-bottom:20px;">
-      <div style="font-size:11px;color:var(--text2);margin-bottom:6px;letter-spacing:1px;text-transform:uppercase;">대타 기용 (준비중)</div>
-      <div id="sub-hitter-list" style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px;opacity:0.5;pointer-events:none;">
-        <div style="padding:10px;text-align:center;font-size:12px;color:var(--text3);">준비 중인 기능입니다.</div>
-      </div>
-    </div>
-
-    <div style="text-align:center;">
-      <button class="btn" onclick="closeSubModal()">닫기</button>
+    <div class="sub-sheet-body" id="sub-candidate-list"></div>
+  </div>
+  <div class="lineup-nav-blocker" aria-hidden="true">
+    <div class="lineup-nav-close">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </div>
   </div>
 </div>

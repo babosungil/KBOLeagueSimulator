@@ -783,6 +783,21 @@ function initGame(home, away) {
   const pH = getTeamPitchers(home), pA = getTeamPitchers(away);
   const hL = buildLineup(hH),       aL = buildLineup(hA);
   if (!hL.length || !aL.length) { alert('해당 팀 데이터 부족'); return null; }
+  const homeCode = getTeamCode(home) || home;
+  const awayCode = getTeamCode(away) || away;
+  const isSeasonGame = typeof SS !== 'undefined' && Array.isArray(SS.schedule) && SS.schedule.length > 0;
+  const homeIsMine = typeof SS !== 'undefined' && SS.myTeamKor === home;
+  const awayIsMine = typeof SS !== 'undefined' && SS.myTeamKor === away;
+  const homeStarter = isSeasonGame
+    ? (homeIsMine && typeof pickStarterFromRotation === 'function'
+      ? pickStarterFromRotation(pH, homeCode)
+      : pickStarterWithFatigue(pH, homeCode))
+    : pickStarter(pH);
+  const awayStarter = isSeasonGame
+    ? (awayIsMine && typeof pickStarterFromRotation === 'function'
+      ? pickStarterFromRotation(pA, awayCode)
+      : pickStarterWithFatigue(pA, awayCode))
+    : pickStarter(pA);
   return {
     homeTeam: home, awayTeam: away,
     homeScore: 0,   awayScore: 0,
@@ -790,12 +805,8 @@ function initGame(home, away) {
     outs: 0, bases: [null, null, null],
     homeLineup: hL,   awayLineup: aL,
     homePitchers: pH, awayPitchers: pA,
-    curHP: (typeof pickStarterWithFatigue === 'function' && typeof SS !== 'undefined' && SS.gameIdx > 0)
-           ? pickStarterWithFatigue(pH, getTeamCode(home) || home)
-           : pickStarter(pH),
-    curAP: (typeof pickStarterWithFatigue === 'function' && typeof SS !== 'undefined' && SS.gameIdx > 0)
-           ? pickStarterWithFatigue(pA, getTeamCode(away) || away)
-           : pickStarter(pA),
+    curHP: homeStarter,
+    curAP: awayStarter,
     homeOrder: 0, awayOrder: 0,
     innings: { home: [], away: [0] },
     currentPA: null,
@@ -1617,37 +1628,175 @@ async function stepOnce() {
 }
 function showSetup()   { stopPlay(); document.getElementById('setup-screen').style.display = 'flex'; }
 function restartGame() { document.getElementById('game-over').classList.remove('show'); showSetup(); }
+function getMySide() {
+  const myTeamKor = (typeof SS !== 'undefined' && SS.myTeamKor) ? SS.myTeamKor : gs.homeTeam;
+  return gs.homeTeam === myTeamKor ? 'home' : 'away';
+}
+
+function getHitterStaminaForSub(h, teamCode) {
+  if (h.defPos === '포수' || h.position === 'C' || h.pos === 'C') {
+    const key = `${h.name}_${teamCode}`;
+    const cf = (typeof SS !== 'undefined' && SS.catcherFatigue) ? SS.catcherFatigue[key] : null;
+    return cf ? Math.round(cf.stamina) : 100;
+  }
+  return 100;
+}
+
+function getCurrentBatterForSide(side) {
+  const lineup = side === 'home' ? gs.homeLineup : gs.awayLineup;
+  const order = side === 'home' ? gs.homeOrder : gs.awayOrder;
+  return { lineup, order, idx: order % lineup.length, batter: lineup[order % lineup.length] };
+}
+
+function getNextOpponentBatter() {
+  const lineup = gs.isTop ? gs.awayLineup : gs.homeLineup;
+  const order = gs.isTop ? gs.awayOrder : gs.homeOrder;
+  return lineup[order % lineup.length];
+}
+
+function getSubContext() {
+  const side = getMySide();
+  const isBatting = (side === 'home' && !gs.isTop) || (side === 'away' && gs.isTop);
+  return { side, isBatting };
+}
+
+function renderSubCardHtml(item, idx, onclickName) {
+  const badgeClass = item.badgeClass || '';
+  const stamina = item.stamina == null ? null : Math.max(0, Math.min(100, Math.round(item.stamina)));
+  const stColor = stamina == null ? 'var(--accent3)' : stamina >= 80 ? 'var(--accent3)' : stamina >= 50 ? 'var(--accent)' : 'var(--accent2)';
+  return `
+    <div class="sub-card" onclick="${onclickName}('${item.name.replace(/'/g, "\\'")}')">
+      <div class="sub-rank">${idx + 1}</div>
+      <div class="sub-main">
+        <div class="sub-name-row">
+          <div class="sub-name">${item.name}</div>
+          <div class="sub-badge ${badgeClass}">${item.badge}</div>
+        </div>
+        <div class="sub-meta">${item.meta}</div>
+        <div class="sub-reason">${item.reason}</div>
+        ${stamina == null ? '' : `<div class="sub-stamina"><div class="sub-stamina-fill" style="width:${stamina}%;background:${stColor}"></div></div>`}
+      </div>
+      <div class="sub-score">${Math.round(item.score)}</div>
+    </div>`;
+}
+
+function fmtNum(v, digits, fallback = '-') {
+  const n = Number(v);
+  return Number.isFinite(n) ? n.toFixed(digits) : fallback;
+}
+
+function renderHitterSubCandidates(side) {
+  const team = side === 'home' ? gs.homeTeam : gs.awayTeam;
+  const teamCode = getTeamCode(team) || team;
+  const { lineup, batter } = getCurrentBatterForSide(side);
+  const lineupNames = new Set(lineup.map(p => p.name));
+  const usedSetName = side === 'home' ? 'homeUsedHitters' : 'awayUsedHitters';
+  if (!gs[usedSetName]) gs[usedSetName] = new Set();
+  const pitcher = gs.isTop ? gs.curHP : gs.curAP;
+  const pool = getTeamHitters(team)
+    .filter(h => !lineupNames.has(h.name) && !gs[usedSetName].has(h.name));
+
+  const candidates = pool.map(h => {
+    const pl = calcPlatoon(h.hand, pitcher.hand);
+    const stamina = getHitterStaminaForSub(h, teamCode);
+    let score = (h.ops || 0) * 100 + (h.AVG || 0) * 35;
+    if (pl.advantage === 'batter') score += 18; else score -= 10;
+    score += (stamina - 70) * 0.18;
+    if (isRISP(gs.bases)) score += (h.RBI || 0) * 0.035 + (h.obp || 0) * 12;
+    if (gs.inning >= 7 && Math.abs(gs.homeScore - gs.awayScore) <= 2) score += (h.HR || 0) * 0.18 + (h.slg || 0) * 10;
+    const badge = pl.advantage === 'batter' ? '좌우 유리' : '좌우 불리';
+    const hand = h.hand === 'L' ? '좌타' : '우타';
+    return {
+      name: h.name,
+      score,
+      stamina,
+      badge,
+      badgeClass: pl.advantage === 'batter' ? 'good' : 'warn',
+      meta: `${hand} · AVG ${fmtNum(h.AVG, 3)} · OPS ${fmtNum(h.ops, 3)} · HR ${h.HR || 0}`,
+      reason: `체력 ${stamina}% · ${pl.label}${isRISP(gs.bases) ? ' · 득점권 가산' : ''}`,
+    };
+  }).sort((a, b) => b.score - a.score);
+
+  const titleEl = document.getElementById('sub-sheet-title');
+  const contextEl = document.getElementById('sub-sheet-context');
+  const listEl = document.getElementById('sub-candidate-list');
+  if (titleEl) titleEl.textContent = '타자 교체';
+  if (contextEl) contextEl.innerHTML = `현재 타자<br>${batter.name}`;
+  if (listEl) listEl.innerHTML = candidates.length
+    ? candidates.map((item, idx) => renderSubCardHtml(item, idx, 'changeHitterInGame')).join('')
+    : '<div class="sub-empty">교체 가능한 타자가 없습니다.</div>';
+}
+
+function scorePitcherRoleFit(p, inning, scoreDiff) {
+  const absDiff = Math.abs(scoreDiff);
+  if (inning >= 9 && scoreDiff > 0 && scoreDiff <= 3) return p.role === 'closer' ? 28 : p.role === 'middle' ? 10 : -8;
+  if (inning >= 8 && absDiff <= 3) return p.role === 'closer' ? 18 : p.role === 'middle' ? 14 : -6;
+  if (inning >= 6) return p.role === 'middle' ? 18 : p.role === 'closer' ? 6 : -4;
+  return p.role === 'middle' ? 12 : p.role === 'starter' ? 2 : -6;
+}
+
+function renderPitcherSubCandidates(side) {
+  const teamCode = side === 'home' ? getTeamCode(gs.homeTeam) || gs.homeTeam : getTeamCode(gs.awayTeam) || gs.awayTeam;
+  const pitchers = side === 'home' ? gs.homePitchers : gs.awayPitchers;
+  const curP = side === 'home' ? gs.curHP : gs.curAP;
+  const scoreDiff = side === 'home' ? gs.homeScore - gs.awayScore : gs.awayScore - gs.homeScore;
+  const nextBatter = getNextOpponentBatter();
+  let pool = pitchers.filter(p => p.name !== curP.name && !p.usedToday && !p.isStarter);
+  if (!pool.length) pool = pitchers.filter(p => p.name !== curP.name && !p.usedToday);
+
+  const candidates = pool.map(p => {
+    const isStarter = !!p.isStarter;
+    const fatigueInfo = (typeof getPitcherFatigueInfo === 'function')
+      ? getPitcherFatigueInfo(p, teamCode, isStarter)
+      : { staminaPct: Math.round(calcStamina(p)), stColor: 'var(--accent3)' };
+    const stamina = fatigueInfo.staminaPct;
+    const pl = nextBatter ? calcPlatoon(nextBatter.hand, p.hand) : null;
+    const roleFit = scorePitcherRoleFit(p, gs.inning, scoreDiff);
+    let score = roleFit + Math.max(0, 6 - p.ERA) * 8 + Math.max(0, 1.6 - p.WHIP) * 18 + (p.K9 || 0) * 1.4 - (p.BB9 || 0) * 1.2;
+    score += (stamina - 60) * 0.45;
+    if (pl && pl.advantage === 'pitcher') score += 10;
+    if (pl && pl.advantage === 'batter') score -= 7;
+    if (stamina < 30) score -= 80;
+    const roleLabel = { starter:'선발', middle:'계투', closer:'마무리' }[p.role] || '투수';
+    const hand = p.hand === 'L' ? '좌투' : '우투';
+    const badge = stamina < 30 ? '체력 낮음' : pl && pl.advantage === 'pitcher' ? '좌우 유리' : roleFit >= 18 ? '역할 적합' : roleLabel;
+    return {
+      name: p.name,
+      score,
+      stamina,
+      badge,
+      badgeClass: stamina < 30 ? 'warn' : (badge === '좌우 유리' || badge === '역할 적합') ? 'good' : '',
+      meta: `${hand} · ${roleLabel} · ERA ${fmtNum(p.ERA, 2)} · WHIP ${fmtNum(p.WHIP, 2)} · K/9 ${fmtNum(p.K9, 1)}`,
+      reason: `체력 ${stamina}% · ${nextBatter ? `다음 타자 ${nextBatter.name}` : '다음 타자'}${pl ? ` · ${pl.label}` : ''}`,
+    };
+  }).filter(item => item.stamina >= 30)
+    .sort((a, b) => b.score - a.score);
+
+  const titleEl = document.getElementById('sub-sheet-title');
+  const contextEl = document.getElementById('sub-sheet-context');
+  const listEl = document.getElementById('sub-candidate-list');
+  if (titleEl) titleEl.textContent = '투수 교체';
+  if (contextEl) contextEl.innerHTML = `현재 투수<br>${curP.name}`;
+  if (listEl) listEl.innerHTML = candidates.length
+    ? candidates.map((item, idx) => renderSubCardHtml(item, idx, 'changePitcherInGame')).join('')
+    : '<div class="sub-empty">교체 가능한 투수가 없습니다.</div>';
+}
+
 window.openSubstitutionModal = function() {
   if (!gs || gs.gameOver) return;
   stopPlay();
-
-  const isMyHome = (gs.homeTeam === SS.myTeam);
-  const myPitchers = isMyHome ? gs.homePitchers : gs.awayPitchers;
-  const curP = isMyHome ? gs.curHP : gs.curAP;
-  
-  const pool = myPitchers.filter(p => p.name !== curP.name && !p.usedToday);
-  const listEl = document.getElementById('sub-pitcher-list');
-  if (listEl) {
-    if (pool.length === 0) {
-      listEl.innerHTML = '<div style="padding:10px;text-align:center;color:var(--text3);font-size:12px;">사용 가능한 투수가 없습니다.</div>';
-    } else {
-      listEl.innerHTML = pool.map(p => {
-        const roleLabel = { starter:'선발', middle:'계투', closer:'마무리' }[p.role] || '투수';
-        return `
-          <div onclick="changePitcherInGame('${p.name}')" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.02);">
-            <div style="display:flex;flex-direction:column;">
-              <span style="font-weight:700;font-size:13px;color:var(--text);">${p.name} <span style="font-size:10px;color:var(--accent);font-weight:normal;">${roleLabel}</span></span>
-              <span style="font-family:'JetBrains Mono';font-size:10px;color:var(--text3);">ERA ${p.ERA.toFixed(2)} · IP ${p.IP.toFixed(1)}</span>
-            </div>
-            <div style="text-align:right;">
-              <div style="font-family:'JetBrains Mono';font-size:11px;color:var(--accent3);">교체</div>
-            </div>
-          </div>`;
-      }).join('');
-    }
+  const modal = document.getElementById('in-game-sub-modal');
+  const listEl = document.getElementById('sub-candidate-list');
+  if (modal) modal.style.display = 'block';
+  if (listEl) listEl.innerHTML = '<div class="sub-empty">교체 후보를 계산 중입니다.</div>';
+  try {
+    const { side, isBatting } = getSubContext();
+    if (isBatting) renderHitterSubCandidates(side);
+    else renderPitcherSubCandidates(side);
+  } catch (err) {
+    console.error('선수교체 후보 렌더링 실패:', err);
+    if (listEl) listEl.innerHTML = '<div class="sub-empty">교체 후보를 표시하지 못했습니다.<br>콘솔 오류를 확인해 주세요.</div>';
   }
-
-  document.getElementById('in-game-sub-modal').style.display = 'flex';
 };
 
 window.closeSubModal = function() {
@@ -1680,7 +1829,8 @@ window.switchMobileLineupTab = function(side) {
 };
 
 window.changePitcherInGame = function(name) {
-  const isMyHome = (gs.homeTeam === SS.myTeam);
+  const { side } = getSubContext();
+  const isMyHome = side === 'home';
   const myPitchers = isMyHome ? gs.homePitchers : gs.awayPitchers;
   const np = myPitchers.find(p => p.name === name);
   
@@ -1691,11 +1841,59 @@ window.changePitcherInGame = function(name) {
     
     const roleLabel = { starter:'선발', middle:'중간계투', closer:'마무리' }[np.role] || '계투';
     addLog(`🔄 투수교체(사용자) → ${np.name} [${roleLabel}] (ERA ${np.ERA})`, 'change');
+    if (gs.currentPA) {
+      gs.currentPA.pitcher = np;
+      if (gs.currentPA.pidx === 0) {
+        gs.currentPA.pr = decidePAResult(gs.currentPA.batter, np, gs.bases, gs.inning, gs.outs);
+        gs.currentPA.seq = buildSeq(gs.currentPA.pr);
+        updateFml(gs.currentPA.batter, np, gs.currentPA.pr);
+      }
+    }
     updatePitUI(np);
     updateGameUI();
     closeSubModal();
     alert(`${np.name} 투수로 교체되었습니다.`);
   }
+};
+
+window.changeHitterInGame = function(name) {
+  const { side, isBatting } = getSubContext();
+  if (!isBatting) return;
+
+  const team = side === 'home' ? gs.homeTeam : gs.awayTeam;
+  const { lineup, idx, batter: oldBatter } = getCurrentBatterForSide(side);
+  const usedSetName = side === 'home' ? 'homeUsedHitters' : 'awayUsedHitters';
+  if (!gs[usedSetName]) gs[usedSetName] = new Set();
+
+  const lineupNames = new Set(lineup.map(p => p.name));
+  const np = getTeamHitters(team).find(h => h.name === name && !lineupNames.has(h.name) && !gs[usedSetName].has(h.name));
+  if (!np) return;
+
+  np.pos = oldBatter.pos || POS_KOR_MAP[np.defPos] || 'PH';
+  np.order = oldBatter.order;
+  np.usedToday = true;
+  oldBatter.usedToday = true;
+  gs[usedSetName].add(oldBatter.name);
+  gs[usedSetName].add(np.name);
+  lineup[idx] = np;
+
+  const pitcher = gs.isTop ? gs.curHP : gs.curAP;
+  if (gs.currentPA && gs.currentPA.batter && gs.currentPA.batter.name === oldBatter.name) {
+    if (oldBatter.todayStats && oldBatter.todayStats.PA > 0) oldBatter.todayStats.PA--;
+    np.todayStats.PA++;
+    gs.currentPA.batter = np;
+    if (gs.currentPA.pidx === 0) {
+      gs.currentPA.pr = decidePAResult(np, pitcher, gs.bases, gs.inning, gs.outs);
+      gs.currentPA.seq = buildSeq(gs.currentPA.pr);
+      updateFml(np, pitcher, gs.currentPA.pr);
+    }
+  }
+
+  addLog(`🔄 대타 교체(사용자) → ${oldBatter.name} 대신 ${np.name}`, 'change');
+  updateBatUI(np);
+  updateGameUI();
+  updateLnpUI();
+  closeSubModal();
 };
 
 function switchTab(t) {

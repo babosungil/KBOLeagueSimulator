@@ -23,6 +23,8 @@ const SS = {
   // consecDays: 연속 등판 일수 (불펜)
   // type: 'starter' | 'reliever'
   pitcherFatigue: {},
+  starterRotation: [],
+  starterRotationIndex: 0,
 };
 
 // ── localStorage 키 ──────────────────────────────────────
@@ -158,6 +160,7 @@ function saveSeasonState() {
       phase:           SS.phase,
       pitcherFatigue:  SS.pitcherFatigue,
       starterRotation: SS.starterRotation,
+      starterRotationIndex: SS.starterRotationIndex,
     }));
   } catch(e) { console.warn('시즌 저장 실패', e); }
 }
@@ -341,6 +344,55 @@ function pickStarterWithFatigue(pitchers, teamCode) {
   });
   const pool = available.length ? available : starters; // 전원 피로 시 어쩔 수 없이 등판
   return pool.sort((a, b) => a.ERA - b.ERA)[Math.floor(Math.random() * Math.min(3, pool.length))];
+}
+
+function normalizeStarterRotationIndex() {
+  if (!SS.starterRotation || SS.starterRotation.length === 0) {
+    SS.starterRotationIndex = 0;
+    return 0;
+  }
+  const len = SS.starterRotation.length;
+  SS.starterRotationIndex = Number(SS.starterRotationIndex) || 0;
+  SS.starterRotationIndex = ((SS.starterRotationIndex % len) + len) % len;
+  return SS.starterRotationIndex;
+}
+
+function getNextRotationStarterName(pitchers, teamCode) {
+  initStarterRotation();
+  const rotation = SS.starterRotation || [];
+  if (!rotation.length) return null;
+  const byName = new Map(pitchers.map(p => [p.name, p]));
+  const startIdx = normalizeStarterRotationIndex();
+
+  for (let offset = 0; offset < rotation.length; offset++) {
+    const name = rotation[(startIdx + offset) % rotation.length];
+    const p = byName.get(name);
+    if (p && getFatigueMult(p.name, teamCode, true) < 99) return p.name;
+  }
+
+  return rotation[startIdx] || null;
+}
+
+function advanceStarterRotationAfter(name) {
+  const rotation = SS.starterRotation || [];
+  if (!rotation.length || !name) return;
+  const idx = rotation.indexOf(name);
+  if (idx === -1) return;
+  SS.starterRotationIndex = (idx + 1) % rotation.length;
+  saveSeasonState();
+}
+
+function pickStarterFromRotation(pitchers, teamCode) {
+  initStarterRotation();
+  const rotation = SS.starterRotation || [];
+  if (!rotation.length) return pickStarterWithFatigue(pitchers, teamCode);
+
+  const byName = new Map(pitchers.map(p => [p.name, p]));
+  const nextName = getNextRotationStarterName(pitchers, teamCode);
+  const picked = nextName ? byName.get(nextName) : null;
+  if (picked) return picked;
+
+  return pickStarterWithFatigue(pitchers, teamCode);
 }
 
 /**
@@ -1125,7 +1177,10 @@ function initStarterRotation() {
   if (SS.starterRotation && SS.starterRotation.length > 0) {
     const validNames = new Set(allPitchers.map(p => p.name));
     SS.starterRotation = SS.starterRotation.filter(n => validNames.has(n));
-    if (SS.starterRotation.length > 0) return;
+    if (SS.starterRotation.length > 0) {
+      normalizeStarterRotationIndex();
+      return;
+    }
   }
 
   // 초기화: IP/G >= 4.5 선수를 ERA 순으로 선발 로테이션에 배정
@@ -1133,6 +1188,7 @@ function initStarterRotation() {
     .filter(p => p.G > 0 && (p.IP / p.G) >= 4.5)
     .sort((a, b) => a.ERA - b.ERA);
   SS.starterRotation = naturalStarters.map(p => p.name);
+  normalizeStarterRotationIndex();
 }
 
 // ── 투수 피로 정보 계산 헬퍼 ─────────────────────────────────
@@ -1182,12 +1238,8 @@ function renderFatiguePanel() {
   // 불펜 투수 (로테이션 외)
   const relievers = allPitchers.filter(p => !rotation.includes(p.name));
 
-  // 다음 경기 선발: 로테이션 순서에서 등판 가능한 첫 번째
-  let nextStarterName = null;
-  for (const p of starters) {
-    if (getFatigueMult(p.name, teamCode, true) < 99) { nextStarterName = p.name; break; }
-  }
-  if (!nextStarterName && starters.length > 0) nextStarterName = starters[0].name;
+  // 다음 경기 선발: 로테이션 포인터부터 등판 가능한 첫 번째
+  const nextStarterName = getNextRotationStarterName(starters, teamCode) || (starters[0] && starters[0].name);
 
   // 불펜 정렬: 상태(체력 높은 순) > 역할(마무리 우선) > ERA
   relievers.sort((a, b) => {
@@ -1329,6 +1381,7 @@ function setupRotationDrag() {
       if (_over !== -1 && _over !== _from) {
         const [moved] = SS.starterRotation.splice(_from, 1);
         SS.starterRotation.splice(_over, 0, moved);
+        normalizeStarterRotationIndex();
         saveSeasonState();
         const fatigueEl = document.getElementById('season-fatigue');
         if (fatigueEl) { fatigueEl.innerHTML = renderFatiguePanel(); setupRotationDrag(); }
@@ -1339,6 +1392,7 @@ function setupRotationDrag() {
 
 window.fatigMoveToReliever = function(name) {
   SS.starterRotation = (SS.starterRotation || []).filter(n => n !== name);
+  normalizeStarterRotationIndex();
   saveSeasonState();
   const el = document.getElementById('season-fatigue');
   if (el) { el.innerHTML = renderFatiguePanel(); setupRotationDrag(); }
@@ -1347,6 +1401,7 @@ window.fatigMoveToReliever = function(name) {
 window.fatigMoveToStarter = function(name) {
   if (!SS.starterRotation) SS.starterRotation = [];
   if (!SS.starterRotation.includes(name)) SS.starterRotation.push(name);
+  normalizeStarterRotationIndex();
   saveSeasonState();
   const el = document.getElementById('season-fatigue');
   if (el) { el.innerHTML = renderFatiguePanel(); setupRotationDrag(); }
@@ -1671,6 +1726,7 @@ async function startSeasonGame() {
   // 기존 게임 시작 함수 활용
   gs = initGame(hKor, aKor);
   if (!gs) return;
+  const hadSavedGame = hasSavedGame();
 
   // 마법사 또는 개별 편집으로 설정한 내 팀 로스터 적용
   if (tempGameSetup && tempGameSetup.myPitcher) {
@@ -1692,6 +1748,11 @@ async function startSeasonGame() {
   
   // 다음 경기를 위해 클리어
   tempGameSetup = { myPitcher: null, myLineup: [], wizardMode: false, currentMyGameIdx: -1 };
+
+  if (!hadSavedGame && typeof advanceStarterRotationAfter === 'function') {
+    const myStarter = game.home === SS.myTeam ? gs.curHP : game.away === SS.myTeam ? gs.curAP : null;
+    if (myStarter) advanceStarterRotationAfter(myStarter.name);
+  }
 
   // 게임 종료 콜백 등록 (시즌 결과 반영용)
   gs._seasonGame = { gameIdx: SS.gameIdx, home: game.home, away: game.away };

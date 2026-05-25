@@ -392,20 +392,28 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 .gnav-btn.play.playing{color:var(--accent2);}
 .gnav-btn.play:active{transform:scale(1.05);}
 .gnav-btn.exit{color:var(--accent2);}
-#mobile-lineup-sheet{position:fixed;inset:0;z-index:260;display:none;align-items:flex-end;background:rgba(0,0,0,.58);}
-#mobile-lineup-sheet.open{display:flex;}
-.lineup-sheet-panel{width:100%;max-height:76vh;background:var(--panel);border-top:1px solid var(--border2);border-radius:12px 12px 0 0;box-shadow:0 -14px 35px rgba(0,0,0,.45);overflow:hidden;transform:translateY(100%);animation:lineupSheetIn .2s ease forwards;}
+#mobile-lineup-sheet{position:fixed;inset:0;z-index:260;display:none;background:rgba(0,0,0,.58);}
+#mobile-lineup-sheet.open{display:block;}
+.lineup-sheet-panel{position:fixed;left:0;right:0;bottom:62px;width:100%;height:calc(100vh - 62px);background:var(--panel);border-top:1px solid var(--border2);border-radius:12px 12px 0 0;box-shadow:0 -14px 35px rgba(0,0,0,.45);overflow:hidden;transform:translateY(100%);animation:lineupSheetIn .2s ease forwards;display:flex;flex-direction:column;}
 @keyframes lineupSheetIn{to{transform:translateY(0)}}
-.lineup-sheet-head{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-bottom:1px solid var(--border);background:var(--bg2);}
+.lineup-sheet-head{height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0;}
 .lineup-sheet-title{font-family:'Black Han Sans';font-size:15px;letter-spacing:2px;color:var(--text);}
 .lineup-sheet-close{width:36px;height:36px;border:none;background:transparent;color:var(--text2);display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:6px;}
 .lineup-sheet-close:active{background:var(--bg3);color:var(--text);}
-.lineup-sheet-tabs{display:flex;background:var(--bg2);border-bottom:1px solid var(--border);}
-.lineup-sheet-tab{flex:1;height:40px;border:none;background:transparent;color:var(--text2);font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer;border-bottom:2px solid transparent;}
-.lineup-sheet-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
-.lineup-sheet-body{max-height:calc(76vh - 85px);overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.lineup-sheet-tabs{display:flex;background:var(--bg2);border-top:1px solid var(--border);order:3;flex-shrink:0;}
+.lineup-sheet-tab{flex:1;height:52px;border:none;background:transparent;color:var(--text2);font-size:15px;font-weight:700;letter-spacing:1px;cursor:pointer;border-top:3px solid transparent;}
+.lineup-sheet-tab.active{color:var(--accent);border-top-color:var(--accent);}
+.lineup-sheet-body{order:2;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
 .mobile-lineup-list{display:none;}
 .mobile-lineup-list.active{display:block;}
+#mobile-lineup-sheet .lr{padding:8px 14px;gap:11px;min-height:44px;}
+#mobile-lineup-sheet .lr-num{font-size:16px;min-width:21px;}
+#mobile-lineup-sheet .lr-pos{font-size:14px;min-width:39px;padding:2px 6px;}
+#mobile-lineup-sheet .lr-name{font-size:18px;font-weight:700;}
+#mobile-lineup-sheet .lr-avg{font-size:15px;}
+#mobile-lineup-sheet .lr-today{font-size:15px;min-width:81px;}
+.lineup-nav-blocker{position:fixed;left:0;right:0;bottom:0;height:62px;background:#000;display:flex;align-items:center;justify-content:center;color:var(--text);}
+.lineup-nav-close{width:42px;height:42px;display:flex;align-items:center;justify-content:center;border-radius:50%;color:var(--text);}
 @media(max-width:880px){.gnav-spacer{display:block}.gnav-btn.gnav-lineup{display:flex}}
 
 /* 내비게이션 아이콘 스타일 */
@@ -591,6 +599,11 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
     <div class="lineup-sheet-body">
       <div class="mobile-lineup-list active" id="mobile-away-lineup"></div>
       <div class="mobile-lineup-list" id="mobile-home-lineup"></div>
+    </div>
+  </div>
+  <div class="lineup-nav-blocker" aria-hidden="true">
+    <div class="lineup-nav-close">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </div>
   </div>
 </div>

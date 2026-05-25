@@ -1,0 +1,19 @@
+# 1. 의존성 및 빌드 결과물 (토큰 낭비의 주범!)
+node_modules/
+vendor/
+dist/
+build/
+.next/
+out/
+
+# 2. 대용량 미디어 및 바이너리 파일
+*.mp4
+*.png
+*.jpg
+*.svg
+*.exe
+
+# 3. 로그 및 데이터베이스 파일
+*.log
+*.sqlite
+.env*

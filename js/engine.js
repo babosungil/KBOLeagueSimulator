@@ -1660,20 +1660,20 @@ function getSubContext() {
   return { side, isBatting };
 }
 
-function renderSubCardHtml(item, idx, onclickName) {
+function renderSubCardHtml(item, idx, onclickName, isPitcher) {
   const badgeClass = item.badgeClass || '';
   const stamina = item.stamina == null ? null : Math.max(0, Math.min(100, Math.round(item.stamina)));
   const stColor = stamina == null ? 'var(--accent3)' : stamina >= 80 ? 'var(--accent3)' : stamina >= 50 ? 'var(--accent)' : 'var(--accent2)';
   return `
-    <div class="sub-card" onclick="${onclickName}('${item.name.replace(/'/g, "\\'")}')">
-      <div class="sub-rank">${idx + 1}</div>
+    <div class="sub-card${isPitcher ? ' is-pitcher' : ''}" onclick="${onclickName}('${item.name.replace(/'/g, "\\'")}')">
+      ${isPitcher ? '' : `<div class="sub-rank">${idx + 1}</div>`}
       <div class="sub-main">
         <div class="sub-name-row">
           <div class="sub-name">${item.name}</div>
-          <div class="sub-badge ${badgeClass}">${item.badge}</div>
+          ${isPitcher ? '' : `<div class="sub-badge ${badgeClass}">${item.badge}</div>`}
         </div>
         <div class="sub-meta">${item.meta}</div>
-        <div class="sub-reason">${item.reason}</div>
+        ${isPitcher ? '' : `<div class="sub-reason">${item.reason}</div>`}
         ${stamina == null ? '' : `<div class="sub-stamina"><div class="sub-stamina-fill" style="width:${stamina}%;background:${stColor}"></div></div>`}
       </div>
       <div class="sub-score">${Math.round(item.score)}</div>
@@ -1776,9 +1776,9 @@ function renderPitcherSubCandidates(side) {
   const contextEl = document.getElementById('sub-sheet-context');
   const listEl = document.getElementById('sub-candidate-list');
   if (titleEl) titleEl.textContent = '투수 교체';
-  if (contextEl) contextEl.innerHTML = `현재 투수<br>${curP.name}`;
+  if (contextEl) contextEl.innerHTML = '';
   if (listEl) listEl.innerHTML = candidates.length
-    ? candidates.map((item, idx) => renderSubCardHtml(item, idx, 'changePitcherInGame')).join('')
+    ? candidates.map((item, idx) => renderSubCardHtml(item, idx, 'changePitcherInGame', true)).join('')
     : '<div class="sub-empty">교체 가능한 투수가 없습니다.</div>';
 }
 

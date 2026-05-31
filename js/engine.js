@@ -1676,7 +1676,7 @@ function renderSubCardHtml(item, idx, onclickName, isPitcher) {
         ${isPitcher ? '' : `<div class="sub-reason">${item.reason}</div>`}
         ${stamina == null ? '' : `<div class="sub-stamina"><div class="sub-stamina-fill" style="width:${stamina}%;background:${stColor}"></div></div>`}
       </div>
-      <div class="sub-score">${Math.round(item.score)}</div>
+      ${isPitcher ? '' : `<div class="sub-score">${Math.round(item.score)}</div>`}
     </div>`;
 }
 
@@ -1741,8 +1741,8 @@ function renderPitcherSubCandidates(side) {
   const curP = side === 'home' ? gs.curHP : gs.curAP;
   const scoreDiff = side === 'home' ? gs.homeScore - gs.awayScore : gs.awayScore - gs.homeScore;
   const nextBatter = getNextOpponentBatter();
-  let pool = pitchers.filter(p => p.name !== curP.name && !p.usedToday && !p.isStarter);
-  if (!pool.length) pool = pitchers.filter(p => p.name !== curP.name && !p.usedToday);
+  // 선발 포함 전체 교체 후보 풀 (현재 투수 및 오늘 등판한 투수 제외)
+  const pool = pitchers.filter(p => p.name !== curP.name && !p.usedToday);
 
   const candidates = pool.map(p => {
     const isStarter = !!p.isStarter;
@@ -1759,27 +1759,35 @@ function renderPitcherSubCandidates(side) {
     if (stamina < 30) score -= 80;
     const roleLabel = { starter:'선발', middle:'계투', closer:'마무리' }[p.role] || '투수';
     const hand = p.hand === 'L' ? '좌투' : '우투';
-    const badge = stamina < 30 ? '체력 낮음' : pl && pl.advantage === 'pitcher' ? '좌우 유리' : roleFit >= 18 ? '역할 적합' : roleLabel;
     return {
       name: p.name,
       score,
       stamina,
-      badge,
-      badgeClass: stamina < 30 ? 'warn' : (badge === '좌우 유리' || badge === '역할 적합') ? 'good' : '',
+      isStarter,
       meta: `${hand} · ${roleLabel} · ERA ${fmtNum(p.ERA, 2)} · WHIP ${fmtNum(p.WHIP, 2)} · K/9 ${fmtNum(p.K9, 1)}`,
-      reason: `체력 ${stamina}% · ${nextBatter ? `다음 타자 ${nextBatter.name}` : '다음 타자'}${pl ? ` · ${pl.label}` : ''}`,
     };
   }).filter(item => item.stamina >= 30)
     .sort((a, b) => b.score - a.score);
+
+  // 그룹 분리
+  const starters  = candidates.filter(c => c.isStarter);
+  const relievers = candidates.filter(c => !c.isStarter);
+
+  function renderGroup(label, list) {
+    if (!list.length) return '';
+    const cards = list.map((item, idx) => renderSubCardHtml(item, idx, 'changePitcherInGame', true)).join('');
+    return `<div class="sub-group-label">${label}</div>${cards}`;
+  }
 
   const titleEl = document.getElementById('sub-sheet-title');
   const contextEl = document.getElementById('sub-sheet-context');
   const listEl = document.getElementById('sub-candidate-list');
   if (titleEl) titleEl.textContent = '투수 교체';
   if (contextEl) contextEl.innerHTML = '';
-  if (listEl) listEl.innerHTML = candidates.length
-    ? candidates.map((item, idx) => renderSubCardHtml(item, idx, 'changePitcherInGame', true)).join('')
-    : '<div class="sub-empty">교체 가능한 투수가 없습니다.</div>';
+  if (listEl) {
+    const html = renderGroup('계투 · 마무리', relievers) + renderGroup('선발 투수', starters);
+    listEl.innerHTML = html || '<div class="sub-empty">교체 가능한 투수가 없습니다.</div>';
+  }
 }
 
 window.openSubstitutionModal = function() {

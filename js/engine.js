@@ -1837,6 +1837,8 @@ window.switchMobileLineupTab = function(side) {
 };
 
 window.changePitcherInGame = function(name) {
+  if (!confirm(`${name} 투수로 교체하시겠습니까?`)) return;
+
   const { side } = getSubContext();
   const isMyHome = side === 'home';
   const myPitchers = isMyHome ? gs.homePitchers : gs.awayPitchers;

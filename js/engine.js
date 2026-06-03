@@ -1996,6 +1996,7 @@ window.changeHitterInGame = function(name) {
   const lineupNames = new Set(lineup.map(p => p.name));
   const np = getTeamHitters(team).find(h => h.name === name && !lineupNames.has(h.name) && !gs[usedSetName].has(h.name));
   if (!np) return;
+  if (!confirm(`${oldBatter.name} 대신 ${np.name} 타자로 교체하시겠습니까?`)) return;
 
   np.pos = oldBatter.pos || POS_KOR_MAP[np.defPos] || 'PH';
   np.order = oldBatter.order;

@@ -278,6 +278,43 @@ function csvRowToHitter(row, profileLookup, teamName) {
     draft:           p.draft           || null,
     salary:          p.salary          || null,
     salaryRaw:       p.salaryRaw       || null,
+    defense:         null,
+  };
+}
+
+function parseDefNumber(v, fallback = 0) {
+  if (v == null || v === '' || v === '-') return fallback;
+  const n = parseFloat(String(v).replace(/,/g, ''));
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function buildDefenseStats(row) {
+  const ip = Math.max(parseIP(row['IP'] || 0) || 0, 0);
+  const e = parseDefNumber(row['E']);
+  const po = parseDefNumber(row['PO']);
+  const a = parseDefNumber(row['A']);
+  const dp = parseDefNumber(row['DP']);
+  const fpct = parseDefNumber(row['FPCT'], 0.98);
+  const pb = parseDefNumber(row['PB']);
+  const csPctRaw = row['CS%'];
+  return {
+    pos: row['POS'] || null,
+    G: parseDefNumber(row['G']),
+    GS: parseDefNumber(row['GS']),
+    IP: ip,
+    E: e,
+    PO: po,
+    A: a,
+    DP: dp,
+    FPCT: fpct,
+    PB: pb,
+    SB: parseDefNumber(row['SB']),
+    CS: parseDefNumber(row['CS']),
+    CSPercent: (csPctRaw && csPctRaw !== '-') ? parseDefNumber(csPctRaw) : null,
+    rangePer9: ip > 0 ? ((po + a) / ip) * 9 : 0,
+    errPer9: ip > 0 ? (e / ip) * 9 : 0,
+    dpPer9: ip > 0 ? (dp / ip) * 9 : 0,
+    pbPer9: ip > 0 ? (pb / ip) * 9 : 0,
   };
 }
 
@@ -372,6 +409,7 @@ async function loadTeamCSV(year, teamCode, korName, profileRows) {
       if (!rows) return;
       const main = rows.slice().sort((a, b) => parseInt(b['G']) - parseInt(a['G']))[0];
       h.defPos = main['POS'] || null;
+      h.defense = buildDefenseStats(main);
       // 포수인 경우 도루 저지율 추가
       const catcherRow = rows.find(r => r['POS'] === '포수');
       if (catcherRow) {
@@ -575,11 +613,83 @@ function calcPlatoon(bHand, pHand) {
     : { advantage: 'batter',  label: `반대타(${bh}타/${ph}투) 타자유리`, hitMod: +0.03, kMod: -0.05 };
 }
 
+function clamp(v, min, max) {
+  return Math.max(min, Math.min(max, v));
+}
+
+const DEF_POS_WEIGHTS = {
+  C: 0.12, '1B': 0.08, '2B': 0.14, '3B': 0.12, SS: 0.18,
+  LF: 0.10, CF: 0.16, RF: 0.10, OF: 0.10, IF: 0.12,
+};
+
+function meanAndSd(values) {
+  const nums = values.filter(Number.isFinite);
+  if (!nums.length) return { mean: 0, sd: 1 };
+  const mean = nums.reduce((sum, v) => sum + v, 0) / nums.length;
+  const variance = nums.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / nums.length;
+  return { mean, sd: Math.sqrt(variance) || 1 };
+}
+
+function getDefenseBaselines(pos) {
+  const rows = DB.hitters
+    .map(h => h.defense)
+    .filter(d => d && d.pos === pos && d.IP > 0);
+  return {
+    range: meanAndSd(rows.map(d => d.rangePer9)),
+    fpct: meanAndSd(rows.map(d => d.FPCT)),
+    err: meanAndSd(rows.map(d => d.errPer9)),
+    dp: meanAndSd(rows.map(d => d.dpPer9)),
+  };
+}
+
+function zScore(value, stat) {
+  return stat.sd ? (value - stat.mean) / stat.sd : 0;
+}
+
+function calcFielderDefenseScore(player) {
+  const d = player && player.defense;
+  if (!d || !d.pos || d.IP <= 0) return 50;
+  const base = getDefenseBaselines(d.pos);
+  const zRange = zScore(d.rangePer9, base.range);
+  const zFpct = zScore(d.FPCT, base.fpct);
+  const zErrAvoid = zScore(base.err.mean - d.errPer9, { mean: 0, sd: base.err.sd });
+  const zDP = zScore(d.dpPer9, base.dp);
+  const raw = 50 + 8 * (0.35 * zRange + 0.30 * zFpct + 0.25 * zErrAvoid + 0.10 * zDP);
+  return clamp(raw, 35, 65);
+}
+
+function calcTeamDefenseImpact(defenseLineup) {
+  if (!Array.isArray(defenseLineup) || !defenseLineup.length) {
+    return { score: 50, infieldScore: 50, hitAdj: 0, dpAdj: 0 };
+  }
+  let total = 0, weightSum = 0, infieldTotal = 0, infieldWeight = 0;
+  defenseLineup.forEach(player => {
+    const pos = player.pos || POS_KOR_MAP[player.defPos] || player.defPos;
+    if (!pos || pos === 'DH' || pos === 'P') return;
+    const weight = DEF_POS_WEIGHTS[pos] || 0.10;
+    const score = calcFielderDefenseScore(player);
+    total += score * weight;
+    weightSum += weight;
+    if (pos === '1B' || pos === '2B' || pos === '3B' || pos === 'SS' || pos === 'IF') {
+      infieldTotal += score * weight;
+      infieldWeight += weight;
+    }
+  });
+  const score = weightSum ? total / weightSum : 50;
+  const infieldScore = infieldWeight ? infieldTotal / infieldWeight : score;
+  return {
+    score,
+    infieldScore,
+    hitAdj: clamp((score - 50) / 50, -0.06, 0.06),
+    dpAdj: clamp((infieldScore - 50) / 100, -0.08, 0.08),
+  };
+}
+
 // ═══════════════════════════════════════════════════════
 //  타석 결과 결정
 // ═══════════════════════════════════════════════════════
 
-function decidePAResult(b, p, bases, inning, outs) {
+function decidePAResult(b, p, bases, inning, outs, defenseLineup = null) {
   const era = adjERA(p), pq = Math.max(0.5, Math.min(1.8, era / 4.30));
   
   // 포수 피로도 타격 페널티 (시즌 모드)
@@ -612,6 +722,10 @@ function decidePAResult(b, p, bases, inning, outs) {
   if (isFullBase(bases)) bb *= 0.75;
   if (inning >= 7)       k  *= 1.05;
 
+  // 수비진 보정: 평균보다 좋은 수비는 안타 확률을 낮추고 병살 가능성을 조금 높인다.
+  const defenseImpact = calcTeamDefenseImpact(defenseLineup);
+  hit = Math.max(0.05, hit * (1 - defenseImpact.hitAdj));
+
   const tot = hit + bb + k;
   if (tot > 0.93) { const r = 0.93 / tot; hit *= r; bb *= r; k *= r; }
 
@@ -629,7 +743,7 @@ function decidePAResult(b, p, bases, inning, outs) {
     return '1b';
   }
   const dpMult = bases[0] && outs < 2 ? 2.0 : 1.0;
-  return rn() < 0.07 * dpMult ? 'dp' : 'out';
+  return rn() < 0.07 * dpMult * (1 + defenseImpact.dpAdj) ? 'dp' : 'out';
 }
 
 // ── 투구 시퀀스 생성 ──
@@ -816,6 +930,11 @@ function initGame(home, away) {
   };
 }
 
+function getCurrentDefenseLineup() {
+  if (!gs) return null;
+  return gs.isTop ? gs.homeLineup : gs.awayLineup;
+}
+
 async function startPA() {
   const lineup  = gs.isTop ? gs.awayLineup  : gs.homeLineup;
   const order   = gs.isTop ? gs.awayOrder   : gs.homeOrder;
@@ -846,7 +965,7 @@ async function startPA() {
   }
 
   batter.todayStats.PA++;
-  const pr = decidePAResult(batter, pitcher, gs.bases, gs.inning, gs.outs);
+  const pr = decidePAResult(batter, pitcher, gs.bases, gs.inning, gs.outs, getCurrentDefenseLineup());
   gs.currentPA = { batter, pitcher, pr, seq: buildSeq(pr), pidx: 0 };
   gs.balls = 0; gs.strikes = 0;
   updateBatUI(batter); updatePitUI(pitcher); updateCntUI(0, 0);
@@ -1853,7 +1972,7 @@ window.changePitcherInGame = function(name) {
     if (gs.currentPA) {
       gs.currentPA.pitcher = np;
       if (gs.currentPA.pidx === 0) {
-        gs.currentPA.pr = decidePAResult(gs.currentPA.batter, np, gs.bases, gs.inning, gs.outs);
+        gs.currentPA.pr = decidePAResult(gs.currentPA.batter, np, gs.bases, gs.inning, gs.outs, getCurrentDefenseLineup());
         gs.currentPA.seq = buildSeq(gs.currentPA.pr);
         updateFml(gs.currentPA.batter, np, gs.currentPA.pr);
       }
@@ -1892,7 +2011,7 @@ window.changeHitterInGame = function(name) {
     np.todayStats.PA++;
     gs.currentPA.batter = np;
     if (gs.currentPA.pidx === 0) {
-      gs.currentPA.pr = decidePAResult(np, pitcher, gs.bases, gs.inning, gs.outs);
+      gs.currentPA.pr = decidePAResult(np, pitcher, gs.bases, gs.inning, gs.outs, getCurrentDefenseLineup());
       gs.currentPA.seq = buildSeq(gs.currentPA.pr);
       updateFml(np, pitcher, gs.currentPA.pr);
     }
@@ -1921,5 +2040,9 @@ if (typeof globalThis !== 'undefined') {
     buildPitcher,
     advRunners,
     calcPlatoon,
+    decidePAResult,
+    buildDefenseStats,
+    calcFielderDefenseScore,
+    calcTeamDefenseImpact,
   });
 }

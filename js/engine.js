@@ -1661,22 +1661,23 @@ function getSubContext() {
 }
 
 function renderSubCardHtml(item, idx, onclickName, isPitcher) {
+  const simpleCard = !!isPitcher || item.simpleCard;
   const badgeClass = item.badgeClass || '';
   const stamina = item.stamina == null ? null : Math.max(0, Math.min(100, Math.round(item.stamina)));
   const stColor = stamina == null ? 'var(--accent3)' : stamina >= 80 ? 'var(--accent3)' : stamina >= 50 ? 'var(--accent)' : 'var(--accent2)';
   return `
-    <div class="sub-card${isPitcher ? ' is-pitcher' : ''}" onclick="${onclickName}('${item.name.replace(/'/g, "\\'")}')">
-      ${isPitcher ? '' : `<div class="sub-rank">${idx + 1}</div>`}
+    <div class="sub-card${simpleCard ? ' is-pitcher' : ''}" onclick="${onclickName}('${item.name.replace(/'/g, "\\'")}')">
+      ${simpleCard ? '' : `<div class="sub-rank">${idx + 1}</div>`}
       <div class="sub-main">
         <div class="sub-name-row">
           <div class="sub-name">${item.name}</div>
-          ${isPitcher ? '' : `<div class="sub-badge ${badgeClass}">${item.badge}</div>`}
+          ${simpleCard ? '' : `<div class="sub-badge ${badgeClass}">${item.badge}</div>`}
         </div>
         <div class="sub-meta">${item.meta}</div>
-        ${isPitcher ? '' : `<div class="sub-reason">${item.reason}</div>`}
+        ${simpleCard ? '' : `<div class="sub-reason">${item.reason}</div>`}
         ${stamina == null ? '' : `<div class="sub-stamina"><div class="sub-stamina-fill" style="width:${stamina}%;background:${stColor}"></div></div>`}
       </div>
-      ${isPitcher ? '' : `<div class="sub-score">${Math.round(item.score)}</div>`}
+      ${simpleCard ? '' : `<div class="sub-score">${Math.round(item.score)}</div>`}
     </div>`;
 }
 
@@ -1688,7 +1689,7 @@ function fmtNum(v, digits, fallback = '-') {
 function renderHitterSubCandidates(side) {
   const team = side === 'home' ? gs.homeTeam : gs.awayTeam;
   const teamCode = getTeamCode(team) || team;
-  const { lineup, batter } = getCurrentBatterForSide(side);
+  const { lineup } = getCurrentBatterForSide(side);
   const lineupNames = new Set(lineup.map(p => p.name));
   const usedSetName = side === 'home' ? 'homeUsedHitters' : 'awayUsedHitters';
   if (!gs[usedSetName]) gs[usedSetName] = new Set();
@@ -1704,16 +1705,14 @@ function renderHitterSubCandidates(side) {
     score += (stamina - 70) * 0.18;
     if (isRISP(gs.bases)) score += (h.RBI || 0) * 0.035 + (h.obp || 0) * 12;
     if (gs.inning >= 7 && Math.abs(gs.homeScore - gs.awayScore) <= 2) score += (h.HR || 0) * 0.18 + (h.slg || 0) * 10;
-    const badge = pl.advantage === 'batter' ? '좌우 유리' : '좌우 불리';
     const hand = h.hand === 'L' ? '좌타' : '우타';
+    const pos = h.pos || POS_KOR_MAP[h.defPos] || h.defPos || h.position || 'DH';
     return {
       name: h.name,
       score,
       stamina,
-      badge,
-      badgeClass: pl.advantage === 'batter' ? 'good' : 'warn',
-      meta: `${hand} · AVG ${fmtNum(h.AVG, 3)} · OPS ${fmtNum(h.ops, 3)} · HR ${h.HR || 0}`,
-      reason: `체력 ${stamina}% · ${pl.label}${isRISP(gs.bases) ? ' · 득점권 가산' : ''}`,
+      simpleCard: true,
+      meta: `${hand} · ${pos} · AVG ${fmtNum(h.AVG, 3)} · OPS ${fmtNum(h.ops, 3)} · HR ${h.HR || 0}`,
     };
   }).sort((a, b) => b.score - a.score);
 
@@ -1721,7 +1720,7 @@ function renderHitterSubCandidates(side) {
   const contextEl = document.getElementById('sub-sheet-context');
   const listEl = document.getElementById('sub-candidate-list');
   if (titleEl) titleEl.textContent = '타자 교체';
-  if (contextEl) contextEl.innerHTML = `현재 타자<br>${batter.name}`;
+  if (contextEl) contextEl.innerHTML = '';
   if (listEl) listEl.innerHTML = candidates.length
     ? candidates.map((item, idx) => renderSubCardHtml(item, idx, 'changeHitterInGame')).join('')
     : '<div class="sub-empty">교체 가능한 타자가 없습니다.</div>';

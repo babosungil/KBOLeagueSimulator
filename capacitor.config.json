@@ -1,0 +1,8 @@
+{
+  "appId": "com.babosungil.kboleaguesimulator",
+  "appName": "KBOLeagueSimulator",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}

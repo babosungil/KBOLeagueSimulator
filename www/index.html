@@ -875,6 +875,15 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 // index.html에는 데이터가 없으므로, _meta.json → 팀 JSON 순으로 fetch
 
 (async function init() {
+  // 모바일 앱 환경일 경우 Preferences 데이터 동기화
+  if (typeof syncPreferencesToLocalStorage === 'function') {
+    await syncPreferencesToLocalStorage();
+  }
+  // 안드로이드 뒤로가기 버튼 리스너 등록
+  if (typeof setupAndroidBackButton === 'function') {
+    setupAndroidBackButton();
+  }
+
   const notice  = document.getElementById('setup-notice');
   const YEAR    = '2025';   // 연도 고정
 

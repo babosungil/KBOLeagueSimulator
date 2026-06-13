@@ -31,11 +31,80 @@ const SS = {
 const LS_KEY      = 'kbo_season_v1';
 const LS_GAME_KEY = 'kbo_game_state_v1';   // 게임 진행 중 저장용
 
+// Capacitor Preferences & App 헬퍼
+const isApp = window.Capacitor !== undefined && Capacitor.Plugins;
+
+// 앱 시작 시 Preferences -> localStorage 동기화 함수
+window.syncPreferencesToLocalStorage = async function() {
+  if (!isApp || !Capacitor.Plugins.Preferences) return;
+  try {
+    const { Preferences } = Capacitor.Plugins;
+    const resSeason = await Preferences.get({ key: LS_KEY });
+    if (resSeason.value) {
+      localStorage.setItem(LS_KEY, resSeason.value);
+    }
+    const resGame = await Preferences.get({ key: LS_GAME_KEY });
+    if (resGame.value) {
+      localStorage.setItem(LS_GAME_KEY, resGame.value);
+    }
+  } catch(e) {
+    console.warn('Preferences -> localStorage 동기화 실패', e);
+  }
+};
+
+// 안드로이드 뒤로가기 핸들러 설정
+window.setupAndroidBackButton = function() {
+  if (!isApp || !Capacitor.Plugins.App) return;
+  const { App } = Capacitor.Plugins;
+  App.addListener('backButton', () => {
+    const inGameSubModal = document.getElementById('in-game-sub-modal');
+    const pitcherModal = document.getElementById('pitcher-modal');
+    const lineupModal = document.getElementById('lineup-modal');
+    const mobileLineupSheet = document.getElementById('mobile-lineup-sheet');
+    const turnModal = document.getElementById('turn-modal');
+
+    // 1. 모달 및 시트 닫기
+    if (inGameSubModal && inGameSubModal.style.display === 'block') {
+      if (typeof closeSubModal === 'function') closeSubModal();
+    } else if (pitcherModal && pitcherModal.style.display === 'flex') {
+      if (typeof closePitcherModal === 'function') closePitcherModal();
+    } else if (lineupModal && lineupModal.style.display === 'flex') {
+      if (typeof closeLineupModal === 'function') closeLineupModal();
+    } else if (mobileLineupSheet && mobileLineupSheet.classList.contains('open')) {
+      if (typeof closeMobileLineupSheet === 'function') closeMobileLineupSheet();
+    } else if (turnModal && turnModal.style.display === 'flex') {
+      if (typeof closeTurnModal === 'function') closeTurnModal();
+    } else {
+      // 2. 화면 상태 판단
+      const gameOverScreen = document.getElementById('game-over');
+      const gameBottomNav = document.getElementById('game-bottom-nav');
+      const seasonScreen = document.getElementById('season-screen');
+      const setupScreen = document.getElementById('setup-screen');
+
+      if (gameOverScreen && gameOverScreen.style.display === 'flex') {
+        if (typeof returnToSeason === 'function') returnToSeason();
+      } else if (gameBottomNav && gameBottomNav.style.display === 'flex') {
+        if (typeof returnToSeason === 'function') returnToSeason();
+      } else if (seasonScreen && seasonScreen.style.display === 'flex') {
+        // 메인 탭(3)이 아닌 경우 메인 탭으로 복귀, 메인이면 종료
+        if (typeof currentSeasonTab !== 'undefined' && currentSeasonTab !== 3) {
+          if (typeof switchSeasonTab === 'function') switchSeasonTab(3);
+        } else {
+          App.exitApp();
+        }
+      } else if (setupScreen && setupScreen.style.display === 'flex') {
+        App.exitApp();
+      } else {
+        App.exitApp();
+      }
+    }
+  });
+};
+
 // 게임 진행 중 상태 저장 (gs 전체 + 시즌 컨텍스트)
 function saveGameState() {
   if (!gs || !gs._seasonGame) return;
   try {
-    // gs 객체에서 직렬화 가능한 부분만 추출
     const snapshot = {
       homeTeam:    gs.homeTeam,
       awayTeam:    gs.awayTeam,
@@ -53,7 +122,6 @@ function saveGameState() {
       totalAB:     gs.totalAB,
       gameOver:    gs.gameOver,
       _seasonGame: gs._seasonGame,
-      // 라인업·투수 todayStats 보존
       homeLineupStats: gs.homeLineup.map(p => ({ name: p.name, todayStats: p.todayStats, pitchCount: p.pitchCount || 0 })),
       awayLineupStats: gs.awayLineup.map(p => ({ name: p.name, todayStats: p.todayStats, pitchCount: p.pitchCount || 0 })),
       homePitcherStats: gs.homePitchers.map(p => ({ name: p.name, pitchCount: p.pitchCount || 0, usedToday: p.usedToday || false })),
@@ -61,7 +129,13 @@ function saveGameState() {
       curHPName: gs.curHP ? gs.curHP.name : null,
       curAPName: gs.curAP ? gs.curAP.name : null,
     };
-    localStorage.setItem(LS_GAME_KEY, JSON.stringify(snapshot));
+    const dataStr = JSON.stringify(snapshot);
+    localStorage.setItem(LS_GAME_KEY, dataStr);
+
+    if (isApp && Capacitor.Plugins.Preferences) {
+      Capacitor.Plugins.Preferences.set({ key: LS_GAME_KEY, value: dataStr })
+        .catch(e => console.warn('Preferences 게임 이중 저장 실패', e));
+    }
   } catch(e) { console.warn('게임 저장 실패', e); }
 }
 
@@ -142,12 +216,18 @@ function restoreGameState() {
 
 // 게임 저장 삭제 (경기 종료 시)
 function clearGameState() {
-  try { localStorage.removeItem(LS_GAME_KEY); } catch(e) {}
+  try {
+    localStorage.removeItem(LS_GAME_KEY);
+    if (isApp && Capacitor.Plugins.Preferences) {
+      Capacitor.Plugins.Preferences.remove({ key: LS_GAME_KEY })
+        .catch(e => console.warn('Preferences 게임 저장 삭제 실패', e));
+    }
+  } catch(e) {}
 }
 
 function saveSeasonState() {
   try {
-    localStorage.setItem(LS_KEY, JSON.stringify({
+    const dataStr = JSON.stringify({
       year:            SS.year,
       myTeam:          SS.myTeam,
       myTeamKor:       SS.myTeamKor,
@@ -161,7 +241,14 @@ function saveSeasonState() {
       pitcherFatigue:  SS.pitcherFatigue,
       starterRotation: SS.starterRotation,
       starterRotationIndex: SS.starterRotationIndex,
-    }));
+      catcherFatigue:  SS.catcherFatigue || {},
+    });
+    localStorage.setItem(LS_KEY, dataStr);
+
+    if (isApp && Capacitor.Plugins.Preferences) {
+      Capacitor.Plugins.Preferences.set({ key: LS_KEY, value: dataStr })
+        .catch(e => console.warn('Preferences 시즌 이중 저장 실패', e));
+    }
   } catch(e) { console.warn('시즌 저장 실패', e); }
 }
 
@@ -176,7 +263,13 @@ function loadSeasonState() {
 }
 
 function clearSeasonState() {
-  localStorage.removeItem(LS_KEY);
+  try {
+    localStorage.removeItem(LS_KEY);
+    if (isApp && Capacitor.Plugins.Preferences) {
+      Capacitor.Plugins.Preferences.remove({ key: LS_KEY })
+        .catch(e => console.warn('Preferences 시즌 저장 삭제 실패', e));
+    }
+  } catch(e) {}
 }
 
 

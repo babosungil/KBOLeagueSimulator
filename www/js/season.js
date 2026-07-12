@@ -1908,6 +1908,11 @@ window.returnToSeason = function() {
   document.getElementById('game-bottom-nav').style.display = 'none';
   if (typeof closeMobileLineupSheet === 'function') closeMobileLineupSheet();
   showSeasonScreen();
+
+  // 전면 광고 노출
+  if (typeof AdManager !== 'undefined') {
+    AdManager.showInterstitial();
+  }
 };
 
 // ── 시즌 경기 종료 후 처리 (endGame() 훅) ───────────────
@@ -1994,6 +1999,160 @@ async function playPsSeries(stage) {
   }
 }
 
+// ── AdMob 광고 매니저 ──────────────────────────────────────
+const AdManager = {
+  isInitialized: false,
+  hasInterstitial: false,
+  hasRewarded: false,
+  rewardCallback: null,
+
+  async initialize() {
+    if (!isApp || !window.Capacitor || !Capacitor.Plugins || !Capacitor.Plugins.AdMob) {
+      console.log('[AdManager] 앱 환경이 아니거나 AdMob 플러그인이 없습니다. 웹 시뮬레이션 모드로 작동합니다.');
+      return;
+    }
+    try {
+      const { AdMob } = Capacitor.Plugins;
+      await AdMob.initialize({ requestTrackingAuthorization: true });
+      this.isInitialized = true;
+      console.log('[AdManager] AdMob 초기화 완료');
+
+      // 리스너 등록
+      AdMob.addListener('interstitialAdDismissed', () => {
+        console.log('[AdManager] 전면 광고 닫힘');
+        this.hasInterstitial = false;
+        this.loadInterstitial(); // 다음 광고 로드
+      });
+
+      AdMob.addListener('interstitialAdFailedToLoad', (info) => {
+        console.warn('[AdManager] 전면 광고 로드 실패', info);
+        this.hasInterstitial = false;
+      });
+
+      AdMob.addListener('rewardedAdReceivedReward', () => {
+        console.log('[AdManager] 보상형 광고 시청 완료, 보상 지급');
+        if (typeof this.rewardCallback === 'function') {
+          this.rewardCallback();
+          this.rewardCallback = null;
+        }
+      });
+
+      AdMob.addListener('rewardedAdDismissed', () => {
+        console.log('[AdManager] 보상형 광고 닫힘');
+        this.hasRewarded = false;
+        this.loadRewarded(); // 다음 광고 로드
+      });
+
+      AdMob.addListener('rewardedAdFailedToLoad', (info) => {
+        console.warn('[AdManager] 보상형 광고 로드 실패', info);
+        this.hasRewarded = false;
+      });
+
+      // 최초 광고 로드
+      await this.loadInterstitial();
+      await this.loadRewarded();
+    } catch (e) {
+      console.error('[AdManager] AdMob 초기화 실패', e);
+    }
+  },
+
+  async loadInterstitial() {
+    if (!this.isInitialized) return;
+    try {
+      const { AdMob } = Capacitor.Plugins;
+      await AdMob.prepareInterstitial({
+        adId: 'ca-app-pub-3940256099942544/1033173712', // Android Test Interstitial ID
+        isTesting: true
+      });
+      this.hasInterstitial = true;
+      console.log('[AdManager] 전면 광고 로드 완료');
+    } catch (e) {
+      console.warn('[AdManager] 전면 광고 로드 에러', e);
+      this.hasInterstitial = false;
+    }
+  },
+
+  async showInterstitial() {
+    if (!isApp || !this.isInitialized) {
+      console.log('[AdManager] 웹 환경 또는 미초기화 상태입니다. 전면 광고 노출을 건너뜁니다.');
+      return;
+    }
+    if (!this.hasInterstitial) {
+      console.log('[AdManager] 로드된 전면 광고가 없습니다. 새로 로드를 시도합니다.');
+      this.loadInterstitial();
+      return;
+    }
+    try {
+      const { AdMob } = Capacitor.Plugins;
+      await AdMob.showInterstitial();
+    } catch (e) {
+      console.error('[AdManager] 전면 광고 노출 실패', e);
+    }
+  },
+
+  async loadRewarded() {
+    if (!this.isInitialized) return;
+    try {
+      const { AdMob } = Capacitor.Plugins;
+      await AdMob.prepareRewardVideoAd({
+        adId: 'ca-app-pub-3940256099942544/5224354917', // Android Test Rewarded ID
+        isTesting: true
+      });
+      this.hasRewarded = true;
+      console.log('[AdManager] 보상형 광고 로드 완료');
+    } catch (e) {
+      console.warn('[AdManager] 보상형 광고 로드 에러', e);
+      this.hasRewarded = false;
+    }
+  },
+
+  async showRewarded(onRewardSuccess) {
+    if (!isApp || !this.isInitialized) {
+      // 웹 환경 시뮬레이션
+      const confirmWeb = confirm('[웹 시뮬레이션] 광고를 끝까지 시청한 것으로 처리하고 모든 선수의 피로도를 회복하시겠습니까?');
+      if (confirmWeb) {
+        onRewardSuccess();
+      }
+      return;
+    }
+    
+    if (!this.hasRewarded) {
+      alert('광고가 아직 준비되지 않았습니다. 잠시 후 다시 시도해 주세요.');
+      this.loadRewarded();
+      return;
+    }
+
+    try {
+      const { AdMob } = Capacitor.Plugins;
+      this.rewardCallback = onRewardSuccess;
+      await AdMob.showRewardVideoAd();
+    } catch (e) {
+      console.error('[AdManager] 보상형 광고 노출 실패', e);
+      alert('광고 실행 중 오류가 발생했습니다.');
+    }
+  }
+};
+
+window.showRewardAdAndRecover = function() {
+  AdManager.showRewarded(() => {
+    // 투수 체력 회복
+    if (SS.pitcherFatigue) {
+      Object.keys(SS.pitcherFatigue).forEach(key => {
+        SS.pitcherFatigue[key].stamina = 100;
+        SS.pitcherFatigue[key].consecDays = 0; // 연투 초기화
+      });
+    }
+    // 포수 체력 회복
+    if (SS.catcherFatigue) {
+      Object.keys(SS.catcherFatigue).forEach(key => {
+        SS.catcherFatigue[key].stamina = 100;
+      });
+    }
+    saveSeasonState();
+    refreshSeasonUI();
+  });
+};
+
 if (typeof globalThis !== 'undefined') {
   globalThis.__KBO_TEST__ = Object.assign(globalThis.__KBO_TEST__ || {}, {
     SS,
@@ -2005,3 +2164,10 @@ if (typeof globalThis !== 'undefined') {
     getSortedStandings,
   });
 }
+
+// AdMob 초기화 실행 (Capacitor 플러그인 로드를 기다리기 위해 500ms 지연 실행)
+setTimeout(() => {
+  if (typeof AdManager !== 'undefined') {
+    AdManager.initialize();
+  }
+}, 500);

@@ -947,7 +947,7 @@ function openPitcherModal(isWizard = false) {
        <label style="display:flex;align-items:center;padding:10px;background:var(--bg2);border:1px solid ${isSelected ? 'var(--accent)' : 'var(--border)'};border-radius:6px;cursor:pointer;">
          <input type="radio" name="temp-pitcher" value="${p.name}" ${isSelected ? 'checked' : ''} onchange="selectTempPitcher('${p.name}')" style="margin-right:10px;">
          <div style="flex:1;">
-           <div style="font-weight:700;color:var(--text);font-size:14px;display:flex;align-items:center">${p.name} ${isStarterLabel}</div>
+           <div style="font-weight:700;color:var(--text);font-size:14px;display:flex;align-items:center">${formatPlayerName(p.name)} ${isStarterLabel}</div>
            <div style="font-family:'JetBrains Mono';font-size:11px;color:var(--text2)">ERA: ${p.ERA.toFixed(2)} | IP: ${p.IP.toFixed(1)}</div>
          </div>
          <div style="font-size:11px;color:${statusColor};font-weight:700">${mult >= 99 ? '등판불가' : mult > 1 ? '피로누적' : '정상'}</div>
@@ -994,7 +994,7 @@ function renderLineupList() {
        <div style="display:flex;align-items:center;padding:8px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;">
          <div style="width:24px;font-family:'Bebas Neue';font-size:18px;color:var(--text2);text-align:center">${idx+1}</div>
          <div style="flex:1;margin-left:8px;">
-           <div style="font-weight:700;color:var(--text);font-size:13px;">${p.name} <span style="font-size:10px;color:var(--text2);margin-left:4px;">${p.pos}</span></div>
+           <div style="font-weight:700;color:var(--text);font-size:13px;">${formatPlayerName(p.name)} <span style="font-size:10px;color:var(--text2);margin-left:4px;">${p.pos}</span></div>
            <div style="font-family:'JetBrains Mono';font-size:10px;color:var(--text3)">AVG: ${p.AVG.toFixed(3)} | HR: ${p.HR}</div>
          </div>
          <div style="display:flex;flex-direction:column;gap:4px;">
@@ -1366,7 +1366,7 @@ function renderFatiguePanel() {
         <div style="font-family:'Bebas Neue';font-size:18px;color:var(--text3);min-width:18px;text-align:center;flex-shrink:0">${idx + 1}</div>
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-            <span style="font-weight:700;font-size:13px;color:${nameClr}">${p.name}</span>
+            <span style="font-weight:700;font-size:13px;color:${nameClr}">${formatPlayerName(p.name)}</span>
             ${nextBadge}
           </div>
           <div style="font-family:'JetBrains Mono';font-size:10px;color:var(--text3)">ERA ${p.ERA ? p.ERA.toFixed(2) : '-'} · IP ${p.IP ? p.IP.toFixed(1) : 0}</div>
@@ -1397,7 +1397,7 @@ function renderFatiguePanel() {
       <div style="display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--border);">
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-            <span style="font-weight:700;font-size:13px;color:var(--text)">${p.name}</span>
+            <span style="font-weight:700;font-size:13px;color:var(--text)">${formatPlayerName(p.name)}</span>
             <span style="font-size:9px;color:${roleClr};border:1px solid ${roleClr};border-radius:8px;padding:1px 5px;">${roleLabel}</span>
           </div>
           <div style="font-family:'JetBrains Mono';font-size:10px;color:var(--text3)">ERA ${p.ERA ? p.ERA.toFixed(2) : '-'} · IP ${p.IP ? p.IP.toFixed(1) : 0}</div>
@@ -1595,7 +1595,7 @@ function renderLineupEditorTab() {
         <span style="font-family:'Bebas Neue';font-size:20px;color:var(--text3);min-width:16px;text-align:center">${idx+1}</span>
       </div>
       <div style="flex:1">
-        <div style="font-weight:700;color:var(--text);font-size:14px">${p.name} <span style="font-size:10px;color:var(--text2)">${p.pos}</span></div>
+        <div style="font-weight:700;color:var(--text);font-size:14px">${formatPlayerName(p.name)} <span style="font-size:10px;color:var(--text2)">${p.pos}</span></div>
         <div style="font-size:11px;color:var(--text3);font-family:'JetBrains Mono'">AVG:${p.AVG.toFixed(3)} HR:${p.HR} RBI:${p.RBI}</div>
       </div>
     </div>`;

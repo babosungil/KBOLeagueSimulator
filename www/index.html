@@ -890,7 +890,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
   }
 
   const notice  = document.getElementById('setup-notice');
-  const YEAR    = '2025';   // 연도 고정
+  const YEAR    = '2026';   // 연도 고정
 
   // 메타 로드
   loadMeta(
@@ -906,7 +906,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
         myTeamSel.innerHTML += `<option value="${t}">${label}</option>`;
       });
       document.getElementById('season-start-btn').disabled = teams.length < 2;
-      notice.textContent = ''; // 2025 시즌 10개 구단 텍스트 제거
+      notice.textContent = ''; // 2026 시즌 10개 구단 텍스트 제거
 
       // 이어하기 가능 여부 체크
       try {
@@ -993,7 +993,7 @@ function initHeaderScoreboard(away = '-', home = '-') {
 
 // ── 시즌 모드 시작 ─────────────────────────────────────
 async function startSeasonMode() {
-  const year      = '2025';   // 연도 고정
+  const year      = '2026';   // 연도 고정
   const myTeam    = document.getElementById('myteam-select').value;
   const metaRes   = await fetch(dataUrl('data/_meta.json'));
   const meta      = await metaRes.json();
@@ -1031,19 +1031,8 @@ async function loadAllTeamData(year, teams, nameKor) {
   const loadingEl = document.getElementById('loading');
   loadingEl.style.display = 'flex';
   document.getElementById('loading-text').textContent = '전체 팀 데이터 로딩 중...';
-  // profile 한 번만 fetch
-  const profileRes  = await fetch(dataUrl('data/player_profile.csv'));
-  const profileRows = parseCSV(await profileRes.text());
-  DB.hitters = []; DB.pitchers = [];
-  for (const teamCode of teams) {
-    const korName = nameKor[teamCode] || teamCode;
-    document.getElementById('loading-sub').textContent = `${korName} 로딩 중...`;
-    try {
-      const data = await loadTeamCSV(year, teamCode, korName, profileRows);
-      DB.hitters  = [...DB.hitters,  ...data.hitters];
-      DB.pitchers = [...DB.pitchers, ...data.pitchers];
-    } catch(e) { console.warn(`${korName} 로드 실패:`, e.message); }
-  }
+  document.getElementById('loading-sub').textContent = `${year} 시즌 데이터 로드 중`;
+  await loadYearData(year);
   loadingEl.style.display = 'none';
 }
 

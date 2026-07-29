@@ -294,10 +294,13 @@ function buildProfileLookup(profileRows) {
  * 타자 CSV 행 → JSON hitter 객체 변환.
  * AVG='-' (타석 없는 투수) 는 null을 반환해 호출 측에서 걸러낸다.
  */
-function csvRowToHitter(row, profileLookup, teamName) {
+function csvRowToHitter(row, profileLookup, fallbackTeamName = '') {
   if (row['AVG'] === '-') return null;           // 타석 없는 투수 제외
-  const p = profileLookup[row['playerId']] || {};
+  const pId = row['playerId'] || null;
+  const p = (pId && profileLookup[pId]) ? profileLookup[pId] : {};
+  const teamName = row['팀명'] || fallbackTeamName;
   return {
+    id: pId || `${row['선수명']}_${teamName}`,
     name: row['선수명'],
     team: teamName,
     AVG: Math.round(parseFloat(row['AVG']) * 1000) / 1000,
@@ -369,17 +372,20 @@ function buildDefenseStats(row) {
     CSPercent: (csPctRaw && csPctRaw !== '-') ? parseDefNumber(csPctRaw) : null,
     rangePer9: ip > 0 ? ((po + a) / ip) * 9 : 0,
     errPer9: ip > 0 ? (e / ip) * 9 : 0,
-    dpPer9: ip > 0 ? (dp / ip) * 9 : 0,
-    pbPer9: ip > 0 ? (pb / ip) * 9 : 0,
+    dpPer9: ip > 0 ? ((dp) / ip) * 9 : 0,
+    pbPer9: ip > 0 ? ((pb) / ip) * 9 : 0,
   };
 }
 
 /**
  * 투수 CSV 행 → JSON pitcher 객체 변환.
  */
-function csvRowToPitcher(row, profileLookup, teamName) {
-  const p = profileLookup[row['playerId']] || {};
+function csvRowToPitcher(row, profileLookup, fallbackTeamName = '') {
+  const pId = row['playerId'] || null;
+  const p = (pId && profileLookup[pId]) ? profileLookup[pId] : {};
+  const teamName = row['팀명'] || fallbackTeamName;
   return {
+    id: pId || `${row['선수명']}_${teamName}`,
     name: row['선수명'],
     team: teamName,
     ERA: Math.round(parseFloat(row['ERA']) * 100) / 100,
@@ -404,23 +410,18 @@ function csvRowToPitcher(row, profileLookup, teamName) {
 }
 
 /**
- * 한 팀의 CSV 3종(타자·투수·프로파일)을 병렬 fetch해서
- * { hitters, pitchers } 를 반환.
- *
- * 파일 경로 규칙:
- *   data/{year}/{team}_hitter.csv
- *   data/{year}/{team}_pitcher.csv
- *   data/player_profile.csv          ← 연도 무관 공통 파일
+ * 연도별 통합 CSV 4종(타자·투수·도루·수비)을 병렬 fetch해서
+ * 전체 { hitters, pitchers } 를 반환.
  */
-async function loadTeamCSV(year, teamCode, korName, profileRows) {
+async function loadYearCSV(year, profileRows) {
   const [hitterRes, pitcherRes, runRes, defRes] = await Promise.all([
-    fetch(dataUrl(`data/${year}/${year}_hitter_${teamCode}.csv`)),
-    fetch(dataUrl(`data/${year}/${year}_pitcher_${teamCode}.csv`)),
-    fetch(dataUrl(`data/${year}/${year}_run_${teamCode}.csv`)),
-    fetch(dataUrl(`data/${year}/${year}_defense_${teamCode}.csv`)),
+    fetch(dataUrl(`data/${year}/${year}_hitter.csv`)),
+    fetch(dataUrl(`data/${year}/${year}_pitcher.csv`)),
+    fetch(dataUrl(`data/${year}/${year}_run.csv`)),
+    fetch(dataUrl(`data/${year}/${year}_defense.csv`)),
   ]);
-  if (!hitterRes.ok) throw new Error(`${korName}(${teamCode}) 타자 데이터를 찾을 수 없습니다 (${year})`);
-  if (!pitcherRes.ok) throw new Error(`${korName}(${teamCode}) 투수 데이터를 찾을 수 없습니다 (${year})`);
+  if (!hitterRes.ok) throw new Error(`${year}년 타자 데이터를 찾을 수 없습니다`);
+  if (!pitcherRes.ok) throw new Error(`${year}년 투수 데이터를 찾을 수 없습니다`);
 
   const [hitterText, pitcherText] = await Promise.all([
     hitterRes.text(),
@@ -429,18 +430,24 @@ async function loadTeamCSV(year, teamCode, korName, profileRows) {
 
   const profileLookup = buildProfileLookup(profileRows);
 
-  // team 필드에는 영문 코드 대신 한글명 저장 → 게임 내 UI 표시에 사용
   const hitters = parseCSV(hitterText)
-    .map(r => csvRowToHitter(r, profileLookup, korName))
-    .filter(Boolean);                             // null(AVG='-') 제거
+    .map(r => csvRowToHitter(r, profileLookup))
+    .filter(Boolean);
   const pitchers = parseCSV(pitcherText)
-    .map(r => csvRowToPitcher(r, profileLookup, korName));
+    .map(r => csvRowToPitcher(r, profileLookup));
 
-  // ── 도루 데이터 병합 (run CSV) ──────────────────────────────────────────
+  // ── 도루 데이터 병합 (run CSV) ──
   if (runRes.ok) {
     const runRows = parseCSV(await runRes.text());
+    const runMapById = {};
+    const runMapByName = {};
+    runRows.forEach(rr => {
+      if (rr['playerId']) runMapById[rr['playerId']] = rr;
+      if (rr['선수명']) runMapByName[rr['선수명']] = rr;
+    });
+
     hitters.forEach(h => {
-      const rr = runRows.find(r => r['선수명'] === h.name);
+      const rr = (h.id && runMapById[h.id]) || runMapByName[h.name];
       if (rr) {
         h.SB = parseInt(rr['SB']) || 0;
         h.CS = parseInt(rr['CS']) || 0;
@@ -450,23 +457,30 @@ async function loadTeamCSV(year, teamCode, korName, profileRows) {
     });
   }
 
-  // ── 수비 데이터 병합 (defense CSV) ─────────────────────────────────────
+  // ── 수비 데이터 병합 (defense CSV) ──
   if (defRes.ok) {
     const defRows = parseCSV(await defRes.text());
-    // 선수명 기준으로 출장 수 최다 포지션을 주 포지션으로 결정
-    const defMap = {};
+    const defMapById = {};
+    const defMapByName = {};
     defRows.forEach(r => {
+      const pId = r['playerId'];
       const name = r['선수명'];
-      if (!defMap[name]) defMap[name] = [];
-      defMap[name].push(r);
+      if (pId) {
+        if (!defMapById[pId]) defMapById[pId] = [];
+        defMapById[pId].push(r);
+      }
+      if (name) {
+        if (!defMapByName[name]) defMapByName[name] = [];
+        defMapByName[name].push(r);
+      }
     });
+
     hitters.forEach(h => {
-      const rows = defMap[h.name];
+      const rows = (h.id && defMapById[h.id]) || defMapByName[h.name];
       if (!rows) return;
       const main = rows.slice().sort((a, b) => parseInt(b['G']) - parseInt(a['G']))[0];
       h.defPos = main['POS'] || null;
       h.defense = buildDefenseStats(main);
-      // 포수인 경우 도루 저지율 추가
       const catcherRow = rows.find(r => r['POS'] === '포수');
       if (catcherRow) {
         const csVal = catcherRow['CS%'];
@@ -479,40 +493,107 @@ async function loadTeamCSV(year, teamCode, korName, profileRows) {
 }
 
 /**
- * 두 팀의 CSV를 병렬로 fetch해서 DB에 적재한 뒤 콜백 실행.
- * @param {string}   year     - "2025"
- * @param {string}   home     - "두산"
- * @param {string}   away     - "KIA"
- * @param {Function} onReady  - 로드 완료 콜백
- * @param {Function} onError  - 에러 콜백 (message:string)
+ * 하위 호환용 단일 팀 CSV 로더 (분할 파일 fallback이 필요한 경우)
  */
-async function loadTeamData(year, home, away, onReady, onError) {
+async function loadTeamCSV(year, teamCode, korName, profileRows) {
   try {
-    // player_profile은 연도 무관 공통 파일 — 한 번만 fetch
+    return await loadYearCSV(year, profileRows);
+  } catch (e) {
+    const [hitterRes, pitcherRes, runRes, defRes] = await Promise.all([
+      fetch(dataUrl(`data/${year}/${year}_hitter_${teamCode}.csv`)),
+      fetch(dataUrl(`data/${year}/${year}_pitcher_${teamCode}.csv`)),
+      fetch(dataUrl(`data/${year}/${year}_run_${teamCode}.csv`)),
+      fetch(dataUrl(`data/${year}/${year}_defense_${teamCode}.csv`)),
+    ]);
+    if (!hitterRes.ok) throw new Error(`${korName}(${teamCode}) 타자 데이터를 찾을 수 없습니다 (${year})`);
+    if (!pitcherRes.ok) throw new Error(`${korName}(${teamCode}) 투수 데이터를 찾을 수 없습니다 (${year})`);
+
+    const [hitterText, pitcherText] = await Promise.all([
+      hitterRes.text(),
+      pitcherRes.text(),
+    ]);
+
+    const profileLookup = buildProfileLookup(profileRows);
+
+    const hitters = parseCSV(hitterText)
+      .map(r => csvRowToHitter(r, profileLookup, korName))
+      .filter(Boolean);
+    const pitchers = parseCSV(pitcherText)
+      .map(r => csvRowToPitcher(r, profileLookup, korName));
+
+    if (runRes.ok) {
+      const runRows = parseCSV(await runRes.text());
+      hitters.forEach(h => {
+        const rr = runRows.find(r => (r['playerId'] && r['playerId'] === h.id) || r['선수명'] === h.name);
+        if (rr) {
+          h.SB = parseInt(rr['SB']) || 0;
+          h.CS = parseInt(rr['CS']) || 0;
+          h.SBA = parseInt(rr['SBA']) || 0;
+          h.sbPct = parseFloat(rr['SB%']) || 0;
+        }
+      });
+    }
+
+    if (defRes.ok) {
+      const defRows = parseCSV(await defRes.text());
+      const defMap = {};
+      defRows.forEach(r => {
+        const key = r['playerId'] || r['선수명'];
+        if (!defMap[key]) defMap[key] = [];
+        defMap[key].push(r);
+      });
+      hitters.forEach(h => {
+        const rows = defMap[h.id] || defMap[h.name];
+        if (!rows) return;
+        const main = rows.slice().sort((a, b) => parseInt(b['G']) - parseInt(a['G']))[0];
+        h.defPos = main['POS'] || null;
+        h.defense = buildDefenseStats(main);
+        const catcherRow = rows.find(r => r['POS'] === '포수');
+        if (catcherRow) {
+          const csVal = catcherRow['CS%'];
+          h.csPct = (csVal && csVal !== '-') ? parseFloat(csVal) : 0;
+        }
+      });
+    }
+
+    return { hitters, pitchers };
+  }
+}
+
+/**
+ * 전체 연도 데이터를 한 번에 로드하여 DB.hitters, DB.pitchers에 적재.
+ */
+async function loadYearData(year, onReady, onError) {
+  try {
     const profileRes = await fetch(dataUrl('data/player_profile.csv'));
     if (!profileRes.ok) throw new Error('player_profile.csv를 찾을 수 없습니다');
     const profileRows = parseCSV(await profileRes.text());
 
-    // _meta.json의 name_kor에서 한글명 조회 (없으면 영문 코드 그대로 사용)
+    const data = await loadYearCSV(year, profileRows);
+
+    DB.hitters = data.hitters;
+    DB.pitchers = data.pitchers;
+
+    if (typeof onReady === 'function') onReady(data);
+  } catch (e) {
+    if (typeof onError === 'function') onError(e.message || '데이터 로드 실패');
+  }
+}
+
+/**
+ * 하위 호환용 두 팀 로더
+ */
+async function loadTeamData(year, home, away, onReady, onError) {
+  try {
+    await loadYearData(year);
     const metaRes = await fetch(dataUrl('data/_meta.json'));
     const meta = metaRes.ok ? await metaRes.json() : {};
     const nameKor = (meta.name_kor) || {};
     const homeKor = nameKor[home] || home;
     const awayKor = nameKor[away] || away;
-
-    // 홈·원정 팀 CSV 병렬 로드 (파일명=영문코드, 선수데이터 team=한글명)
-    const [homeData, awayData] = await Promise.all([
-      loadTeamCSV(year, home, homeKor, profileRows),
-      loadTeamCSV(year, away, awayKor, profileRows),
-    ]);
-
-    DB.hitters = [...homeData.hitters, ...awayData.hitters];
-    DB.pitchers = [...homeData.pitchers, ...awayData.pitchers];
-
-    // 한글 팀명을 호출 측에 전달 (UI 표시용)
-    onReady({ homeKor, awayKor });
+    if (typeof onReady === 'function') onReady({ homeKor, awayKor });
   } catch (e) {
-    onError(e.message || '데이터 로드 실패');
+    if (typeof onError === 'function') onError(e.message || '데이터 로드 실패');
   }
 }
 
@@ -2102,5 +2183,7 @@ if (typeof globalThis !== 'undefined') {
     calcFielderDefenseScore,
     calcTeamDefenseImpact,
     formatPlayerName,
+    loadYearCSV,
+    loadYearData,
   });
 }

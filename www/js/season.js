@@ -1800,16 +1800,8 @@ async function startSeasonGame() {
   document.getElementById('loading-text').textContent = '데이터 로딩 중...';
   document.getElementById('loading-sub').textContent  = `${aKor} vs ${hKor}`;
 
-  // 해당 두 팀 데이터 로드 (이미 DB에 있으면 재활용)
-  const homeInDB = DB.hitters.some(h => h.team === hKor);
-  const awayInDB = DB.hitters.some(h => h.team === aKor);
-
-  if (!homeInDB || !awayInDB) {
-    await loadTeamData(
-      SS.year, game.home, game.away,
-      ({ homeKor, awayKor }) => {},
-      (err) => { alert('데이터 로드 실패: ' + err); }
-    );
+  if (!DB.hitters || DB.hitters.length === 0) {
+    await loadYearData(SS.year || '2026');
   }
 
   loadingEl.style.display = 'none';

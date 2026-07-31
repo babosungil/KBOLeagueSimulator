@@ -143,6 +143,26 @@ async function doGameOverEffect() {
   overlay.classList.remove('show');
 }
 
+async function doGameStartEffect(awayTeam, homeTeam, subTag = 'MATCH START') {
+  isAnimating = true;
+  const overlay = document.getElementById('match-start-overlay');
+  if (!overlay) { isAnimating = false; return; }
+
+  const subTagEl = document.getElementById('ms-sub-tag');
+  const awayEl = document.getElementById('ms-away-team');
+  const homeEl = document.getElementById('ms-home-team');
+
+  if (subTagEl) subTagEl.textContent = subTag;
+  if (awayEl) awayEl.textContent = awayTeam;
+  if (homeEl) homeEl.textContent = homeTeam;
+
+  overlay.classList.add('show');
+  await sleep(2100);
+  overlay.classList.remove('show');
+  await sleep(300);
+  isAnimating = false;
+}
+
 function popBases(bases, prevBases) {
   [1, 2, 3].forEach((b, i) => {
     if (bases[i]) {

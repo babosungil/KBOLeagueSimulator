@@ -298,6 +298,103 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 @keyframes scaleUp { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
+/* ── 경기 시작 (VS Matchup) 연출 ── */
+#match-start-overlay {
+  background: radial-gradient(circle at center, rgba(24, 28, 36, 0.98) 0%, rgba(10, 12, 16, 0.99) 100%);
+  backdrop-filter: blur(10px);
+}
+.ms-sub-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  letter-spacing: 4px;
+  color: var(--accent);
+  margin-bottom: 24px;
+  text-transform: uppercase;
+  font-weight: 700;
+  opacity: 0;
+}
+#match-start-overlay.show .ms-sub-tag {
+  animation: fadeIn 0.4s ease 0.1s forwards;
+}
+.ms-vs-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 30px;
+  width: 100%;
+  max-width: 500px;
+}
+.ms-team-box {
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 42px;
+  letter-spacing: 2px;
+  color: #ffffff;
+  padding: 16px 28px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  min-width: 120px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+}
+.ms-team-box.away {
+  border-color: rgba(59, 130, 246, 0.4);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(10, 12, 16, 0.4));
+  color: #60a5fa;
+}
+.ms-team-box.home {
+  border-color: rgba(245, 166, 35, 0.4);
+  background: linear-gradient(135deg, rgba(245, 166, 35, 0.15), rgba(10, 12, 16, 0.4));
+  color: var(--accent);
+}
+#match-start-overlay.show .ms-team-box.away {
+  animation: msSlideInLeft 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.15s forwards;
+}
+#match-start-overlay.show .ms-team-box.home {
+  animation: msSlideInRight 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.15s forwards;
+}
+@keyframes msSlideInLeft {
+  from { transform: translateX(-80px) scale(0.8); opacity: 0; }
+  to { transform: translateX(0) scale(1); opacity: 1; }
+}
+@keyframes msSlideInRight {
+  from { transform: translateX(80px) scale(0.8); opacity: 0; }
+  to { transform: translateX(0) scale(1); opacity: 1; }
+}
+.ms-vs-badge {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 56px;
+  color: #ffffff;
+  letter-spacing: 2px;
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.6);
+  opacity: 0;
+}
+#match-start-overlay.show .ms-vs-badge {
+  animation: msVsPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.35s forwards;
+}
+@keyframes msVsPop {
+  0% { transform: scale(0); opacity: 0; }
+  70% { transform: scale(1.3); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.ms-playball {
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 32px;
+  letter-spacing: 4px;
+  color: var(--accent3);
+  text-shadow: 0 0 25px rgba(45, 204, 111, 0.6);
+  opacity: 0;
+}
+#match-start-overlay.show .ms-playball {
+  animation: msPlayballUp 0.4s ease 0.55s forwards;
+}
+@keyframes msPlayballUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
 @keyframes popRunner {
   0%   { transform: scale(0.4); fill: #f5a623; opacity: 0.6; }
   40%  { transform: scale(2.1); fill: #ffffff;  opacity: 1; }
@@ -1089,6 +1186,16 @@ async function loadAllTeamData(year, teams, nameKor) {
   </div>
   <div id="extra-overlay" class="extra-overlay" style="display:none">
     <div id="extra-banner" class="extra-banner"></div>
+  </div>
+
+  <div id="match-start-overlay" class="fullscreen-overlay">
+    <div class="ms-sub-tag" id="ms-sub-tag">2026 REGULAR SEASON</div>
+    <div class="ms-vs-stage">
+      <div class="ms-team-box away" id="ms-away-team">KIA</div>
+      <div class="ms-vs-badge" id="ms-vs-badge">VS</div>
+      <div class="ms-team-box home" id="ms-home-team">삼성</div>
+    </div>
+    <div class="ms-playball" id="ms-playball">PLAY BALL!</div>
   </div>
 </body>
 </html>

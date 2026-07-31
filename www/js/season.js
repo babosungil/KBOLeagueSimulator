@@ -1888,6 +1888,13 @@ async function startSeasonGame() {
 }
   updateGameUI(); updateLnpUI(); updateSbUI(); updateSituationBar();
   addLog(`⚾ ${SS.year}시즌 ${SS.gameIdx + 1}번째 경기 · ${aKor} vs ${hKor}`, '');
+
+  // 경기 시작 VS 연출
+  const isPost = typeof SS !== 'undefined' && SS.phase === 'postseason';
+  const subTag = isPost ? 'POSTSEASON' : `${SS.year || ''} REGULAR SEASON`;
+  if (typeof doGameStartEffect === 'function') {
+    await doGameStartEffect(aKor, hKor, subTag);
+  }
   startPA();
 }
 

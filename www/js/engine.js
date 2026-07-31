@@ -1034,7 +1034,8 @@ function trySteal(batter, bases, outs) {
   if (rn() < successRate) {
     gs.bases = [null, 'r', bases[2]];
     batter.todayStats.SB++;
-    addLog(`🟣 ${formatPlayerName(batter.name)} 도루 성공! (시즌 ${batter.SB}도루)`, 'steal');
+    const currentTotalSB = (batter.SB || 0) + batter.todayStats.SB;
+    addLog(`🟣 ${formatPlayerName(batter.name)} 도루 성공! (시즌 ${currentTotalSB}도루)`, 'steal');
     showPitch('도루!', 'steal');
   } else {
     gs.bases = [null, null, bases[2]];

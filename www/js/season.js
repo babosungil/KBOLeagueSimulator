@@ -703,14 +703,17 @@ function simGameFast(homeTeam, awayTeam) {
       while (outs < 3) {
         const batter = lineup[order % lineup.length];
         order++;
-        const pr = decidePAResult(batter, pitcher, bases, inning, outs);
-        if (pr === 'k' || pr === 'out') {
+        const prRes = decidePAResult(batter, pitcher, bases, inning, outs, lineup);
+        const pr = typeof prRes === 'object' ? prRes.type : prRes;
+        if (pr === 'k' || pr === 'out' || pr === 'fine_play') {
           outs++;
         } else if (pr === 'dp') {
           outs = Math.min(outs + 2, 3);
           bases = [null, bases[1], bases[2]];
         } else if (pr === 'bb') {
           const res = advRunners(bases, 'bb'); bases = res.bases; runs += res.scored;
+        } else if (pr === 'error') {
+          const res = advRunners(bases, '1b'); bases = res.bases; runs += res.scored;
         } else {
           const res = advRunners(bases, pr);   bases = res.bases; runs += res.scored;
         }

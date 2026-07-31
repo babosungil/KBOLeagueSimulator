@@ -826,6 +826,32 @@ function calcTeamDefenseImpact(defenseLineup) {
 //  타석 결과 결정
 // ═══════════════════════════════════════════════════════
 
+const POS_KOR_FULL_MAP = {
+  C: '포수', '1B': '1루수', '2B': '2루수', '3B': '3루수', SS: '유격수',
+  LF: '좌익수', CF: '중견수', RF: '우익수', P: '투수', OF: '외야수', IF: '내야수'
+};
+
+const FINE_PLAY_DESCS = {
+  OF: ['다이빙 캐치', '펜스 직전 점핑 캐치', '슬라이딩 캐치', '다이빙 슈퍼 캐치'],
+  IF: ['다이빙 캐치 후 1루 송구', '빠진 타구를 차단하는 호수비', '점핑 캐치', '라인드라이브 호수비'],
+  C: ['파울플라이 익스트림 캐치']
+};
+
+function getRandomFielder(defenseLineup, posGroup) {
+  if (!Array.isArray(defenseLineup) || !defenseLineup.length) return null;
+  const filtered = defenseLineup.filter(p => {
+    const pos = p.pos || POS_KOR_MAP[p.defPos] || p.defPos;
+    if (posGroup === 'OF') return ['LF', 'CF', 'RF'].includes(pos);
+    if (posGroup === 'IF') return ['1B', '2B', '3B', 'SS'].includes(pos);
+    return pos !== 'DH';
+  });
+  if (!filtered.length) {
+    const nonDH = defenseLineup.filter(p => (p.pos || POS_KOR_MAP[p.defPos]) !== 'DH');
+    return nonDH.length ? nonDH[Math.floor(rn() * nonDH.length)] : defenseLineup[0];
+  }
+  return filtered[Math.floor(rn() * filtered.length)];
+}
+
 function decidePAResult(b, p, bases, inning, outs, defenseLineup = null) {
   const era = adjERA(p), pq = Math.max(0.5, Math.min(1.8, era / 4.30));
 
@@ -870,6 +896,20 @@ function decidePAResult(b, p, bases, inning, outs, defenseLineup = null) {
   if (roll < k) return 'k';
   if (roll < k + bb) return 'bb';
   if (roll < k + bb + hit) {
+    // 호수비 (Fine play) 판정 (수비진 수비점수가 높으면 안타 타구를 캐치)
+    const finePlayChance = Math.max(0.01, 0.035 + (defenseImpact.score - 50) * 0.002);
+    if (rn() < finePlayChance && defenseLineup && defenseLineup.length) {
+      const fielder = getRandomFielder(defenseLineup, rn() < 0.6 ? 'OF' : 'IF');
+      if (fielder) {
+        const pos = fielder.pos || POS_KOR_MAP[fielder.defPos] || 'OF';
+        const posGroup = ['LF', 'CF', 'RF'].includes(pos) ? 'OF' : 'IF';
+        const descs = FINE_PLAY_DESCS[posGroup] || FINE_PLAY_DESCS.IF;
+        const catchType = descs[Math.floor(rn() * descs.length)];
+        const posName = POS_KOR_FULL_MAP[pos] || pos;
+        return { type: 'fine_play', fielder, posName, catchType };
+      }
+    }
+
     const hr2 = Math.min(b.hr_of_hit, 0.35),
       d3 = Math.min(b.d3_of_hit, 0.06),
       d2 = Math.min(b.d2_of_hit, 0.25),
@@ -879,35 +919,51 @@ function decidePAResult(b, p, bases, inning, outs, defenseLineup = null) {
     if (r2 < hr2 + d3 + d2) return '2b';
     return '1b';
   }
+
   const dpMult = bases[0] && outs < 2 ? 2.0 : 1.0;
-  return rn() < 0.07 * dpMult * (1 + defenseImpact.dpAdj) ? 'dp' : 'out';
+  const isDP = rn() < 0.07 * dpMult * (1 + defenseImpact.dpAdj);
+  if (!isDP) {
+    // 수비 실책 (Error) 판정 (범타 처리 중 일부가 수비실책으로 변경)
+    const errorChance = Math.max(0.005, 0.025 - (defenseImpact.score - 50) * 0.0015);
+    if (rn() < errorChance && defenseLineup && defenseLineup.length) {
+      const fielder = getRandomFielder(defenseLineup, 'ALL');
+      if (fielder) {
+        const pos = fielder.pos || POS_KOR_MAP[fielder.defPos] || 'IF';
+        const posName = POS_KOR_FULL_MAP[pos] || pos;
+        return { type: 'error', fielder, posName };
+      }
+    }
+  }
+
+  return isDP ? 'dp' : 'out';
 }
 
 // ── 투구 시퀀스 생성 ──
 function buildSeq(pr) {
-  const dk = (pr === '1b' || pr === '2b' || pr === '3b') ? 'hit'
-    : pr === 'hr' ? 'hr'
-      : pr === 'k' ? 'k'
-        : pr === 'bb' ? 'bb' : 'out';
+  const prType = typeof pr === 'object' ? pr.type : pr;
+  const dk = (prType === '1b' || prType === '2b' || prType === '3b' || prType === 'error') ? 'hit'
+    : prType === 'hr' ? 'hr'
+      : prType === 'k' ? 'k'
+        : prType === 'bb' ? 'bb' : 'out';
   const d = PITCH_DIST[dk], target = randN(d.mean, d.sd), seq = [];
   let balls = 0, strikes = 0;
   for (let i = 0; i < target - 1; i++) {
     const rem = target - 1 - i;
     if (rem === 1) {
-      if (pr === 'k' && strikes < 2) { seq.push('S'); strikes++; continue; }
-      if (pr === 'bb' && balls < 3) { seq.push('B'); balls++; continue; }
-      if (pr === 'bb') { seq.push('F'); continue; }
+      if (prType === 'k' && strikes < 2) { seq.push('S'); strikes++; continue; }
+      if (prType === 'bb' && balls < 3) { seq.push('B'); balls++; continue; }
+      if (prType === 'bb') { seq.push('F'); continue; }
     }
     let bP = 0.35, sP = 0.25, fP = 0.22;
-    if (pr === 'k') { bP = 0.27; sP = 0.33; fP = 0.25; }
-    if (pr === 'bb') { bP = 0.46; sP = 0.17; fP = 0.17; }
+    if (prType === 'k') { bP = 0.27; sP = 0.33; fP = 0.25; }
+    if (prType === 'bb') { bP = 0.46; sP = 0.17; fP = 0.17; }
     const r = rn();
     if (r < bP && balls < 3) { seq.push('B'); balls++; }
     else if (r < bP + sP) { strikes < 2 ? (seq.push('S'), strikes++) : seq.push('F'); }
     else if (r < bP + sP + fP) { strikes >= 2 ? seq.push('F') : (seq.push('S'), strikes++); }
     else { balls < 3 ? (seq.push('B'), balls++) : seq.push('F'); }
   }
-  seq.push({ k: 'K', bb: 'W', hr: 'HR', '1b': '1B', '2b': '2B', '3b': '3B', dp: 'DP', out: 'OUT' }[pr] || 'OUT');
+  seq.push({ k: 'K', bb: 'W', hr: 'HR', '1b': '1B', '2b': '2B', '3b': '3B', dp: 'DP', fine_play: 'OUT', error: '1B', out: 'OUT' }[prType] || 'OUT');
   return seq;
 }
 
@@ -1102,8 +1158,13 @@ async function startPA() {
   }
 
   batter.todayStats.PA++;
-  const pr = decidePAResult(batter, pitcher, gs.bases, gs.inning, gs.outs, getCurrentDefenseLineup());
-  gs.currentPA = { batter, pitcher, pr, seq: buildSeq(pr), pidx: 0 };
+  const prRes = decidePAResult(batter, pitcher, gs.bases, gs.inning, gs.outs, getCurrentDefenseLineup());
+  let pr = prRes, fielderDetail = null;
+  if (prRes && typeof prRes === 'object') {
+    pr = prRes.type;
+    fielderDetail = prRes;
+  }
+  gs.currentPA = { batter, pitcher, pr, seq: buildSeq(pr), pidx: 0, fielderDetail };
   gs.balls = 0; gs.strikes = 0;
   updateBatUI(batter); updatePitUI(pitcher); updateCntUI(0, 0);
   const pcab = document.getElementById('pc-ab');
@@ -1166,7 +1227,10 @@ async function processOnePitch() {
 
 async function handlePA(pa) {
   isAnimating = true;
-  const r = pa.pr, b = pa.batter, p = pa.pitcher, n = pa.pidx;
+  const prResult = pa.pr;
+  const r = typeof prResult === 'object' ? prResult.type : prResult;
+  const fielderDetail = pa.fielderDetail || (typeof prResult === 'object' ? prResult : null);
+  const b = pa.batter, p = pa.pitcher, n = pa.pidx;
   if (!p.todayStats) p.todayStats = { IP_out: 0, H: 0, R: 0, ER: 0, BB: 0, K: 0 };
 
   if (r === 'k') {
@@ -1221,6 +1285,28 @@ async function handlePA(pa) {
       addRuns(res.scored);
     }
     addLog(`✅ ${formatPlayerName(b.name)} ${lbl}${res.scored ? ` (${res.scored}점)` : ''}`, res.scored ? 'score' : 'hit');
+  } else if (r === 'fine_play') {
+    gs.outs = Math.min(gs.outs + 1, 3);
+    p.todayStats.IP_out++;
+    showPitch('호수비!', 'fineplay');
+    const fName = fielderDetail && fielderDetail.fielder ? formatPlayerName(fielderDetail.fielder.name) : '수비수';
+    const posName = fielderDetail ? fielderDetail.posName : '야수';
+    const catchType = fielderDetail ? fielderDetail.catchType : '호수비';
+    addLog(`🛡️ [호수비] ${posName} ${fName}의 ${catchType}! 안타를 지워냅니다! (${n}구)`, 'fineplay');
+  } else if (r === 'error') {
+    showPitch('수비실책', 'error');
+    const prevBases_err = [...gs.bases];
+    const res = advRunners(gs.bases, '1b'); gs.bases = res.bases;
+    updateBasesUI(gs.bases);
+    popBases(gs.bases, prevBases_err);
+    if (res.scored) {
+      await doScoreEffect(res.scored);
+      p.todayStats.R += res.scored;
+      addRuns(res.scored);
+    }
+    const fName = fielderDetail && fielderDetail.fielder ? formatPlayerName(fielderDetail.fielder.name) : '수비수';
+    const posName = fielderDetail ? fielderDetail.posName : '야수';
+    addLog(`⚠️ [실책] ${posName} ${fName} 실책! ${formatPlayerName(b.name)} 1루 출루${res.scored ? ` (${res.scored}점)` : ''} (${n}구)`, 'error');
   } else if (r === 'dp') {
     const doublePlayOuts = Math.min(2, 3 - gs.outs);
     gs.outs += doublePlayOuts;
@@ -1607,6 +1693,7 @@ function showPitch(text, type) {
     hit: 'badge-hit', out: 'badge-out', hr: 'badge-hr',
     walk: 'badge-walk', k: 'badge-k', steal: 'badge-steal',
     bunt: 'badge-bunt', ext: 'badge-ext',
+    fineplay: 'badge-fineplay', error: 'badge-error',
   }[type] || '';
   area.innerHTML = `<span class="pitch-badge ${cls}">${text}</span>`;
   pitchTimeout = setTimeout(() => { area.innerHTML = ''; }, 1000);

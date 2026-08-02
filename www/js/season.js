@@ -17,6 +17,7 @@ const SS = {
   gameIdx:   0,      // 현재 경기 인덱스
   standings: {},     // { doosan:{ w,l,d,rs,ra }, ... }
   playerStats:{},    // { '선수명_팀': { PA,H,HR,RBI,... } }
+  matchupHistory:{}, // { '투수명_투수팀__타자명_타자팀': { PA,AB,H,HR,BB,K,RBI } } (시즌 누적 맞대결)
   phase:     'season', // 'season' | 'postseason' | 'done'
   // 투수 피로도: { '선수명_팀': { lastGame, consecDays, type } }
   // lastGame: 마지막 등판 경기 인덱스
@@ -237,6 +238,7 @@ function saveSeasonState() {
       gameIdx:         SS.gameIdx,
       standings:       SS.standings,
       playerStats:     SS.playerStats,
+      matchupHistory:  SS.matchupHistory || {},
       phase:           SS.phase,
       pitcherFatigue:  SS.pitcherFatigue,
       starterRotation: SS.starterRotation,
@@ -808,6 +810,24 @@ function recordPlayerStats(lineup, todayStats) {
     s.K   += ts.K   || 0; s.BB  += ts.BB  || 0;
     s.SB  += ts.SB  || 0;
   });
+}
+
+// ── 투수-타자 맞대결 기록 (시즌 누적) ─────────────────────
+// result: decidePAResult가 반환한 결과 코드 ('k','bb','hr','1b','2b','3b','out','dp','error','fine_play')
+function recordMatchupHistory(pitcher, batter, result, rbi) {
+  if (!SS.matchupHistory) SS.matchupHistory = {};
+  const key = `${pitcher.name}_${pitcher.team}__${batter.name}_${batter.team}`;
+  if (!SS.matchupHistory[key]) {
+    SS.matchupHistory[key] = { PA: 0, AB: 0, H: 0, HR: 0, BB: 0, K: 0, RBI: 0 };
+  }
+  const m = SS.matchupHistory[key];
+  m.PA++;
+  if (result !== 'bb') m.AB++;
+  if (result === '1b' || result === '2b' || result === '3b' || result === 'hr') m.H++;
+  if (result === 'hr') m.HR++;
+  if (result === 'bb') m.BB++;
+  if (result === 'k') m.K++;
+  if (rbi) m.RBI += rbi;
 }
 
 // ── 포스트시즌 ───────────────────────────────────────────

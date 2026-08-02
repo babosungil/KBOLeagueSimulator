@@ -872,8 +872,30 @@ function getRandomFielder(defenseLineup, posGroup) {
   return filtered[Math.floor(rn() * filtered.length)];
 }
 
+// 계산식 탭 등에서 쓰는 결과 코드 → 한글 라벨
+const RESULT_LABELS = {
+  k: '삼진', bb: '볼넷', hr: '홈런', '1b': '단타', '2b': '2루타', '3b': '3루타',
+  out: '범타', dp: '병살', fine_play: '호수비', error: '실책',
+};
+
+// decidePAResult가 실제로 사용한 중간 계산값 전체를 기록한 최신 trace.
+// 계산식 탭은 이 값을 그대로 렌더링하므로 화면 표시가 실제 판정 로직과 항상 일치한다.
+let lastCalcTrace = null;
+
 function decidePAResult(b, p, bases, inning, outs, defenseLineup = null) {
+  const steps = [];
+  const push = (label, value) => steps.push({ label, value });
+  const finish = (result) => {
+    const type = typeof result === 'object' ? result.type : result;
+    push('최종 결과', RESULT_LABELS[type] || type);
+    lastCalcTrace = { steps, result: type };
+    return result;
+  };
+
   const era = adjERA(p), pq = Math.max(0.5, Math.min(1.8, era / 4.30));
+  push('타자', `${b.hand || 'R'}타 · AVG ${(b.AVG || 0).toFixed(3)}`);
+  push('투수', `${p.hand || 'R'}투 · ERA(보정) ${era.toFixed(2)}`);
+  push('투수품질지수(pq)', pq.toFixed(3));
 
   // 포수 피로도 타격 페널티 (시즌 모드)
   let batterHitRate = b.hit_rate;
@@ -883,6 +905,7 @@ function decidePAResult(b, p, bases, inning, outs, defenseLineup = null) {
       const cf = SS.catcherFatigue[`${b.name}_${teamCode}`];
       if (cf && cf.stamina < 50) {
         batterHitRate *= 0.9; // 체력 50 미만 시 안타 확률 10% 하락
+        push('포수 피로도 페널티', `안타율 ${b.hit_rate.toFixed(3)} → ${batterHitRate.toFixed(3)}`);
       }
     }
   }
@@ -890,34 +913,52 @@ function decidePAResult(b, p, bases, inning, outs, defenseLineup = null) {
   let hit = batterHitRate * (0.85 * pq + 0.15),
     bb = b.bb_rate * (0.5 + 0.5 * pq),
     k = b.k_rate * (0.5 + 0.5 / pq);
+  push('기본 확률(pq 반영)', `안타 ${hit.toFixed(3)} · 볼넷 ${bb.toFixed(3)} · 삼진 ${k.toFixed(3)}`);
+
   const kb = (p.K9 - 7.5) * 0.006, bp = (p.BB9 - 3.5) * 0.004;
   k = Math.max(0.05, k + kb);
   bb = Math.max(0.02, bb + bp);
   hit = Math.max(0.05, hit - kb * 0.5);
+  push('K9/BB9 보정', `안타 ${hit.toFixed(3)} · 볼넷 ${bb.toFixed(3)} · 삼진 ${k.toFixed(3)}`);
 
   // 좌우 유불리
   const pl = calcPlatoon(b.hand, p.hand);
   hit = Math.max(0.05, hit + pl.hitMod);
   k = Math.max(0.04, k + pl.kMod);
+  push('좌우 매치업', `${pl.label} → 안타 ${hit.toFixed(3)} · 삼진 ${k.toFixed(3)}`);
 
   // 주자 상황
-  if (isRISP(bases)) hit = Math.min(hit * 1.06 + 0.02, 0.45);
-  if (isFullBase(bases)) bb *= 0.75;
-  if (inning >= 7) k *= 1.05;
+  if (isRISP(bases)) {
+    hit = Math.min(hit * 1.06 + 0.02, 0.45);
+    push('RISP 보정', `안타 → ${hit.toFixed(3)}`);
+  }
+  if (isFullBase(bases)) {
+    bb *= 0.75;
+    push('만루 보정', `볼넷 → ${bb.toFixed(3)}`);
+  }
+  if (inning >= 7) {
+    k *= 1.05;
+    push('7회 이후 보정', `삼진 → ${k.toFixed(3)}`);
+  }
 
   // 수비진 보정: 평균보다 좋은 수비는 안타 확률을 낮추고 병살 가능성을 조금 높인다.
   const defenseImpact = calcTeamDefenseImpact(defenseLineup);
   hit = Math.max(0.05, hit * (1 - defenseImpact.hitAdj));
+  push('수비진 보정', `수비점수 ${defenseImpact.score.toFixed(1)} → 안타 ${hit.toFixed(3)}`);
 
   const tot = hit + bb + k;
-  if (tot > 0.93) { const r = 0.93 / tot; hit *= r; bb *= r; k *= r; }
+  if (tot > 0.93) { const r = 0.93 / tot; hit *= r; bb *= r; k *= r; push('확률 정규화', `합계 ${tot.toFixed(3)} > 0.93 → 비율 축소`); }
+
+  push('최종 확률', `삼진 ${k.toFixed(3)} · 볼넷 ${bb.toFixed(3)} · 안타 ${hit.toFixed(3)} · 범타 ${Math.max(0, 1 - k - bb - hit).toFixed(3)}`);
 
   const roll = rn();
-  if (roll < k) return 'k';
-  if (roll < k + bb) return 'bb';
+  push('난수(roll)', roll.toFixed(4));
+  if (roll < k) return finish('k');
+  if (roll < k + bb) return finish('bb');
   if (roll < k + bb + hit) {
     // 호수비 (Fine play) 판정 (수비진 수비점수가 높으면 안타 타구를 캐치)
     const finePlayChance = Math.max(0.01, 0.035 + (defenseImpact.score - 50) * 0.002);
+    push('호수비 확률', finePlayChance.toFixed(3));
     if (rn() < finePlayChance && defenseLineup && defenseLineup.length) {
       const fielder = getRandomFielder(defenseLineup, rn() < 0.6 ? 'OF' : 'IF');
       if (fielder) {
@@ -926,7 +967,7 @@ function decidePAResult(b, p, bases, inning, outs, defenseLineup = null) {
         const descs = FINE_PLAY_DESCS[posGroup] || FINE_PLAY_DESCS.IF;
         const catchType = descs[Math.floor(rn() * descs.length)];
         const posName = POS_KOR_FULL_MAP[pos] || pos;
-        return { type: 'fine_play', fielder, posName, catchType };
+        return finish({ type: 'fine_play', fielder, posName, catchType });
       }
     }
 
@@ -934,28 +975,32 @@ function decidePAResult(b, p, bases, inning, outs, defenseLineup = null) {
       d3 = Math.min(b.d3_of_hit, 0.06),
       d2 = Math.min(b.d2_of_hit, 0.25),
       r2 = rn();
-    if (r2 < hr2) return 'hr';
-    if (r2 < hr2 + d3) return '3b';
-    if (r2 < hr2 + d3 + d2) return '2b';
-    return '1b';
+    push('안타 세부 판정', `홈런${hr2.toFixed(3)}/3루타${d3.toFixed(3)}/2루타${d2.toFixed(3)} · 난수 ${r2.toFixed(4)}`);
+    if (r2 < hr2) return finish('hr');
+    if (r2 < hr2 + d3) return finish('3b');
+    if (r2 < hr2 + d3 + d2) return finish('2b');
+    return finish('1b');
   }
 
   const dpMult = bases[0] && outs < 2 ? 2.0 : 1.0;
-  const isDP = rn() < 0.07 * dpMult * (1 + defenseImpact.dpAdj);
+  const dpChance = 0.07 * dpMult * (1 + defenseImpact.dpAdj);
+  const isDP = rn() < dpChance;
+  push('병살 확률', dpChance.toFixed(3));
   if (!isDP) {
     // 수비 실책 (Error) 판정 (범타 처리 중 일부가 수비실책으로 변경)
     const errorChance = Math.max(0.005, 0.025 - (defenseImpact.score - 50) * 0.0015);
+    push('실책 확률', errorChance.toFixed(3));
     if (rn() < errorChance && defenseLineup && defenseLineup.length) {
       const fielder = getRandomFielder(defenseLineup, 'ALL');
       if (fielder) {
         const pos = fielder.pos || POS_KOR_MAP[fielder.defPos] || 'IF';
         const posName = POS_KOR_FULL_MAP[pos] || pos;
-        return { type: 'error', fielder, posName };
+        return finish({ type: 'error', fielder, posName });
       }
     }
   }
 
-  return isDP ? 'dp' : 'out';
+  return finish(isDP ? 'dp' : 'out');
 }
 
 // ── 투구 시퀀스 생성 ──
@@ -1185,12 +1230,12 @@ async function startPA() {
     pr = prRes.type;
     fielderDetail = prRes;
   }
-  gs.currentPA = { batter, pitcher, pr, seq: buildSeq(pr), pidx: 0, fielderDetail };
+  gs.currentPA = { batter, pitcher, pr, seq: buildSeq(pr), pidx: 0, fielderDetail, trace: lastCalcTrace };
   gs.balls = 0; gs.strikes = 0;
   updateBatUI(batter); updatePitUI(pitcher); updateCntUI(0, 0);
   const pcab = document.getElementById('pc-ab');
   if (pcab) pcab.textContent = '0';
-  updateFml(batter, pitcher, pr);
+  updateFml(gs.currentPA.trace);
   updateSituationBar();
 }
 
@@ -1253,6 +1298,7 @@ async function handlePA(pa) {
   const fielderDetail = pa.fielderDetail || (typeof prResult === 'object' ? prResult : null);
   const b = pa.batter, p = pa.pitcher, n = pa.pidx;
   if (!p.todayStats) p.todayStats = { IP_out: 0, H: 0, R: 0, ER: 0, BB: 0, K: 0 };
+  const rbiBeforePA = b.todayStats.RBI || 0;
 
   if (r === 'k') {
     gs.outs = Math.min(gs.outs + 1, 3);
@@ -1343,6 +1389,9 @@ async function handlePA(pa) {
     p.todayStats.IP_out++;
     showPitch('범타', 'out');
     addLog(`🔴 ${formatPlayerName(b.name)} 아웃 (${n}구)`, 'out');
+  }
+  if (typeof SS !== 'undefined' && typeof recordMatchupHistory === 'function') {
+    recordMatchupHistory(p, b, r, (b.todayStats.RBI || 0) - rbiBeforePA);
   }
   gs.isTop ? gs.awayOrder++ : gs.homeOrder++;
   updateTodayStats();
@@ -1632,10 +1681,6 @@ function updateBatUI(b) {
 
   const bHandKR = b.hand === 'L' ? '좌' : '우';
   document.getElementById('b-info').innerHTML = `${bHandKR}타${platoonTag}`;
-  document.getElementById('b-avg').textContent = b.AVG.toFixed(3);
-  document.getElementById('b-hr').textContent = b.HR;
-  document.getElementById('b-rbi').textContent = Math.round(b.RBI);
-  document.getElementById('b-ops').textContent = (b.ops || 0).toFixed(3);
   // 타자 체력: PA 기반 (9타석 기준, 최소 20%)
   const bPA = (b.todayStats && b.todayStats.PA) || 0;
   const bStam = Math.max(20, 100 - bPA * (80 / 9));
@@ -1669,10 +1714,6 @@ function updatePitUI(p) {
 
   const pHandKR = p.hand === 'L' ? '좌' : '우';
   document.getElementById('p-team').innerHTML = `${platoonTagPit}${pHandKR}투`;
-  document.getElementById('p-era').textContent = p.ERA.toFixed(2);
-  document.getElementById('p-k9').textContent = p.K9.toFixed(1);
-  document.getElementById('p-whip').textContent = p.WHIP.toFixed(2);
-  document.getElementById('p-bb9').textContent = p.BB9.toFixed(1);
   updateStamUI(p);
   const badge = document.getElementById('p-role-badge');
   const role = p.role || 'middle';
@@ -1688,6 +1729,69 @@ function updateStamUI(p) {
   document.getElementById('stamina-fill').style.background = s > 70 ? 'var(--accent3)' : s > 40 ? 'var(--accent)' : 'var(--accent2)';
   document.getElementById('stamina-pct').textContent = Math.round(s) + '%';
 }
+
+// ── 선수 정보 팝업 (능력치 / 맞대결 기록) ──
+function getDisplayedBatter() {
+  if (!gs) return null;
+  if (gs.currentPA && gs.currentPA.batter) return gs.currentPA.batter;
+  const lineup = gs.isTop ? gs.awayLineup : gs.homeLineup;
+  const order = gs.isTop ? gs.awayOrder : gs.homeOrder;
+  return (lineup && lineup.length) ? lineup[order % lineup.length] : null;
+}
+function getDisplayedPitcher() {
+  if (!gs) return null;
+  if (gs.currentPA && gs.currentPA.pitcher) return gs.currentPA.pitcher;
+  return gs.isTop ? gs.curHP : gs.curAP;
+}
+
+function showPlayerPopup(title, bodyHtml) {
+  document.getElementById('player-popup-title').textContent = title;
+  document.getElementById('player-popup-body').innerHTML = bodyHtml;
+  document.getElementById('player-popup').style.display = 'flex';
+}
+function closePlayerPopup() {
+  document.getElementById('player-popup').style.display = 'none';
+}
+window.closePlayerPopup = closePlayerPopup;
+
+// 이름 탭 → 현재 투수 vs 현재 타자 맞대결(시즌 누적) 기록 + 두 선수 능력치 팝업
+window.openMatchupPopup = function () {
+  const batter = getDisplayedBatter(), pitcher = getDisplayedPitcher();
+  if (!batter || !pitcher) return;
+  const title = `${formatPlayerName(pitcher.name)} vs ${formatPlayerName(batter.name)}`;
+
+  const key = `${pitcher.name}_${pitcher.team}__${batter.name}_${batter.team}`;
+  const m = (typeof SS !== 'undefined' && SS.matchupHistory) ? SS.matchupHistory[key] : null;
+  const matchupBody = (!m || !m.PA)
+    ? `<div class="player-popup-empty">이번 시즌 맞대결 기록이 없습니다 (첫 상대)</div>`
+    : (() => {
+      const avg = m.AB > 0 ? (m.H / m.AB).toFixed(3) : '-.---';
+      return `
+        <div class="player-popup-row"><span>타석</span><span class="v">${m.PA}</span></div>
+        <div class="player-popup-row"><span>타수</span><span class="v">${m.AB}</span></div>
+        <div class="player-popup-row"><span>안타</span><span class="v">${m.H}</span></div>
+        <div class="player-popup-row"><span>홈런</span><span class="v">${m.HR}</span></div>
+        <div class="player-popup-row"><span>볼넷</span><span class="v">${m.BB}</span></div>
+        <div class="player-popup-row"><span>삼진</span><span class="v">${m.K}</span></div>
+        <div class="player-popup-row"><span>타점</span><span class="v">${m.RBI}</span></div>
+        <div class="player-popup-row"><span>맞대결 타율</span><span class="v">${avg}</span></div>`;
+    })();
+
+  const body = `
+    <div class="player-popup-section-title">맞대결 기록</div>
+    ${matchupBody}
+    <div class="player-popup-section-title">${formatPlayerName(pitcher.name)} (투수)</div>
+    <div class="player-popup-row"><span>ERA</span><span class="v">${pitcher.ERA.toFixed(2)}</span></div>
+    <div class="player-popup-row"><span>K/9</span><span class="v">${pitcher.K9.toFixed(1)}</span></div>
+    <div class="player-popup-row"><span>WHIP</span><span class="v">${pitcher.WHIP.toFixed(2)}</span></div>
+    <div class="player-popup-row"><span>BB/9</span><span class="v">${pitcher.BB9.toFixed(1)}</span></div>
+    <div class="player-popup-section-title">${formatPlayerName(batter.name)} (타자)</div>
+    <div class="player-popup-row"><span>AVG</span><span class="v">${batter.AVG.toFixed(3)}</span></div>
+    <div class="player-popup-row"><span>HR</span><span class="v">${batter.HR}</span></div>
+    <div class="player-popup-row"><span>RBI</span><span class="v">${Math.round(batter.RBI)}</span></div>
+    <div class="player-popup-row"><span>OPS</span><span class="v">${(batter.ops || 0).toFixed(3)}</span></div>`;
+  showPlayerPopup(title, body);
+};
 
 function updateCntUI(b, s) {
   ['b0', 'b1', 'b2'].forEach((id, i) => {
@@ -1861,22 +1965,19 @@ function updateSituationBar() {
   if (sitBunt) sitBunt.textContent = (batter.SAC / Math.max(batter.G, 1) > 0.05 && gs.outs < 2 && gs.bases[0]) ? '가능' : '-';
 }
 
-function updateFml(b, p, r) {
-  const era = adjERA(p), pq = (era / 4.30).toFixed(2);
-  const adj = (b.hit_rate * (0.85 / parseFloat(pq) + 0.15)).toFixed(3);
-  const lbl = { k: '삼진', bb: '볼넷', hr: '홈런', '1b': '단타', '2b': '2루타', '3b': '3루타', out: '범타', dp: '병살' }[r] || r;
-  const risp = isRISP(gs.bases);
-  const pl = calcPlatoon(b.hand, p.hand);
-  const plColor = pl.advantage === 'batter' ? 'var(--accent3)' : 'var(--accent2)';
-  const plSign = pl.hitMod > 0 ? '+' : '';
-  document.getElementById('formula-calc').innerHTML =
-    `<div class="fr"><span class="fk">타자</span><span class="fv">${b.hand || 'R'}타 · AVG ${b.AVG.toFixed(3)}</span></div>` +
-    `<div class="fr"><span class="fk">투수</span><span class="fv">${p.hand || 'R'}투 · ERA ${era.toFixed(2)}</span></div>` +
-    `<div class="fr" style="color:${plColor}"><span class="fk">좌우 매치업</span><span class="fv">${pl.label.split(' ')[1]} | 안타${plSign}${(pl.hitMod * 100).toFixed(0)}%</span></div>` +
-    `<div class="fr"><span class="fk">투수품질지수</span><span class="fv">${pq}</span></div>` +
-    `<div class="fr"><span class="fk">보정 안타율</span><span class="fv">${adj}</span></div>` +
-    (risp ? `<div class="fr" style="color:var(--accent3)"><span class="fk">RISP 보정</span><span class="fv">+2~6%</span></div>` : '') +
-    `<div class="fr" style="color:var(--accent);margin-top:4px"><span class="fk">결과</span><span class="fv">${lbl}</span></div>`;
+// trace: decidePAResult가 남긴 lastCalcTrace (steps 배열). 실제 판정에 쓰인 값을 그대로 표시한다.
+function updateFml(trace) {
+  const el = document.getElementById('formula-calc');
+  if (!el) return;
+  if (!trace || !trace.steps || !trace.steps.length) {
+    el.innerHTML = `<div class="fr"><span class="fv">계산 기록 없음</span></div>`;
+    return;
+  }
+  el.innerHTML = trace.steps.map((s, i) => {
+    const isLast = i === trace.steps.length - 1;
+    const style = isLast ? ' style="color:var(--accent);margin-top:4px"' : '';
+    return `<div class="fr"${style}><span class="fk">${s.label}</span><span class="fv">${s.value}</span></div>`;
+  }).join('');
 }
 
 function updateTodayStats() {
@@ -2219,7 +2320,8 @@ window.changePitcherInGame = function (name) {
       if (gs.currentPA.pidx === 0) {
         gs.currentPA.pr = decidePAResult(gs.currentPA.batter, np, gs.bases, gs.inning, gs.outs, getCurrentDefenseLineup());
         gs.currentPA.seq = buildSeq(gs.currentPA.pr);
-        updateFml(gs.currentPA.batter, np, gs.currentPA.pr);
+        gs.currentPA.trace = lastCalcTrace;
+        updateFml(gs.currentPA.trace);
       }
     }
     updatePitUI(np);
@@ -2259,7 +2361,8 @@ window.changeHitterInGame = function (name) {
     if (gs.currentPA.pidx === 0) {
       gs.currentPA.pr = decidePAResult(np, pitcher, gs.bases, gs.inning, gs.outs, getCurrentDefenseLineup());
       gs.currentPA.seq = buildSeq(gs.currentPA.pr);
-      updateFml(np, pitcher, gs.currentPA.pr);
+      gs.currentPA.trace = lastCalcTrace;
+      updateFml(gs.currentPA.trace);
     }
   }
 
@@ -2275,6 +2378,27 @@ function switchTab(t) {
   document.getElementById('tab-formula').classList.toggle('active', t === 'formula');
   document.getElementById('content-log').style.display = t === 'log' ? '' : 'none';
   document.getElementById('content-formula').style.display = t === 'formula' ? '' : 'none';
+}
+
+// ── 개발자 모드 (계산식 탭 등 디버그 전용 UI 노출) ──
+// 콘솔에서 enableDevMode() / disableDevMode() 로 전환. 기본값은 항상 꺼짐(일반 사용자 미노출).
+function isDevMode() {
+  try { return localStorage.getItem('kbo_dev_mode') === '1'; } catch (e) { return false; }
+}
+window.enableDevMode = function () {
+  try { localStorage.setItem('kbo_dev_mode', '1'); } catch (e) {}
+  location.reload();
+};
+window.disableDevMode = function () {
+  try { localStorage.removeItem('kbo_dev_mode'); } catch (e) {}
+  location.reload();
+};
+function applyDevModeVisibility() {
+  const tabFormula = document.getElementById('tab-formula');
+  if (tabFormula) tabFormula.style.display = isDevMode() ? '' : 'none';
+}
+if (typeof document !== 'undefined' && document.getElementById) {
+  applyDevModeVisibility();
 }
 
 if (typeof globalThis !== 'undefined') {

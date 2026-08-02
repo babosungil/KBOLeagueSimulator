@@ -102,10 +102,16 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 .pitcher-card::after{content:'';position:absolute;top:50%;right:40%;transform:translateY(-50%);width:110px;height:110px;background:url('assets/baseball_icon_1_transparent.png') no-repeat center / contain;opacity:0.15;z-index:0;filter:invert(1);pointer-events:none}
 .pitcher-card .pname{font-family:'Black Han Sans';font-size:26px;letter-spacing:1px;position:relative;z-index:1}
 .pitcher-card .pteam{color:var(--text);font-size:12px;position:relative;z-index:1;font-weight:500;margin-top:2px;text-align:left}
-.pstats,.bstats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px;position:relative;z-index:1}
-.pstat,.bstat{text-align:center;background:rgba(255,255,255,0.03);padding:6px;border-radius:6px;border:1px solid var(--border)}
-.pval,.bval{font-family:'JetBrains Mono';font-size:15px;color:var(--text);font-weight:700}
-.plabel,.blabel{font-size:10px;color:var(--text2);letter-spacing:1px;margin-top:2px}
+.matchup-tap-area{cursor:pointer}
+#player-popup{position:fixed;inset:0;background:rgba(0,0,0,.58);z-index:320;display:none;align-items:center;justify-content:center}
+.player-popup-panel{background:var(--panel);border:1px solid var(--border2);border-radius:12px;padding:16px 18px;width:min(320px,86vw);max-height:80vh;overflow-y:auto;box-shadow:0 14px 35px rgba(0,0,0,.45)}
+.player-popup-title{font-family:'Black Han Sans';font-size:16px;color:var(--text);letter-spacing:1px;margin-bottom:10px}
+.player-popup-section-title{font-size:11px;color:var(--accent);letter-spacing:1px;margin:14px 0 4px;text-transform:uppercase}
+.player-popup-section-title:first-child{margin-top:0}
+.player-popup-row{display:flex;justify-content:space-between;font-size:12px;color:var(--text2);padding:5px 0;border-bottom:1px solid var(--border)}
+.player-popup-row:last-child{border-bottom:none}
+.player-popup-row .v{color:var(--text);font-weight:700;font-family:'JetBrains Mono'}
+.player-popup-empty{font-size:12px;color:var(--text3);text-align:center;padding:14px 0}
 .stamina-wrap{margin-top:7px;position:relative;z-index:1}
 .stamina-label{display:flex;justify-content:space-between;font-size:10px;color:var(--text2);margin-bottom:3px}
 .stamina-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden}
@@ -783,6 +789,14 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
   </div>
 </div>
 
+<!-- ── 선수 정보 팝업 (능력치 / 투수-타자 맞대결) ── -->
+<div id="player-popup" onclick="closePlayerPopup()">
+  <div class="player-popup-panel" onclick="event.stopPropagation()">
+    <div class="player-popup-title" id="player-popup-title"></div>
+    <div id="player-popup-body"></div>
+  </div>
+</div>
+
 <!-- ── 게임 종료 화면 ── -->
 <div class="game-over" id="game-over">
   <div class="go-title">GAME OVER</div>
@@ -875,35 +889,27 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
     <div class="atbat-vs-wrap">
       <div class="atbat-vs-overlay">VS</div>
       <div class="pitcher-card" style="flex: 1; border-right: 1px solid var(--border); border-bottom: none;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px; position: relative; z-index: 1;">
-          <div class="pteam" id="p-team" style="margin-top: 0; text-align: left;">-</div>
-          <div class="pname" id="p-name" style="line-height: 1;">-</div>
-        </div>
-        <div class="pstats">
-          <div class="pstat"><div class="plabel">ERA</div><div class="pval" id="p-era">-</div></div>
-          <div class="pstat"><div class="plabel">K/9</div><div class="pval" id="p-k9">-</div></div>
-          <div class="pstat"><div class="plabel">WHIP</div><div class="pval" id="p-whip">-</div></div>
-          <div class="pstat"><div class="plabel">BB/9</div><div class="pval" id="p-bb9">-</div></div>
-        </div>
-        <div class="stamina-wrap">
-          <div class="stamina-label" style="justify-content: flex-end;"><span>체력</span><span id="stamina-pct" style="margin-left:8px;">100%</span></div>
-          <div class="stamina-bar"><div class="stamina-fill" id="stamina-fill" style="width:100%;background:var(--accent3)"></div></div>
+        <div class="matchup-tap-area" onclick="openMatchupPopup()">
+          <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px; position: relative; z-index: 1;">
+            <div class="pteam" id="p-team" style="margin-top: 0; text-align: left;">-</div>
+            <div class="pname" id="p-name" style="line-height: 1;">-</div>
+          </div>
+          <div class="stamina-wrap">
+            <div class="stamina-label" style="justify-content: flex-end;"><span>체력</span><span id="stamina-pct" style="margin-left:8px;">100%</span></div>
+            <div class="stamina-bar"><div class="stamina-fill" id="stamina-fill" style="width:100%;background:var(--accent3)"></div></div>
+          </div>
         </div>
       </div>
       <div class="batter-card" style="flex: 1; border-bottom: none;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px; position: relative; z-index: 1;">
-          <div class="bname" id="b-name" style="line-height: 1;">-</div>
-          <div class="binfo" id="b-info" style="margin-top: 0; text-align: right;">-</div>
-        </div>
-        <div class="bstats">
-          <div class="bstat"><div class="blabel">AVG</div><div class="bval" id="b-avg">-</div></div>
-          <div class="bstat"><div class="blabel">HR</div><div class="bval" id="b-hr">-</div></div>
-          <div class="bstat"><div class="blabel">RBI</div><div class="bval" id="b-rbi">-</div></div>
-          <div class="bstat"><div class="blabel">OPS</div><div class="bval" id="b-ops">-</div></div>
-        </div>
-        <div class="stamina-wrap">
-          <div class="stamina-label" style="justify-content: flex-start;"><span>체력</span><span id="b-stamina-pct" style="margin-left:8px;">-</span></div>
-          <div class="stamina-bar"><div class="stamina-fill" id="b-stamina-fill" style="width:100%;background:var(--accent3)"></div></div>
+        <div class="matchup-tap-area" onclick="openMatchupPopup()">
+          <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px; position: relative; z-index: 1;">
+            <div class="bname" id="b-name" style="line-height: 1;">-</div>
+            <div class="binfo" id="b-info" style="margin-top: 0; text-align: right;">-</div>
+          </div>
+          <div class="stamina-wrap">
+            <div class="stamina-label" style="justify-content: flex-start;"><span>체력</span><span id="b-stamina-pct" style="margin-left:8px;">-</span></div>
+            <div class="stamina-bar"><div class="stamina-fill" id="b-stamina-fill" style="width:100%;background:var(--accent3)"></div></div>
+          </div>
         </div>
       </div>
     </div>
@@ -931,7 +937,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
     </div>
     <div class="tab-bar">
       <div class="tab active" id="tab-log"     onclick="switchTab('log')">경기 기록</div>
-      <div class="tab"        id="tab-formula" onclick="switchTab('formula')">계산식</div>
+      <div class="tab"        id="tab-formula" onclick="switchTab('formula')" style="display:none">계산식</div>
     </div>
     <div class="tab-content">
       <div id="content-log" class="log-panel"><div id="game-log"></div></div>

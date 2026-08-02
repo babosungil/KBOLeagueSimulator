@@ -1025,8 +1025,9 @@ function buildSeq(pr) {
     const r = rn();
     if (r < bP && balls < 3) { seq.push('B'); balls++; }
     else if (r < bP + sP) { strikes < 2 ? (seq.push('S'), strikes++) : seq.push('F'); }
-    else if (r < bP + sP + fP) { strikes >= 2 ? seq.push('F') : (seq.push('S'), strikes++); }
-    else { balls < 3 ? (seq.push('B'), balls++) : seq.push('F'); }
+    else if (r < bP + sP + fP) { if (strikes < 2) strikes++; seq.push('F'); }
+    else if (balls < 3) { seq.push('B'); balls++; }
+    else { if (strikes < 2) strikes++; seq.push('F'); }
   }
   seq.push({ k: 'K', bb: 'W', hr: 'HR', '1b': '1B', '2b': '2B', '3b': '3B', dp: 'DP', fine_play: 'OUT', error: '1B', out: 'OUT' }[prType] || 'OUT');
   return seq;
@@ -1281,7 +1282,10 @@ async function processOnePitch() {
     } else {
       if (pitch === 'B') { gs.balls++; showPitch('볼', 'ball'); }
       else if (pitch === 'S') { gs.strikes++; showPitch('스트라이크', 'strike'); }
-      else if (pitch === 'F') showPitch('파울', 'foul');
+      else if (pitch === 'F') {
+        if (gs.strikes < 2) gs.strikes++; // 2스트라이크 미만에서는 파울도 스트라이크로 카운트
+        showPitch('파울', 'foul');
+      }
       updateCntUI(gs.balls, gs.strikes);
       updateGameUI();
     }

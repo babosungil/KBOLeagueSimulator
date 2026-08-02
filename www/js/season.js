@@ -149,7 +149,11 @@ function hasSavedGame() {
     // 현재 진행해야 할 경기 정보와 일치하는지 확인
     const currentGame = SS.schedule[SS.gameIdx];
     if (!currentGame || !data._seasonGame) return false;
-    
+
+    // 다른 시즌(다른 내 팀)의 잔여 저장 데이터가 우연히 gameIdx/대진이 일치해
+    // 엉뚱하게 복원되는 것을 방지
+    if (data._seasonGame.myTeam !== SS.myTeam) return false;
+
     return data._seasonGame.gameIdx === SS.gameIdx &&
            data._seasonGame.home === currentGame.home &&
            data._seasonGame.away === currentGame.away;
@@ -1863,7 +1867,7 @@ async function startSeasonGame() {
   }
 
   // 게임 종료 콜백 등록 (시즌 결과 반영용)
-  gs._seasonGame = { gameIdx: SS.gameIdx, home: game.home, away: game.away };
+  gs._seasonGame = { gameIdx: SS.gameIdx, home: game.home, away: game.away, myTeam: SS.myTeam };
 
   // 헤더·UI 초기화
   const hTeamEl = document.getElementById('min-h-name');

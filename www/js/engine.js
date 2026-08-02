@@ -752,11 +752,18 @@ function randN(mean, sd) {
   return Math.max(1, Math.round(mean + sd * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v)));
 }
 function calcStamina(p) {
-  return Math.max(5, Math.min(100, 100 - (p.pitchCount / Math.max(p.avgIP, 1) / 16) * 80));
+  return Math.max(0, Math.min(100, 100 - (p.pitchCount / Math.max(p.avgIP, 1) / 16) * 80));
 }
 function adjERA(p) {
   const s = calcStamina(p);
-  return p.ERA * (s >= 80 ? 1 : s >= 60 ? 1.1 : s >= 40 ? 1.25 : 1.5);
+  const mult = s >= 80 ? 1
+    : s >= 60 ? 1.1
+    : s >= 40 ? 1.25
+    : s >= 30 ? 1.6
+    : s >= 20 ? 1.75
+    : s >= 10 ? 2
+    : 3;
+  return p.ERA * mult;
 }
 function isRISP(bases) { return bases[1] || bases[2]; }
 function isFullBase(bases) { return bases[0] && bases[1] && bases[2]; }
@@ -1224,7 +1231,6 @@ async function startPA() {
     return;
   }
 
-  batter.todayStats.PA++;
   const prRes = decidePAResult(batter, pitcher, gs.bases, gs.inning, gs.outs, getCurrentDefenseLineup());
   let pr = prRes, fielderDetail = null;
   if (prRes && typeof prRes === 'object') {
@@ -1302,6 +1308,7 @@ async function handlePA(pa) {
   const fielderDetail = pa.fielderDetail || (typeof prResult === 'object' ? prResult : null);
   const b = pa.batter, p = pa.pitcher, n = pa.pidx;
   if (!p.todayStats) p.todayStats = { IP_out: 0, H: 0, R: 0, ER: 0, BB: 0, K: 0 };
+  b.todayStats.PA++; // 타석 결과가 확정되는 시점에 카운트 (체력 계산이 진행 중인 타석을 미리 반영하지 않도록)
   const rbiBeforePA = b.todayStats.RBI || 0;
 
   if (r === 'k') {
@@ -2359,8 +2366,6 @@ window.changeHitterInGame = function (name) {
 
   const pitcher = gs.isTop ? gs.curHP : gs.curAP;
   if (gs.currentPA && gs.currentPA.batter && gs.currentPA.batter.name === oldBatter.name) {
-    if (oldBatter.todayStats && oldBatter.todayStats.PA > 0) oldBatter.todayStats.PA--;
-    np.todayStats.PA++;
     gs.currentPA.batter = np;
     if (gs.currentPA.pidx === 0) {
       gs.currentPA.pr = decidePAResult(np, pitcher, gs.bases, gs.inning, gs.outs, getCurrentDefenseLineup());

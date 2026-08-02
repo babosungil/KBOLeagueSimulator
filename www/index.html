@@ -1117,6 +1117,9 @@ async function startSeasonMode() {
   SS.standings  = initStandings(teams);
   SS.playerStats= {};
   SS.phase      = 'season';
+  // 이전 시즌(다른 팀)의 경기 진행 중 저장 데이터가 남아있으면
+  // 새 시즌 첫 경기에 잘못 복원되지 않도록 삭제
+  if (typeof clearGameState === 'function') clearGameState();
   saveSeasonState();
 
   // 전체 팀 데이터 로드

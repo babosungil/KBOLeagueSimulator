@@ -93,8 +93,11 @@ let isPlaying = false;
 let playTimer = null;
 let speedIdx = 2;
 let isAnimating = false;
+// 디버그 전용: true인 동안 sleep()이 즉시 resolve되어 모든 연출 대기가 스킵됨
+// (즉시 시뮬레이션 기능에서 사용, season.js의 instantSimSeasonGame 참고)
+let simTurbo = false;
 
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = ms => (simTurbo ? Promise.resolve() : new Promise(r => setTimeout(r, ms)));
 
 async function doHREffect() {
   const mw = document.getElementById('diamond-wrap');
@@ -1486,9 +1489,14 @@ function checkChange() {
   const allPitchers = isHomePitching ? gs.homePitchers : gs.awayPitchers;
   const needChange = s < 30 || (gs.inning >= 6 && p.pitchCount > 80) || (gs.inning >= 9 && p.isStarter);
 
-  /*
-  if (needChange) {
-    if (gs.isExtra) allPitchers.forEach(p => { if (!p.isStarter) p.usedToday = false; });
+  // 내 팀 투수는 수동 플레이 중엔 "선수 교체" 버튼으로 직접 결정하도록 자동 교체 대상에서 제외.
+  // 즉시 시뮬레이션(simTurbo)처럼 사람이 개입하지 않을 때는 내 팀도 자동 교체 대상에 포함.
+  const pitchingTeamKor = isHomePitching ? gs.homeTeam : gs.awayTeam;
+  const isMyPitching = typeof SS !== 'undefined' && SS.myTeamKor === pitchingTeamKor;
+  const allowAutoSub = !isMyPitching || simTurbo;
+
+  if (needChange && allowAutoSub) {
+    if (gs.isExtra) allPitchers.forEach(pp => { if (!pp.isStarter) pp.usedToday = false; });
     const teamCode = isHomePitching ? getTeamCode(gs.homeTeam) : getTeamCode(gs.awayTeam);
     const np = (typeof selectRelieverWithFatigue === 'function' && teamCode)
       ? selectRelieverWithFatigue(allPitchers, p, gs.inning, scoreDiff, teamCode)
@@ -1500,7 +1508,6 @@ function checkChange() {
       addLog(`🔄 투수교체 → ${np.name} [${roleLabel}] (ERA ${np.ERA})`, 'change');
     }
   }
-  */
 }
 
 function showExtraBanner(inning) {

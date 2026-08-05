@@ -482,6 +482,11 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 #season-play-btn{position:absolute;bottom:62px;left:50%;transform:translateX(-50%);width:80px;height:40px;border-radius:40px 40px 0 0;background:var(--accent);border:none;cursor:pointer;display:none;align-items:center;justify-content:center;flex-direction:column;gap:0;box-shadow:0 -4px 20px rgba(245,166,35,.45);transition:background .2s,transform .1s;overflow:hidden;z-index:110;user-select:none;-webkit-touch-callout:none;}
 #season-play-btn:active{transform:translateX(-50%) scale(.96);}
 #season-play-btn.visible{display:flex;}
+/* ── 개발자 모드 전용: 즉시 시뮬레이션 버튼 ── */
+#season-instant-sim-btn{position:absolute;bottom:62px;left:calc(50% - 96px);transform:translateX(-50%);width:64px;height:34px;border-radius:34px 34px 0 0;background:#7c3aed;border:none;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 -4px 16px rgba(124,58,237,.45);transition:background .2s,transform .1s;z-index:110;user-select:none;-webkit-touch-callout:none;}
+#season-instant-sim-btn:active{transform:translateX(-50%) scale(.96);}
+#season-instant-sim-btn.visible{display:flex;}
+#season-instant-sim-btn span{font-family:'Bebas Neue';font-size:11px;color:#fff;letter-spacing:1px;}
 .play-btn-ball{width:36px;height:36px;position:relative;margin:0 auto;}
 .play-btn-ball svg{position:absolute;inset:0;}
 .play-btn-label{font-family:'Bebas Neue';font-size:11px;color:#000;letter-spacing:2px;text-align:center;width:100%;line-height:1;margin-top:-2px;}
@@ -677,6 +682,11 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
       <path d="M76 40 Q62 28 40 28" fill="none" stroke="rgba(0,0,0,0.2)" stroke-width="2"/>
     </svg>
     <span style="font-family:'Bebas Neue';font-size:13px;color:#000;letter-spacing:3px;position:relative;z-index:1;">PLAY</span>
+  </button>
+
+  <!-- 개발자 모드 전용: 즉시 시뮬레이션 버튼 (경기 시작 전, 시즌 화면) -->
+  <button id="season-instant-sim-btn" onclick="executeInstantSim()" title="즉시 시뮬레이션 (디버그 전용)">
+    <span>⚡즉시</span>
   </button>
 
   <!-- 하단 탭 내비게이션 바 -->

@@ -1081,6 +1081,69 @@ async function executeGame() {
   startSeasonGame();
 }
 
+// ── 개발자 모드 전용: 내 경기 즉시 시뮬레이션 준비 ──
+// executeGame()과 동일하게 앞선 타팀 경기를 먼저 처리한 뒤,
+// 실제 게임 화면으로 넘어가는 대신 instantSimSeasonGame()으로 바로 진행한다.
+async function executeInstantSim() {
+  if (typeof isDevMode !== 'function' || !isDevMode()) return;
+  const myGameIdx = tempGameSetup.currentMyGameIdx;
+  if (myGameIdx === -1) return;
+
+  let advanced = false;
+  for (let i = SS.gameIdx; i < myGameIdx; i++) {
+    const game = SS.schedule[i];
+    if (!game.result) {
+      game.result = simGameFast(game.home, game.away);
+      applyResult(game);
+      advanced = true;
+    }
+  }
+  SS.gameIdx = myGameIdx;
+  if (advanced) saveSeasonState();
+
+  await instantSimSeasonGame();
+}
+
+// ── 개발자 모드 전용: 내 경기를 실제 엔진으로 즉시 시뮬레이션 ──
+// startSeasonGame()과 동일한 로직(투구별 판정, 라인업/투수 로테이션, 시즌 반영 훅)을
+// 그대로 사용하되, 연출용 sleep()만 스킵해서 결과를 즉시 낸다.
+// 게임 화면으로 전환하지 않으므로 시즌 화면에 그대로 머문 채
+// 기존 GAME OVER / 턴 결과 모달이 위에 오버레이로 표시된다.
+async function instantSimSeasonGame() {
+  if (typeof isDevMode !== 'function' || !isDevMode()) return;
+  if (!SS.schedule || SS.gameIdx >= SS.schedule.length) return;
+
+  const game = SS.schedule[SS.gameIdx];
+  const hKor = SS.nameKor[game.home];
+  const aKor = SS.nameKor[game.away];
+
+  if (!DB.hitters || DB.hitters.length === 0) {
+    await loadYearData(SS.year || '2026');
+  }
+
+  // 이전에 진행 중이던 저장 게임은 무시하고 항상 새로 시작
+  clearGameState();
+
+  gs = initGame(hKor, aKor);
+  if (!gs) return;
+  gs._seasonGame = { gameIdx: SS.gameIdx, home: game.home, away: game.away, myTeam: SS.myTeam };
+
+  if (typeof advanceStarterRotationAfter === 'function') {
+    const myStarter = game.home === SS.myTeam ? gs.curHP : game.away === SS.myTeam ? gs.curAP : null;
+    if (myStarter) advanceStarterRotationAfter(myStarter.name);
+  }
+  tempGameSetup = { myPitcher: null, myLineup: [], wizardMode: false, currentMyGameIdx: -1 };
+
+  simTurbo = true;
+  try {
+    while (gs && !gs.gameOver) {
+      await processOnePitch();
+    }
+  } finally {
+    simTurbo = false;
+  }
+}
+
 function autoTurnGames() {
   const turn = SS.schedule[SS.gameIdx].turn;
   for (let i = SS.gameIdx; i < SS.schedule.length; i++) {
@@ -1547,6 +1610,7 @@ window.switchSeasonTab = function(n) {
 
 function updatePlayBtn() {
   const btn = document.getElementById('season-play-btn');
+  const simBtn = document.getElementById('season-instant-sim-btn');
   if (!btn) return;
 
   let hasMyGame = false;
@@ -1562,6 +1626,7 @@ function updatePlayBtn() {
 
   if (currentSeasonTab !== 3) {
     btn.classList.remove('visible');
+    if (simBtn) simBtn.classList.remove('visible');
     return;
   }
   btn.classList.add('visible');
@@ -1576,6 +1641,12 @@ function updatePlayBtn() {
     btn.style.background = 'rgba(255,255,255,0.9)';
     btn.onclick = () => autoTurnGames();
     btn.querySelector('span').style.color = '#111';
+  }
+
+  // 개발자 모드 + 내 경기가 있을 때만 즉시 시뮬레이션 버튼 노출
+  if (simBtn) {
+    const showSimBtn = hasMyGame && typeof isDevMode === 'function' && isDevMode();
+    simBtn.classList.toggle('visible', showSimBtn);
   }
 }
 

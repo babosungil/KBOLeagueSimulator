@@ -1286,6 +1286,7 @@ async function processOnePitch() {
         await sleep(1000); // 투구 결과 연출을 볼 시간을 줌
         await endHalf();
       } else {
+        checkChange(true); // 이닝 중 강판 판정
         updateGameUI();
       }
     } else {
@@ -1451,6 +1452,9 @@ async function endHalf() {
     nextInningText = `${gs.inning}회 말`;
     if (gs.inning >= 9 && gs.homeScore > gs.awayScore) { await endGame(); return; }
 
+    // 이제부터 원정 투수가 던지므로 원정 투수 교체 여부를 검사
+    // (이 호출이 없으면 checkChange가 홈 투수만 보게 되어 원정 투수는 완투하게 됨)
+    checkChange();
     await doInningEffect(prevInningText, nextInningText, prevTeam, gs.homeTeam, updateUI);
     addLog(`── ${gs.inning}회 말 시작 ──`, '');
   } else {
@@ -1479,7 +1483,10 @@ async function endHalf() {
   }
 }
 
-function checkChange() {
+// midInning=true면 이닝 도중(타석 종료 시점) 판정.
+// 이닝 중에는 완전히 무너진 경우에만 강판한다. 이 경로가 없으면 3아웃이 나올 때까지
+// 교체가 불가능해, 지친 투수가 얻어맞을수록 adjERA가 올라 더 얻어맞는 폭주가 발생한다.
+function checkChange(midInning = false) {
   const isHomePitching = gs.isTop;
   const p = isHomePitching ? gs.curHP : gs.curAP;
   const s = calcStamina(p);
@@ -1487,7 +1494,9 @@ function checkChange() {
     ? (gs.homeScore - gs.awayScore)
     : (gs.awayScore - gs.homeScore);
   const allPitchers = isHomePitching ? gs.homePitchers : gs.awayPitchers;
-  const needChange = s < 30 || (gs.inning >= 6 && p.pitchCount > 80) || (gs.inning >= 9 && p.isStarter);
+  const needChange = midInning
+    ? (s < 15 || p.pitchCount > 110)
+    : (s < 30 || (gs.inning >= 6 && p.pitchCount > 80) || (gs.inning >= 9 && p.isStarter));
 
   // 내 팀 투수는 수동 플레이 중엔 "선수 교체" 버튼으로 직접 결정하도록 자동 교체 대상에서 제외.
   // 즉시 시뮬레이션(simTurbo)처럼 사람이 개입하지 않을 때는 내 팀도 자동 교체 대상에 포함.

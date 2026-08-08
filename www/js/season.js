@@ -504,22 +504,23 @@ function selectRelieverWithFatigue(allPitchers, currentPitcher, inning, scoreDif
   );
   if (!pool.length) return null;
 
-  // 피로도 반영 ERA로 정렬
-  const withFatigue = pool.map(p => ({
-    ...p,
-    adjERAFatigue: p.ERA * getFatigueMult(p.name, teamCode, false),
-  })).sort((a, b) => a.adjERAFatigue - b.adjERAFatigue);
+  // 피로도 반영 ERA로 정렬.
+  // 주의: 여기서 객체를 복사하면({...p}) 호출 측이 원본이 아닌 사본을 받게 되어
+  // usedToday·pitchCount가 실제 투수 배열에 반영되지 않는다(같은 투수 재등판·기록 유실).
+  // 따라서 정렬 키만 Map에 따로 두고 원본 참조를 그대로 반환한다.
+  const fatigueERA = new Map(pool.map(p => [p, p.ERA * getFatigueMult(p.name, teamCode, false)]));
+  const withFatigue = [...pool].sort((a, b) => fatigueERA.get(a) - fatigueERA.get(b));
 
   if (inning >= 9 && scoreDiff > 0 && scoreDiff <= 3) {
-    const closer = withFatigue.filter(p => p.adjERAFatigue < 3.5);
+    const closer = withFatigue.filter(p => fatigueERA.get(p) < 3.5);
     if (closer.length) { const p = closer[0]; p.usedToday = true; return p; }
   }
   if (inning === 8) {
-    const setup = withFatigue.filter(p => p.adjERAFatigue < 4.0);
+    const setup = withFatigue.filter(p => fatigueERA.get(p) < 4.0);
     if (setup.length) { const p = setup[0]; p.usedToday = true; return p; }
   }
   if (inning >= 6) {
-    const mid = withFatigue.filter(p => p.adjERAFatigue < 5.0);
+    const mid = withFatigue.filter(p => fatigueERA.get(p) < 5.0);
     if (mid.length) { const p = mid[0]; p.usedToday = true; return p; }
   }
   const p = withFatigue[0]; p.usedToday = true; return p;
@@ -697,12 +698,21 @@ function simGameFast(homeTeam, awayTeam) {
   let homeOrder = 0, awayOrder = 0;
   const innings = { home: [], away: [] };
 
-  for (let inning = 1; inning <= 9; inning++) {
+  // 연장 상한 (포스트시즌 무제한, 정규 11회까지).
+  // 기존에는 for문이 inning <= 9로 묶여 있어 아래 연장 로직이 실행되지 못하고 동점이 그대로 무승부가 됐다.
+  const maxInns = (typeof SS !== 'undefined' && SS.phase === 'postseason') ? 999 : 11;
+
+  for (let inning = 1; ; inning++) {
     // 말 먼저: 원정 공격 (초)
     for (const side of ['top', 'bot']) {
       const isTop   = side === 'top';
+      // 9회 이후 홈팀이 앞서 있으면 말 공격은 치르지 않음
+      if (!isTop && inning >= 9 && homeScore > awayScore) break;
+
       const lineup  = isTop ? lA : lH;
-      const pitcher = isTop ? curHP : curAP;
+      const teamCode = isTop ? homeTeam : awayTeam;
+      const allP     = isTop ? pH : pA;
+      let pitcher   = isTop ? curHP : curAP;
       let order     = isTop ? awayOrder : homeOrder;
       let outs = 0, bases = [null, null, null], runs = 0;
 
@@ -711,6 +721,9 @@ function simGameFast(homeTeam, awayTeam) {
         order++;
         const prRes = decidePAResult(batter, pitcher, bases, inning, outs, lineup);
         const pr = typeof prRes === 'object' ? prRes.type : prRes;
+        // 실제 투구 시퀀스 길이만큼 투구수를 누적 → calcStamina의 입력이 됨.
+        // (기존에는 반이닝당 +15구 고정이라 체력이 경기 내용과 무관했다)
+        pitcher.pitchCount = (pitcher.pitchCount || 0) + buildSeq(prRes).length;
         if (pr === 'k' || pr === 'out' || pr === 'fine_play') {
           outs++;
         } else if (pr === 'dp') {
@@ -723,51 +736,51 @@ function simGameFast(homeTeam, awayTeam) {
         } else {
           const res = advRunners(bases, pr);   bases = res.bases; runs += res.scored;
         }
-      }
+        // 끝내기: 9회 이후 말 공격 중 역전하면 즉시 종료 (실제 엔진과 동일)
+        if (!isTop && inning >= 9 && homeScore + runs > awayScore) break;
 
-      // 투수 구수 간이 업데이트
-      pitcher.pitchCount = (pitcher.pitchCount || 0) + 15;
+        // 이닝 중 강판 (실제 엔진 checkChange(midInning=true)와 동일 기준)
+        if (calcStamina(pitcher) < 15 || pitcher.pitchCount > 110) {
+          // 진행 중인 이닝의 득점(runs)은 아직 팀 점수에 반영 전이므로 여기서 빼준다
+          const lead = (isTop ? homeScore - awayScore : awayScore - homeScore) - runs;
+          const rel = selectRelieverWithFatigue(allP, pitcher, inning, lead, teamCode);
+          if (rel) {
+            rel.pitchCount = 0;
+            pitcher = rel;
+            if (isTop) curHP = rel; else curAP = rel;
+          }
+        }
+      }
 
       if (isTop) {
         awayScore += runs; awayOrder = order;
         innings.away.push(runs);
-        // 9회 말 홈팀 리드 시 콜드게임
-        if (inning === 9 && homeScore > awayScore) break;
       } else {
         homeScore += runs; homeOrder = order;
         innings.home.push(runs);
-        // 9회 말 진행 중 역전 시 끝내기
-        if (inning === 9 && homeScore > awayScore) break;
+      }
+
+      // ── 이닝 종료 시 투수 교체 판정 (실제 엔진 checkChange와 동일 기준) ──
+      const lead = isTop ? (homeScore - awayScore) : (awayScore - homeScore);
+      const needChange = calcStamina(pitcher) < 30
+        || (inning >= 6 && pitcher.pitchCount > 80)
+        || (inning >= 9 && pitcher.isStarter);
+      if (needChange) {
+        if (inning > 9) allP.forEach(pp => { if (!pp.isStarter) pp.usedToday = false; });
+        const rel = selectRelieverWithFatigue(allP, pitcher, inning, lead, teamCode);
+        if (rel) { rel.pitchCount = 0; if (isTop) curHP = rel; else curAP = rel; }
       }
     }
-    // 투수 교체 간이 처리
-    if (curHP.pitchCount > 80) {
-      const rel = selectRelieverWithFatigue(pH, curHP, 6, homeScore - awayScore, homeTeam);
-      if (rel) { curHP = rel; curHP.pitchCount = 0; }
-    }
-    if (curAP.pitchCount > 80) {
-      const rel = selectRelieverWithFatigue(pA, curAP, 6, awayScore - homeScore, awayTeam);
-      if (rel) { curAP = rel; curAP.pitchCount = 0; }
-    }
-    // 연장 로직 (포스트시즌 무제한, 정규 11회까지)
-    const _maxInns = (typeof SS !== 'undefined' && SS.phase === 'postseason') ? 999 : 11;
-    if (inning >= 9 && homeScore === awayScore && inning < _maxInns) {
-      // 계속 진행됨
-    } else if (inning >= 9 && homeScore !== awayScore) {
-       // 승부 결정됨 (simGameFast 특성상 이닝 단위로만 간이 체크하므로)
-       break;
-    } else if (inning >= _maxInns) {
-       break; // 최대 연장 도달 시 종료 (무승부 가능)
-    }
+
+    if (inning >= 9 && homeScore !== awayScore) break; // 승부 결정
+    if (inning >= maxInns) break;                      // 최대 연장 도달 (무승부 가능)
   }
 
-  // 등판 투수 피로도 기록
-  [curHP, ...pH.filter(p => p.usedToday)].forEach(p => {
-    if (p) { p.pitchCount = p.pitchCount || 1; recordPitcherFatigue([p], homeTeam); }
-  });
-  [curAP, ...pA.filter(p => p.usedToday)].forEach(p => {
-    if (p) { p.pitchCount = p.pitchCount || 1; recordPitcherFatigue([p], awayTeam); }
-  });
+  // 등판 투수 피로도 기록.
+  // recordPitcherFatigue가 pitchCount만큼 체력을 차감하고 미등판(pitchCount 0)은 알아서 건너뛰므로
+  // 팀 투수 배열을 통째로 넘긴다. 같은 투수를 두 번 넘기면 체력이 이중 차감되니 주의.
+  recordPitcherFatigue(pH, homeTeam);
+  recordPitcherFatigue(pA, awayTeam);
 
   // 포수 피로도 기록 (라인업의 첫 번째 포수를 찾아서 차감)
   const homeCatcher = hH.find(h => h.position === 'C' || h.position === '포수' || h.defPos === '포수');

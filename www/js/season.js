@@ -1175,12 +1175,14 @@ function autoTurnGames() {
 
 function showTurnResultsModalForAutoSkipped(turn) {
   // 별도의 [휴식] 버튼 클릭 시 모달
-  const turnGames = SS.schedule.filter(g => g.turn === turn);
+  const turnGames = SS.schedule.filter(g => g.turn === turn && g.result);
+  const myTeamKor = SS.myTeamKor;
   let trs = turnGames.map(g => {
-    const myTeamKor = SS.myTeamKor;
-    const aStyled = (a === myTeamKor) ? `<span style="color:var(--accent)">${a}</span>` : a;
-    const hStyled = (h === myTeamKor) ? `<span style="color:var(--accent)">${h}</span>` : h;
-    return `<tr><td style="text-align:right">${aStyled}</td><td style="font-weight:700;text-align:center">${res.awayScore} : ${res.homeScore}</td><td style="text-align:left">${hStyled}</td></tr>`;
+    const aName = SS.nameKor[g.away] || g.away;
+    const hName = SS.nameKor[g.home] || g.home;
+    const aStyled = (aName === myTeamKor) ? `<span style="color:var(--accent)">${aName}</span>` : aName;
+    const hStyled = (hName === myTeamKor) ? `<span style="color:var(--accent)">${hName}</span>` : hName;
+    return `<tr><td style="text-align:right">${aStyled}</td><td style="font-weight:700;text-align:center">${g.result.awayScore} : ${g.result.homeScore}</td><td style="text-align:left">${hStyled}</td></tr>`;
   }).join('');
   let html = `<div style="text-align:center;">
     <div style="font-size:18px;margin-bottom:12px;font-family:'Black Han Sans'">종료된 경기 결과</div>
@@ -1192,6 +1194,12 @@ function showTurnResultsModalForAutoSkipped(turn) {
   const m = document.getElementById('turn-modal');
   m.querySelector('.turn-modal-inner').innerHTML = html;
   m.style.display = 'flex';
+
+  // 턴 내 모든 경기가 종료되었으므로 글로벌 회복 로직 실행 (showTurnResults와 동일)
+  if (typeof processTurnFatigueRecovery === 'function') {
+    processTurnFatigueRecovery();
+  }
+  saveSeasonState();
 }
 
 

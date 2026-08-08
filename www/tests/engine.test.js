@@ -85,9 +85,9 @@ test('buildHitter derives rate stats and initializes today stats', () => {
 test('buildPitcher derives role and rate stats', () => {
   const { buildPitcher } = loadKboScripts();
 
-  const starter = buildPitcher({ name: '선발', ERA: 3.5, G: 30, IP: 180, SO: 150, BB: 45 });
-  const middle = buildPitcher({ name: '중간', ERA: 3.5, G: 50, IP: 100, SO: 90, BB: 30 });
-  const closer = buildPitcher({ name: '마무리', ERA: 3.5, G: 60, IP: 60, SO: 70, BB: 20 });
+  const starter = buildPitcher({ name: '선발', ERA: 3.5, G: 30, GS: 30, IP: 180, SO: 150, BB: 45 });
+  const middle = buildPitcher({ name: '중간', ERA: 3.5, G: 50, GS: 0, IP: 100, SO: 90, BB: 30 });
+  const closer = buildPitcher({ name: '마무리', ERA: 3.5, G: 60, GS: 0, IP: 60, SO: 70, BB: 20 });
 
   assert.equal(starter.role, 'starter');
   assert.equal(starter.isStarter, true);
@@ -96,6 +96,60 @@ test('buildPitcher derives role and rate stats', () => {
   assert.equal(middle.role, 'middle');
   assert.equal(closer.role, 'closer');
   assert.deepEqual(normalize(starter.todayStats), { IP_out: 0, H: 0, R: 0, ER: 0, BB: 0, K: 0 });
+});
+
+test('buildPitcher classifies by GS, not by IP/G diluted with relief outings', () => {
+  const { buildPitcher } = loadKboScripts();
+
+  // 선발 16경기 전원 + 구원 없음이지만 IP/G가 4.5에 못 미치는 케이스(한화 에르난데스 형)
+  const shortStarter = buildPitcher({ name: '짧은선발', ERA: 4.9, G: 16, GS: 16, IP: 71.3, SO: 50, BB: 25 });
+  assert.equal(shortStarter.isStarter, true, 'GS가 충분하면 IP/G가 낮아도 선발');
+
+  // 선발 13 + 구원 7 → IP/G는 3.8이지만 실제로는 선발(KIA 황동하 형)
+  const swingStarter = buildPitcher({ name: '스윙선발', ERA: 4.4, G: 20, GS: 13, IP: 76, SO: 55, BB: 25 });
+  assert.equal(swingStarter.isStarter, true);
+  // 체력 용량은 '선발 등판당' 이닝 기준이어야 한다 (76/13 = 5.85, IP/G 3.8이 아니라)
+  assert.ok(swingStarter.avgIP > 5 && swingStarter.avgIP < 6.5, `avgIP=${swingStarter.avgIP}`);
+
+  // 구원 위주 스윙맨은 선발이 아니며, 구원 등판당 이닝으로 계산
+  const swingMan = buildPitcher({ name: '스윙맨', ERA: 5.1, G: 37, GS: 4, IP: 53, SO: 40, BB: 20 });
+  assert.equal(swingMan.isStarter, false);
+  assert.ok(swingMan.avgIP > 1 && swingMan.avgIP < 2.5, `avgIP=${swingMan.avgIP}`);
+});
+
+test('buildTeamPitchers guarantees a minimum starting rotation', () => {
+  const { buildTeamPitchers } = loadKboScripts();
+
+  // 정규 선발이 2명뿐인 팀
+  const rows = [
+    { name: 'A', ERA: 3.0, G: 20, GS: 20, IP: 120, SO: 100, BB: 30 },
+    { name: 'B', ERA: 3.4, G: 18, GS: 18, IP: 105, SO: 90, BB: 28 },
+    { name: 'C', ERA: 4.0, G: 16, GS: 4, IP: 40, SO: 30, BB: 15 },
+    { name: 'D', ERA: 4.2, G: 20, GS: 3, IP: 38, SO: 28, BB: 14 },
+    { name: 'E', ERA: 4.5, G: 30, GS: 2, IP: 45, SO: 35, BB: 18 },
+    { name: 'F', ERA: 4.8, G: 40, GS: 0, IP: 42, SO: 38, BB: 16 },
+  ];
+  const ps = buildTeamPitchers(rows);
+  const starters = ps.filter(p => p.isStarter);
+
+  assert.equal(starters.length, 5, '선발이 5명으로 보충되어야 한다');
+  // GS 많은 순으로 승격 (C:4, D:3, E:2) → F(GS 0)는 승격되지 않음
+  assert.deepEqual(starters.map(p => p.name).sort(), ['A', 'B', 'C', 'D', 'E']);
+  // 승격된 투수는 선발 기준 체력 용량(최소 3.0이닝)을 받는다
+  const promoted = ps.find(p => p.name === 'E');
+  assert.ok(promoted.avgIP >= 3.0, `승격 투수 avgIP=${promoted.avgIP}`);
+  assert.equal(promoted.role, 'starter');
+
+  // 이미 5명 이상이면 승격 없음
+  const deep = buildTeamPitchers([
+    ...rows.slice(0, 2),
+    { name: 'G', ERA: 3.6, G: 17, GS: 17, IP: 95, SO: 80, BB: 25 },
+    { name: 'H', ERA: 3.8, G: 15, GS: 15, IP: 88, SO: 70, BB: 22 },
+    { name: 'I', ERA: 4.1, G: 14, GS: 14, IP: 80, SO: 65, BB: 20 },
+    { name: 'F', ERA: 4.8, G: 40, GS: 0, IP: 42, SO: 38, BB: 16 },
+  ]);
+  assert.equal(deep.filter(p => p.isStarter).length, 5);
+  assert.equal(deep.find(p => p.name === 'F').isStarter, false);
 });
 
 test('advRunners scores forced walk and home run correctly', () => {

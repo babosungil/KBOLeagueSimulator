@@ -413,6 +413,8 @@ function csvRowToPitcher(row, profileLookup, fallbackTeamName = '') {
     team: teamName,
     ERA: Math.round(parseFloat(row['ERA']) * 100) / 100,
     G: parseInt(row['G']),
+    GS: parseInt(row['GS']) || 0,   // 선발 등판 수 (선발/불펜 판정의 근거)
+    QS: parseInt(row['QS']) || 0,
     IP: parseIP(row['IP']),
     SO: parseInt(row['SO']),
     BB: parseInt(row['BB']),
@@ -596,6 +598,7 @@ async function loadYearData(year, onReady, onError) {
 
     DB.hitters = data.hitters;
     DB.pitchers = data.pitchers;
+    resetDefenseCaches(); // 수비 기준값 캐시는 DB에 종속되므로 함께 무효화
 
     if (typeof onReady === 'function') onReady(data);
   } catch (e) {
@@ -657,23 +660,68 @@ function buildHitter(r) {
   };
 }
 
+// 선발 판정은 실제 선발 등판 수(GS)로 한다.
+// IP/G는 구원 등판이 섞여 평균이 희석되므로(선발 16경기 + 구원 4경기여도 탈락) 쓰지 않는다.
+// GS 하한만 두면 '29경기 중 선발 5번' 같은 불펜 투수가 선발로 잡히므로,
+// 선발 등판이 전체 등판의 과반이어야 한다는 조건을 함께 건다.
+const STARTER_MIN_GS = 5;
+const STARTER_MIN_GS_RATIO = 0.5;
+const MIN_STARTERS_PER_TEAM = 5;
+
+function isStarterRow(r) {
+  const g = r.G || 0, gs = r.GS || 0;
+  return gs >= STARTER_MIN_GS && g > 0 && (gs / g) >= STARTER_MIN_GS_RATIO;
+}
+
+// 등판당 이닝. calcStamina가 이 값을 체력 용량(0%가 되는 투구수 ≈ avgIP × 20)으로 쓰므로
+// 선발은 '선발 등판당', 불펜은 '구원 등판당'으로 나눠 계산해야 실제 역할과 맞는다.
+function calcAvgIP(r, asStarter) {
+  const ip = r.IP || 0, g = r.G || 0, gs = r.GS || 0;
+  if (asStarter) {
+    const per = gs > 0 ? ip / gs : (g > 0 ? ip / g : 4.5);
+    return clamp(per, 3.0, 7.5);
+  }
+  const relApp = Math.max(0, g - gs);
+  const per = relApp > 0 ? ip / relApp : (g > 0 ? ip / g : 1);
+  return clamp(per, 0.5, 3.0);
+}
+
 function buildPitcher(r) {
-  const ip = r.IP || 1, g = r.G || 1;
-  const avgIP = ip / g;
-  const role = avgIP >= 4.5 ? 'starter' : avgIP >= 1.5 ? 'middle' : 'closer';
+  const ip = r.IP || 1;
+  const isStarter = isStarterRow(r);
+  const avgIP = calcAvgIP(r, isStarter);
+  const role = isStarter ? 'starter' : (avgIP >= 1.5 ? 'middle' : 'closer');
   return {
     ...r,
     K9: (r.SO / ip) * 9, BB9: (r.BB / ip) * 9,
-    avgIP, pitchCount: 0, isStarter: avgIP >= 4.5, role, usedToday: false,
+    avgIP, pitchCount: 0, isStarter, role, usedToday: false,
     todayStats: { IP_out: 0, H: 0, R: 0, ER: 0, BB: 0, K: 0 },
   };
+}
+
+// 팀 단위 투수진 생성. 선발이 MIN_STARTERS_PER_TEAM명에 못 미치면
+// GS(동률이면 IP)가 많은 순으로 승격시켜 최소 로테이션 인원을 보장한다.
+function buildTeamPitchers(rows) {
+  const ps = rows.map(buildPitcher);
+  const shortage = MIN_STARTERS_PER_TEAM - ps.filter(p => p.isStarter).length;
+  if (shortage <= 0) return ps;
+
+  ps.filter(p => !p.isStarter)
+    .sort((a, b) => (b.GS || 0) - (a.GS || 0) || (b.IP || 0) - (a.IP || 0))
+    .slice(0, shortage)
+    .forEach(p => {
+      p.isStarter = true;
+      p.role = 'starter';
+      p.avgIP = calcAvgIP(p, true); // 선발 기준으로 체력 용량 재계산
+    });
+  return ps;
 }
 
 function getTeamHitters(team) {
   return DB.hitters.filter(r => r.team === team).map(buildHitter).sort((a, b) => b.G - a.G);
 }
 function getTeamPitchers(team) {
-  return DB.pitchers.filter(r => r.team === team).map(buildPitcher);
+  return buildTeamPitchers(DB.pitchers.filter(r => r.team === team));
 }
 // 팀 영문 코드 역조회 (시즌 모드 피로도 연동용)
 function getTeamCode(korName) {
@@ -797,16 +845,31 @@ function meanAndSd(values) {
   return { mean, sd: Math.sqrt(variance) || 1 };
 }
 
+// 포지션별 수비 기준값은 DB.hitters가 바뀌지 않는 한 상수인데,
+// 매 타석 × 수비수 9명마다 전 선수를 스캔해 재계산하면 타석 비용의 대부분을 차지한다.
+// DB 교체 시 resetDefenseCaches()로 무효화한다.
+let _defBaselineCache = new Map();
+let _fielderScoreCache = new WeakMap();
+
+function resetDefenseCaches() {
+  _defBaselineCache = new Map();
+  _fielderScoreCache = new WeakMap();
+}
+
 function getDefenseBaselines(pos) {
+  const hit = _defBaselineCache.get(pos);
+  if (hit) return hit;
   const rows = DB.hitters
     .map(h => h.defense)
     .filter(d => d && d.pos === pos && d.IP > 0);
-  return {
+  const out = {
     range: meanAndSd(rows.map(d => d.rangePer9)),
     fpct: meanAndSd(rows.map(d => d.FPCT)),
     err: meanAndSd(rows.map(d => d.errPer9)),
     dp: meanAndSd(rows.map(d => d.dpPer9)),
   };
+  _defBaselineCache.set(pos, out);
+  return out;
 }
 
 function zScore(value, stat) {
@@ -816,13 +879,19 @@ function zScore(value, stat) {
 function calcFielderDefenseScore(player) {
   const d = player && player.defense;
   if (!d || !d.pos || d.IP <= 0) return 50;
+  // 선수의 수비 기록은 경기 중 변하지 않으므로 선수 객체 단위로 캐시한다
+  // (교체 선수는 새 객체이므로 자연히 새로 계산됨)
+  const cached = _fielderScoreCache.get(player);
+  if (cached !== undefined) return cached;
   const base = getDefenseBaselines(d.pos);
   const zRange = zScore(d.rangePer9, base.range);
   const zFpct = zScore(d.FPCT, base.fpct);
   const zErrAvoid = zScore(base.err.mean - d.errPer9, { mean: 0, sd: base.err.sd });
   const zDP = zScore(d.dpPer9, base.dp);
   const raw = 50 + 8 * (0.35 * zRange + 0.30 * zFpct + 0.25 * zErrAvoid + 0.10 * zDP);
-  return clamp(raw, 35, 65);
+  const out = clamp(raw, 35, 65);
+  _fielderScoreCache.set(player, out);
+  return out;
 }
 
 function calcTeamDefenseImpact(defenseLineup) {
@@ -2433,6 +2502,8 @@ if (typeof globalThis !== 'undefined') {
     parseIP,
     buildHitter,
     buildPitcher,
+    buildTeamPitchers,
+    calcAvgIP,
     advRunners,
     calcPlatoon,
     decidePAResult,

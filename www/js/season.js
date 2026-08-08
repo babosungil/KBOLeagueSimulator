@@ -686,8 +686,8 @@ function getGamesBehind(sorted) {
 function simGameFast(homeTeam, awayTeam) {
   const hH = DB.hitters.filter(r => r.team === SS.nameKor[homeTeam]).map(buildHitter).sort((a,b) => b.G - a.G);
   const hA = DB.hitters.filter(r => r.team === SS.nameKor[awayTeam]).map(buildHitter).sort((a,b) => b.G - a.G);
-  const pH = DB.pitchers.filter(r => r.team === SS.nameKor[homeTeam]).map(buildPitcher);
-  const pA = DB.pitchers.filter(r => r.team === SS.nameKor[awayTeam]).map(buildPitcher);
+  const pH = buildTeamPitchers(DB.pitchers.filter(r => r.team === SS.nameKor[homeTeam]));
+  const pA = buildTeamPitchers(DB.pitchers.filter(r => r.team === SS.nameKor[awayTeam]));
 
   if (!hH.length || !hA.length) return { homeScore: 0, awayScore: 0 };
 
@@ -1387,11 +1387,12 @@ function initStarterRotation() {
     }
   }
 
-  // 초기화: IP/G >= 4.5 선수를 ERA 순으로 선발 로테이션에 배정
-  const naturalStarters = allPitchers
-    .filter(p => p.G > 0 && (p.IP / p.G) >= 4.5)
-    .sort((a, b) => a.ERA - b.ERA);
-  SS.starterRotation = naturalStarters.map(p => p.name);
+  // 초기화: 선발 판정·최소 인원 보장을 buildTeamPitchers와 동일한 규칙으로 처리한 뒤 ERA 순 배정.
+  // (직접 IP/G를 계산하면 경기 엔진의 isStarter 판정과 어긋나므로 반드시 같은 경로를 쓴다)
+  SS.starterRotation = buildTeamPitchers(allPitchers)
+    .filter(p => p.isStarter)
+    .sort((a, b) => a.ERA - b.ERA)
+    .map(p => p.name);
   normalizeStarterRotationIndex();
 }
 

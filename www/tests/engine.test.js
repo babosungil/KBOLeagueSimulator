@@ -204,13 +204,47 @@ test('buildTeamPitchers guarantees a minimum starting rotation', () => {
 test('advRunners scores forced walk and home run correctly', () => {
   const { advRunners } = loadKboScripts();
 
-  const walk = advRunners(['r1', 'r2', 'r3'], 'bb');
-  assert.deepEqual(normalize(walk.bases), ['r', 'r2', 'r3']);
+  // 만루 볼넷: 3루 주자 득점, 나머지는 한 베이스씩 밀려난다
+  const walk = advRunners(['r1', 'r2', 'r3'], 'bb', 'B');
+  assert.deepEqual(normalize(walk.bases), ['B', 'r1', 'r2']);
   assert.equal(walk.scored, 1);
 
-  const homer = advRunners(['r1', null, 'r3'], 'hr');
+  const homer = advRunners(['r1', null, 'r3'], 'hr', 'B');
   assert.deepEqual(normalize(homer.bases), [null, null, null]);
   assert.equal(homer.scored, 3);
+});
+
+test('advRunners carries runner identity to the correct base', () => {
+  const { advRunners } = loadKboScripts();
+
+  // 단타: 3루 주자 득점, 2루→3루, 1루→2루, 타자는 1루
+  const single = advRunners(['a', 'b', 'c'], '1b', 'B');
+  assert.deepEqual(normalize(single.bases), ['B', 'a', 'b']);
+  assert.equal(single.scored, 1);
+
+  // 2루타: 2·3루 주자 득점, 1루 주자는 3루까지, 타자는 2루
+  const dbl = advRunners(['a', 'b', 'c'], '2b', 'B');
+  assert.deepEqual(normalize(dbl.bases), [null, 'B', 'a']);
+  assert.equal(dbl.scored, 2);
+
+  // 3루타: 전원 득점, 타자만 3루
+  const triple = advRunners(['a', 'b', null], '3b', 'B');
+  assert.deepEqual(normalize(triple.bases), [null, null, 'B']);
+  assert.equal(triple.scored, 2);
+
+  // 밀어내기가 아닌 볼넷(1루 비어 있음): 기존 주자는 그대로
+  const walk = advRunners([null, 'b', null], 'bb', 'B');
+  assert.deepEqual(normalize(walk.bases), ['B', 'b', null]);
+  assert.equal(walk.scored, 0);
+
+  // 병살: 타자와 1루 주자가 지워지고 2·3루 주자는 유지
+  const dp = advRunners(['a', 'b', 'c'], 'dp', 'B');
+  assert.deepEqual(normalize(dp.bases), [null, 'b', 'c']);
+  assert.equal(dp.scored, 0);
+
+  // runner를 생략하면 익명 주자로 동작 (하위 호환)
+  const anon = advRunners([null, null, null], '1b');
+  assert.deepEqual(normalize(anon.bases), ['r', null, null]);
 });
 
 test('calcPlatoon returns batter advantage for opposite hands', () => {

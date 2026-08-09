@@ -140,23 +140,25 @@ function saveGameState() {
   } catch(e) { console.warn('게임 저장 실패', e); }
 }
 
-// 저장된 게임 상태 여부 확인
-function hasSavedGame() {
+// 저장된 게임 상태가 지금 진행하려는 경기와 일치하는지 확인
+// currentGame을 넘기면 그 대진과 비교한다(포스트시즌용).
+function hasSavedGame(currentGame) {
   try {
     const raw = localStorage.getItem(LS_GAME_KEY);
     if (!raw) return false;
     const data = JSON.parse(raw);
-    // 현재 진행해야 할 경기 정보와 일치하는지 확인
-    const currentGame = SS.schedule[SS.gameIdx];
-    if (!currentGame || !data._seasonGame) return false;
+    const saved = data._seasonGame;
+    const game = currentGame || SS.schedule[SS.gameIdx];
+    if (!game || !saved) return false;
 
-    // 다른 시즌(다른 내 팀)의 잔여 저장 데이터가 우연히 gameIdx/대진이 일치해
+    // 다른 시즌(다른 내 팀)의 잔여 저장 데이터가 우연히 대진이 일치해
     // 엉뚱하게 복원되는 것을 방지
-    if (data._seasonGame.myTeam !== SS.myTeam) return false;
+    if (saved.myTeam !== SS.myTeam) return false;
+    if (saved.home !== game.home || saved.away !== game.away) return false;
 
-    return data._seasonGame.gameIdx === SS.gameIdx &&
-           data._seasonGame.home === currentGame.home &&
-           data._seasonGame.away === currentGame.away;
+    // 포스트시즌은 일정 인덱스가 없으므로 시리즈 단계로 대조한다
+    if (game.psStage || saved.psStage) return saved.psStage === game.psStage;
+    return saved.gameIdx === SS.gameIdx;
   } catch(e) { return false; }
 }
 
@@ -248,6 +250,7 @@ function saveSeasonState() {
       starterRotation: SS.starterRotation,
       starterRotationIndex: SS.starterRotationIndex,
       catcherFatigue:  SS.catcherFatigue || {},
+      _ps:             SS._ps || null,   // 포스트시즌 대진표(시리즈 전적 포함)
     });
     localStorage.setItem(LS_KEY, dataStr);
 
@@ -730,11 +733,11 @@ function simGameFast(homeTeam, awayTeam) {
           outs = Math.min(outs + 2, 3);
           bases = [null, bases[1], bases[2]];
         } else if (pr === 'bb') {
-          const res = advRunners(bases, 'bb'); bases = res.bases; runs += res.scored;
+          const res = advRunners(bases, 'bb', batter.name); bases = res.bases; runs += res.scored;
         } else if (pr === 'error') {
-          const res = advRunners(bases, '1b'); bases = res.bases; runs += res.scored;
+          const res = advRunners(bases, '1b', batter.name); bases = res.bases; runs += res.scored;
         } else {
-          const res = advRunners(bases, pr);   bases = res.bases; runs += res.scored;
+          const res = advRunners(bases, pr, batter.name);   bases = res.bases; runs += res.scored;
         }
         // 끝내기: 9회 이후 말 공격 중 역전하면 즉시 종료 (실제 엔진과 동일)
         if (!isTop && inning >= 9 && homeScore + runs > awayScore) break;
@@ -1204,17 +1207,6 @@ function showTurnResultsModalForAutoSkipped(turn) {
 
 
 // ── 일정 표시 ──────────────────────────────────────────────
-
-let listTurnOffset = 0; // 몇 번째 턴들을 보여줄지 기준
-
-window.changeTurnView = function(delta) {
-  listTurnOffset += delta;
-  if (listTurnOffset < 0) listTurnOffset = 0;
-  const maxTurn = 144;
-  if (listTurnOffset * 3 >= maxTurn) listTurnOffset = Math.floor(maxTurn/3) - 1;
-  const el = document.getElementById('season-upcoming-turns');
-  if (el) el.innerHTML = renderUpcomingTurns();
-};
 
 function renderUpcomingTurns() {
   if (!SS.schedule || !SS.schedule.length) return '';
@@ -1728,30 +1720,6 @@ function renderLineupEditorTab() {
 
 let _lnpSelectedIdx = -1;
 
-window.lnpMoveUp = function() {
-  if (_lnpSelectedIdx <= 0) return;
-  const arr = tempGameSetup.myLineup;
-  [arr[_lnpSelectedIdx-1], arr[_lnpSelectedIdx]] = [arr[_lnpSelectedIdx], arr[_lnpSelectedIdx-1]];
-  _lnpSelectedIdx--;
-  arr.forEach((p,i) => p.order = i+1);
-  renderLineupEditorTab();
-  _lnpSelectedIdx = (_lnpSelectedIdx >= 0) ? _lnpSelectedIdx : 0;
-  highlightLnpRow(_lnpSelectedIdx);
-};
-window.lnpMoveDown = function() {
-  const arr = tempGameSetup.myLineup;
-  if (_lnpSelectedIdx < 0 || _lnpSelectedIdx >= arr.length - 1) return;
-  [arr[_lnpSelectedIdx+1], arr[_lnpSelectedIdx]] = [arr[_lnpSelectedIdx], arr[_lnpSelectedIdx+1]];
-  _lnpSelectedIdx++;
-  arr.forEach((p,i) => p.order = i+1);
-  renderLineupEditorTab();
-  highlightLnpRow(_lnpSelectedIdx);
-};
-window.lnpApply = function() {
-  // 적용: tempGameSetup.myLineup 업데이트 콘파인
-  alert('타선 순서가 저장되었습니다.');
-};
-
 function highlightLnpRow(idx) {
   document.querySelectorAll('.lnp-drag-item').forEach((el, i) => {
     el.style.borderColor = i === idx ? 'var(--accent)' : '';
@@ -1856,61 +1824,16 @@ function refreshSeasonUI() {
   updatePlayBtn();
 }
 
-// ── 자동 1경기 진행 ──────────────────────────────────────
-function autoNextGame() {
-  if (SS.gameIdx >= SS.schedule.length) return;
-  const game   = SS.schedule[SS.gameIdx];
-  // 해당 팀 데이터가 DB에 없으면 스킵
-  const hKor   = SS.nameKor[game.home];
-  const aKor   = SS.nameKor[game.away];
-  const hasData = DB.hitters.some(h => h.team === hKor) && DB.hitters.some(h => h.team === aKor);
-  if (hasData) {
-    game.result = simGameFast(game.home, game.away);
-    applyResult(game);
-  } else {
-    // 데이터 없으면 랜덤 결과
-    const hs = Math.floor(Math.random() * 8), as2 = Math.floor(Math.random() * 8);
-    game.result = { homeScore: hs, awayScore: as2 };
-    applyResult(game);
-  }
-  SS.gameIdx++;
-  saveSeasonState();
-  refreshSeasonUI();
-}
-
-// ── 남은 경기 전부 자동 진행 ─────────────────────────────
-async function autoRemaining() {
-  const btn = event.target;
-  btn.disabled = true;
-  btn.textContent = '진행 중...';
-  // 내 팀 경기 직전까지만 자동 (다음 내 팀 경기 직전에서 멈춤)
-  while (SS.gameIdx < SS.schedule.length) {
-    const game   = SS.schedule[SS.gameIdx];
-    const isMine = game.home === SS.myTeam || game.away === SS.myTeam;
-    if (isMine) break;
-    const hKor = SS.nameKor[game.home], aKor = SS.nameKor[game.away];
-    const hasData = DB.hitters.some(h => h.team === hKor) && DB.hitters.some(h => h.team === aKor);
-    if (hasData) {
-      game.result = simGameFast(game.home, game.away);
-      applyResult(game);
-    } else {
-      const hs = Math.floor(Math.random() * 8), as2 = Math.floor(Math.random() * 8);
-      game.result = { homeScore: hs, awayScore: as2 };
-      applyResult(game);
-    }
-    SS.gameIdx++;
-    // 10경기마다 중간 저장
-    if (SS.gameIdx % 10 === 0) saveSeasonState();
-  }
-  saveSeasonState();
-  refreshSeasonUI();
-  btn.disabled = false;
-  btn.textContent = '자동 진행';
-}
-
 // ── 내 팀 경기 직접 플레이 ───────────────────────────────
-async function startSeasonGame() {
-  const game   = SS.schedule[SS.gameIdx];
+// matchup을 넘기면 그 대진으로 진행한다(포스트시즌용).
+// 생략하면 기존처럼 정규시즌 일정에서 현재 경기를 읽는다.
+// 포스트시즌에는 SS.gameIdx가 일정 배열 끝을 가리키므로 반드시 matchup을 넘겨야 한다.
+async function startSeasonGame(matchup) {
+  const game = matchup || SS.schedule[SS.gameIdx];
+  if (!game || !game.home || !game.away) {
+    alert('진행할 경기 정보를 찾을 수 없습니다.');
+    return;
+  }
   const hKor   = SS.nameKor[game.home];
   const aKor   = SS.nameKor[game.away];
 
@@ -1931,7 +1854,7 @@ async function startSeasonGame() {
   // 기존 게임 시작 함수 활용
   gs = initGame(hKor, aKor);
   if (!gs) return;
-  const hadSavedGame = hasSavedGame();
+  const hadSavedGame = hasSavedGame(game);
 
   // 마법사 또는 개별 편집으로 설정한 내 팀 로스터 적용
   if (tempGameSetup && tempGameSetup.myPitcher) {
@@ -1959,8 +1882,11 @@ async function startSeasonGame() {
     if (myStarter) advanceStarterRotationAfter(myStarter.name);
   }
 
-  // 게임 종료 콜백 등록 (시즌 결과 반영용)
-  gs._seasonGame = { gameIdx: SS.gameIdx, home: game.home, away: game.away, myTeam: SS.myTeam };
+  // 게임 종료 콜백 등록 (시즌 결과 반영용).
+  // 포스트시즌은 일정 인덱스가 없으므로 psStage로 어느 시리즈인지 표시한다.
+  gs._seasonGame = game.psStage
+    ? { psStage: game.psStage, home: game.home, away: game.away, myTeam: SS.myTeam }
+    : { gameIdx: SS.gameIdx, home: game.home, away: game.away, myTeam: SS.myTeam };
 
   // 헤더·UI 초기화
   const hTeamEl = document.getElementById('min-h-name');
@@ -1989,7 +1915,7 @@ async function startSeasonGame() {
 
 
   // 저장된 게임 상태 복원 (중단된 경기 이어하기)
-  if (hasSavedGame()) {
+  if (hasSavedGame(game)) {
     if (confirm('진행 중인 경기가 있습니다. 이어서 하시겠습니까?\n취소하면 새로 시작합니다.')) {
       const ok = restoreGameState();
       if (ok) {
@@ -2037,17 +1963,24 @@ window.returnToSeason = function() {
 // ── 시즌 경기 종료 후 처리 (endGame() 훅) ───────────────
 function onSeasonGameEnd(homeScore, awayScore) {
   if (!gs || !gs._seasonGame) return;
-  const { gameIdx, home, away } = gs._seasonGame;
-  const game = SS.schedule[gameIdx];
-  game.result = { homeScore, awayScore };
-  applyResult(game);
-  recordPlayerStats([...gs.homeLineup, ...gs.awayLineup]);
+  const { gameIdx, home, away, psStage } = gs._seasonGame;
 
-  // 직접 플레이 경기 투수 피로도 기록
+  // 선수 기록·투수 피로도는 정규시즌/포스트시즌 공통
+  recordPlayerStats([...gs.homeLineup, ...gs.awayLineup]);
   const homePitched = gs.homePitchers.filter(p => p.pitchCount > 0);
   const awayPitched = gs.awayPitchers.filter(p => p.pitchCount > 0);
   recordPitcherFatigue(homePitched, home);
   recordPitcherFatigue(awayPitched, away);
+
+  // 포스트시즌은 일정·순위표를 건드리지 않고 시리즈 전적만 갱신한다
+  if (psStage) {
+    onPostseasonGameEnd(psStage, homeScore, awayScore);
+    return;
+  }
+
+  const game = SS.schedule[gameIdx];
+  game.result = { homeScore, awayScore };
+  applyResult(game);
 
   // 턴 내의 모든 경기 완료 처리 및 인덱스 이동
   const currentTurn = game.turn;
@@ -2066,10 +1999,42 @@ function onSeasonGameEnd(homeScore, awayScore) {
   showTurnResults(gameIdx);
 }
 
+// 시리즈 승자로 다음 단계 상대를 채운다
+function advancePostseasonBracket(stage) {
+  const ps = SS._ps;
+  const s = ps[stage];
+  if (!s || !s.done) return;
+  const winner = s.wins[0] >= s.needed ? s.home : s.away;
+  if (stage === 'wc')   ps.semi.away = winner;
+  if (stage === 'semi') ps.play.away = winner;
+  if (stage === 'play') ps.ks.away   = winner;
+}
+
+// ── 내 팀 포스트시즌 경기 종료 처리 ──────────────────────
+function onPostseasonGameEnd(stage, homeScore, awayScore) {
+  const s = SS._ps && SS._ps[stage];
+  if (!s) return;
+
+  s.games.push({ homeScore, awayScore });
+  if (homeScore > awayScore) s.wins[0]++;
+  else if (awayScore > homeScore) s.wins[1]++;   // 무승부는 재경기
+  if (s.wins[0] >= s.needed || s.wins[1] >= s.needed) s.done = true;
+  advancePostseasonBracket(stage);
+
+  clearGameState();
+  saveSeasonState();
+
+  document.getElementById('game-over').classList.remove('show');
+  document.getElementById('game-bottom-nav').style.display = 'none';
+  if (typeof closeMobileLineupSheet === 'function') closeMobileLineupSheet();
+  showPostseasonScreen();
+}
+
 // ── 포스트시즌 화면 ──────────────────────────────────────
+// 이미 진행 중인 대진표가 있으면 유지한다.
+// (매번 buildPostseason으로 새로 만들면 시리즈 전적이 초기화된다)
 function showPostseasonScreen() {
-  const ps  = buildPostseason();
-  SS._ps    = ps;
+  if (!SS._ps) SS._ps = buildPostseason();
   const el  = document.getElementById('postseason-screen');
   el.style.display = 'flex';
   renderPostseasonUI();
@@ -2101,19 +2066,19 @@ async function playPsSeries(stage) {
   const ps   = SS._ps;
   const s    = ps[stage];
   const isMine = s.home === SS.myTeam || s.away === SS.myTeam;
+  if (!s || s.done || !s.home || !s.away) return;
+
   if (isMine) {
-    // 직접 플레이 (1경기)
+    // 직접 플레이 (1경기). 대진을 명시적으로 넘겨야 한다 —
+    // 포스트시즌에는 SS.gameIdx가 일정 배열 범위를 벗어나 있다.
     document.getElementById('postseason-screen').style.display = 'none';
-    await startSeasonGame();  // 재활용 (gs._seasonGame 없이)
-    // 종료 후 돌아올 때 ps 결과 반영은 endGame 훅에서
+    await startSeasonGame({ home: s.home, away: s.away, psStage: stage });
+    // 결과 반영은 onSeasonGameEnd → onPostseasonGameEnd에서
   } else {
     // 자동 진행: 시리즈 끝날 때까지
     while (!s.done) simSeriesGame(s, SS.myTeam);
-    // 다음 단계 상대 결정
-    const winner = s.wins[0] >= s.needed ? s.home : s.away;
-    if (stage === 'wc')   { ps.semi.away = winner; }
-    if (stage === 'semi') { ps.play.away = winner; }
-    if (stage === 'play') { ps.ks.away   = winner; }
+    advancePostseasonBracket(stage);
+    saveSeasonState();
     renderPostseasonUI();
   }
 }

@@ -74,12 +74,61 @@ test('buildHitter derives rate stats and initializes today stats', () => {
     SF: 4,
   });
 
+  // 비율 스탯은 표본 보정(리그 평균 50타석 가산)이 적용된 값이다.
+  // 500타석 규모에서는 보정 폭이 작아 원래 값에 가깝게 남는다.
   assert.equal(hitter.BB_est, 44);
-  assert.equal(Number(hitter.obp.toFixed(3)), 0.358);
-  assert.equal(Number(hitter.slg.toFixed(3)), 0.513);
-  assert.equal(Number(hitter.ops.toFixed(3)), 0.871);
-  assert.equal(Number(hitter.hr_rate.toFixed(3)), 0.044);
+  assert.equal(Number(hitter.obp.toFixed(3)), 0.357);   // 보정 전 0.358
+  assert.equal(Number(hitter.slg.toFixed(3)), 0.502);   // 보정 전 0.513
+  assert.equal(Number(hitter.ops.toFixed(3)), 0.859);   // 보정 전 0.871
+  assert.equal(Number(hitter.hit_rate.toFixed(3)), 0.297); // 보정 전 0.300
+  assert.equal(Number(hitter.hr_rate.toFixed(3)), 0.044);  // 보정 대상 아님
   assert.deepEqual(normalize(hitter.todayStats), { PA: 0, H: 0, HR: 0, RBI: 0, K: 0, BB: 0, SB: 0, CS: 0, SAC: 0 });
+});
+
+test('buildHitter regresses tiny-sample rate stats toward the league mean', () => {
+  const { buildHitter } = loadKboScripts();
+
+  // 1타석 1안타 (보정이 없으면 타율 1.000, OPS 2.000으로 라인업 최상단을 차지)
+  const fluke = buildHitter({
+    name: '1타석타자', AVG: 1.000, G: 6, PA: 1, AB: 1, H: 1,
+    HR: 0, D2: 0, D3: 0, TB: 1, SAC: 0, SF: 0,
+  });
+  assert.ok(fluke.hit_rate > 0.25 && fluke.hit_rate < 0.30,
+    `1타석 타자는 리그 평균 근처여야 한다 (실제 ${fluke.hit_rate.toFixed(3)})`);
+  assert.ok(fluke.ops < 0.85, `OPS도 압축되어야 한다 (실제 ${fluke.ops.toFixed(3)})`);
+  // 안타 세부 비율도 무한대/1.0으로 튀지 않아야 한다
+  assert.ok(fluke.hr_of_hit >= 0 && fluke.hr_of_hit < 0.3, `hr_of_hit=${fluke.hr_of_hit}`);
+
+  // 규정타석급 강타자는 보정 후에도 확실히 우위를 유지해야 한다
+  const star = buildHitter({
+    name: '주전강타자', AVG: 0.340, G: 140, PA: 600, AB: 540, H: 184,
+    HR: 30, D2: 35, D3: 2, TB: 313, SAC: 0, SF: 5,
+  });
+  assert.ok(star.hit_rate > fluke.hit_rate, '주전 강타자가 1타석 타자보다 높아야 한다');
+  assert.ok(star.ops > fluke.ops);
+  assert.ok(star.hit_rate > 0.32, `강타자는 과도하게 압축되면 안 된다 (실제 ${star.hit_rate.toFixed(3)})`);
+});
+
+test('buildLineup excludes tiny-sample hitters but falls back when short-handed', () => {
+  const { buildHitter, buildLineup } = loadKboScripts();
+
+  const mk = (name, PA, AB, H, TB) => buildHitter({
+    name, AVG: H / AB, G: 100, PA, AB, H, HR: 5, D2: 10, D3: 1, TB, SAC: 0, SF: 0,
+  });
+
+  // 규정타석 9명 + 소표본 초고타율 1명
+  const regulars = [];
+  for (let i = 0; i < 9; i++) regulars.push(mk(`주전${i}`, 400, 360, 100, 150));
+  const fluke = mk('한타석', 1, 1, 1, 1);
+
+  const lineup = buildLineup([fluke, ...regulars]);
+  assert.equal(lineup.length, 9);
+  assert.ok(!lineup.some(p => p.name === '한타석'), '소표본 타자는 라인업에서 제외되어야 한다');
+
+  // 자격자가 9명 미만이면 전체 풀로 되돌아간다
+  const thin = buildLineup([fluke, ...regulars.slice(0, 5)]);
+  assert.equal(thin.length, 6, '자격자 부족 시 소표본 타자라도 채워 넣는다');
+  assert.ok(thin.some(p => p.name === '한타석'));
 });
 
 test('buildPitcher derives role and rate stats', () => {

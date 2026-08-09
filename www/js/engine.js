@@ -400,6 +400,18 @@ function buildDefenseStats(row) {
   };
 }
 
+// 투구 이닝이 0인 투수는 CSV의 ERA·WHIP이 '-'로 들어온다.
+// 그대로 parseFloat하면 NaN이 되고, decidePAResult의 pq가 NaN이 되어
+// 안타·볼넷·삼진 판정 비교가 모두 false로 떨어진다(= 절대 맞지 않는 투수).
+// 기록이 없는 투수는 리그 평균값으로 대체한다.
+const LEAGUE_AVG_ERA = 4.60;
+const LEAGUE_AVG_WHIP = 1.46;
+
+function parseStatOr(value, fallback) {
+  const n = parseFloat(value);
+  return Number.isFinite(n) ? Math.round(n * 100) / 100 : fallback;
+}
+
 /**
  * 투수 CSV 행 → JSON pitcher 객체 변환.
  */
@@ -411,14 +423,14 @@ function csvRowToPitcher(row, profileLookup, fallbackTeamName = '') {
     id: pId || `${row['선수명']}_${teamName}`,
     name: row['선수명'],
     team: teamName,
-    ERA: Math.round(parseFloat(row['ERA']) * 100) / 100,
-    G: parseInt(row['G']),
+    ERA: parseStatOr(row['ERA'], LEAGUE_AVG_ERA),
+    G: parseInt(row['G']) || 0,
     GS: parseInt(row['GS']) || 0,   // 선발 등판 수 (선발/불펜 판정의 근거)
     QS: parseInt(row['QS']) || 0,
-    IP: parseIP(row['IP']),
-    SO: parseInt(row['SO']),
-    BB: parseInt(row['BB']),
-    WHIP: Math.round(parseFloat(row['WHIP']) * 100) / 100,
+    IP: parseIP(row['IP']) || 0,
+    SO: parseInt(row['SO']) || 0,
+    BB: parseInt(row['BB']) || 0,
+    WHIP: parseStatOr(row['WHIP'], LEAGUE_AVG_WHIP),
     hand: p.pitcherHand || 'R',
     // 프로필
     jerseyNumber: p.jerseyNumber || null,
@@ -643,18 +655,32 @@ async function loadMeta(onReady, onError) {
 //  선수 처리
 // ═══════════════════════════════════════════════════════
 
+// 표본이 작은 선수의 비율 스탯을 리그 평균 쪽으로 축소(regression to the mean).
+// 보정하지 않으면 1타석 1안타가 타율 1.000으로 그대로 쓰여
+// 라인업 순서(OPS 정렬)와 타석 판정이 모두 왜곡된다.
+// 상수는 2026 데이터 실측값이며 buildHitter의 계산식 정의와 동일하게 산출했다.
+const LG_AVG = 0.2681, LG_SLG = 0.4014, LG_OBP = 0.3437;
+const LG_HR_OF_H = 0.0993, LG_D2_OF_H = 0.1689, LG_D3_OF_H = 0.0153;
+const PA_SHRINK = 50;   // 이만큼의 '리그 평균 타석'을 가상으로 더해 준다
+
 function buildHitter(r) {
   const AB = r.AB || 1, PA = r.PA || 1, H = r.H || 0,
     HR = r.HR || 0, D2 = r.D2 || 0, D3 = r.D3 || 0;
   const BB = Math.max(0, PA - AB - (r.SAC || 0) - (r.SF || 0));
-  const slg = (r.TB || 0) / AB, obp = (H + BB) / PA, ops = obp + slg;
+  const k = PA_SHRINK;
+  const shrunkAVG = (H + k * LG_AVG) / (AB + k);
+  const shrunkH = H + k * LG_AVG;   // 안타 세부 비율의 분모(축소된 안타 수)
+  const slg = ((r.TB || 0) + k * LG_SLG) / (AB + k);
+  const obp = (H + BB + k * LG_OBP) / (PA + k);
+  const ops = obp + slg;
   const speedScore = Math.min(1, (D3 * 3 + r.SAC * 1.5) / Math.max(PA, 1) * 10 + 0.1);
   return {
     ...r, BB_est: BB, bb_rate: BB / PA,
-    k_rate: Math.max(0.08, 0.21 - (r.AVG - 0.265) * 0.35),
-    hr_rate: HR / Math.max(AB, 1), hit_rate: r.AVG,
-    hr_of_hit: HR / Math.max(H, 1), d3_of_hit: D3 / Math.max(H, 1),
-    d2_of_hit: D2 / Math.max(H, 1),
+    k_rate: Math.max(0.08, 0.21 - (shrunkAVG - 0.265) * 0.35),
+    hr_rate: HR / Math.max(AB, 1), hit_rate: shrunkAVG,
+    hr_of_hit: (HR + k * LG_AVG * LG_HR_OF_H) / shrunkH,
+    d3_of_hit: (D3 + k * LG_AVG * LG_D3_OF_H) / shrunkH,
+    d2_of_hit: (D2 + k * LG_AVG * LG_D2_OF_H) / shrunkH,
     ops, obp, slg, speedScore,
     todayStats: { PA: 0, H: 0, HR: 0, RBI: 0, K: 0, BB: 0, SB: 0, CS: 0, SAC: 0 },
   };
@@ -735,8 +761,15 @@ const POS_KOR_MAP = {
   '투수': 'P', '외야수': 'OF', '내야수': 'IF',
 };
 
+// 표본 보정을 해도 무기록 선수는 리그 평균 OPS를 받아 중위 타순에 들 수 있으므로,
+// 선발 라인업 자체를 일정 타석 이상 소화한 선수로 제한한다.
+// 자격자가 9명 미만인 팀은 전체 풀로 되돌린다.
+const LINEUP_MIN_PA = 50;
+
 function buildLineup(hs) {
-  const sorted = [...hs].sort((a, b) => b.ops - a.ops);
+  const eligible = hs.filter(h => (h.PA || 0) >= LINEUP_MIN_PA);
+  const pool = eligible.length >= 9 ? eligible : hs;
+  const sorted = [...pool].sort((a, b) => b.ops - a.ops);
   const fallbackPos = ['CF', 'SS', '3B', '1B', 'RF', '2B', 'C', 'LF', 'DH'];
   const used = new Set();
   const lineup = [];
@@ -805,6 +838,9 @@ function randN(mean, sd) {
 function calcStamina(p) {
   return Math.max(0, Math.min(100, 100 - (p.pitchCount / Math.max(p.avgIP, 1) / 16) * 80));
 }
+// decidePAResult의 pq 산출 기준. 이 값을 낮출수록 타자 쪽이 유리해진다.
+const PQ_BASELINE_ERA = 4.00;
+
 function adjERA(p) {
   const s = calcStamina(p);
   const mult = s >= 80 ? 1
@@ -971,7 +1007,9 @@ function decidePAResult(b, p, bases, inning, outs, defenseLineup = null) {
     return result;
   };
 
-  const era = adjERA(p), pq = Math.max(0.5, Math.min(1.8, era / 4.30));
+  // pq(투수품질지수): 클수록 나쁜 투수. 기준값을 낮추면 타격이 전반적으로 살아난다.
+  // 4.30에서는 리그 평균 득점이 실제 KBO 하한(4.5)에 못 미쳐 4.00으로 조정.
+  const era = adjERA(p), pq = Math.max(0.5, Math.min(1.8, era / PQ_BASELINE_ERA));
   push('타자', `${b.hand || 'R'}타 · AVG ${(b.AVG || 0).toFixed(3)}`);
   push('투수', `${p.hand || 'R'}투 · ERA(보정) ${era.toFixed(2)}`);
   push('투수품질지수(pq)', pq.toFixed(3));
@@ -2501,6 +2539,7 @@ if (typeof globalThis !== 'undefined') {
     parseCSV,
     parseIP,
     buildHitter,
+    buildLineup,
     buildPitcher,
     buildTeamPitchers,
     calcAvgIP,

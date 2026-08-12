@@ -226,6 +226,59 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 .ps-matchup{font-family:'Bebas Neue';font-size:22px;letter-spacing:2px;margin-bottom:6px}
 .ps-matchup span{color:var(--accent)}
 .ps-status{font-size:10px;color:var(--text3);margin-bottom:8px}
+.ps-series.ps-champ{opacity:1;border-color:var(--accent);background:rgba(245,166,35,.09);box-shadow:0 0 24px rgba(245,166,35,.18)}
+.ps-champ-tag{font-family:'Black Han Sans';font-size:13px;color:var(--accent);letter-spacing:2px;margin-top:6px}
+/* ── 개발자 모드 패널 ── */
+.dev-panel{border:1px dashed rgba(124,58,237,.55);background:rgba(124,58,237,.07);border-radius:8px;padding:10px;margin-bottom:14px}
+.dev-panel-title{font-size:9px;letter-spacing:2px;color:#a78bfa;margin-bottom:8px;text-transform:uppercase}
+.dev-panel-btns{display:flex;gap:8px;flex-wrap:wrap}
+.dev-btn{flex:1 1 140px;background:#7c3aed;color:#fff;border:none;border-radius:6px;padding:9px 10px;font-size:12px;font-family:'Noto Sans KR';font-weight:600;cursor:pointer;transition:filter .15s,transform .1s}
+.dev-btn:hover{filter:brightness(1.12)}
+.dev-btn:active{transform:scale(.97)}
+.dev-btn.alt{background:#b45309}
+.dev-note{font-size:10px;color:var(--text3);margin-top:7px;line-height:1.5}
+/* ── 우승 팝업 ── */
+#champion-modal{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:400;display:none;align-items:center;justify-content:center;overflow:hidden}
+#champion-modal.show{display:flex}
+#champion-fx{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.champ-inner{position:relative;z-index:2;text-align:center;padding:30px 26px;max-width:440px;width:90%;
+  background:var(--bg2);border:1px solid var(--border2);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.6);
+  animation:champRise .55s cubic-bezier(.22,1,.36,1) both}
+.champ-inner.champ-mine{border-color:var(--accent);box-shadow:0 0 0 1px rgba(245,166,35,.35),0 0 70px rgba(245,166,35,.32),0 20px 60px rgba(0,0,0,.6)}
+@keyframes champRise{from{transform:translateY(26px) scale(.94);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
+.champ-year{font-family:'JetBrains Mono';font-size:11px;letter-spacing:4px;color:var(--text2);margin-bottom:2px}
+.champ-label{font-family:'Black Han Sans';font-size:15px;letter-spacing:3px;color:var(--accent);margin-bottom:14px}
+.champ-trophy{font-size:66px;line-height:1;margin-bottom:10px;animation:champTrophy .8s cubic-bezier(.34,1.56,.64,1) .15s both}
+@keyframes champTrophy{0%{transform:scale(0) rotate(-25deg);opacity:0}70%{transform:scale(1.22) rotate(6deg)}100%{transform:scale(1) rotate(0);opacity:1}}
+.champ-inner.champ-mine .champ-trophy{filter:drop-shadow(0 0 22px rgba(245,166,35,.85));animation:champTrophy .8s cubic-bezier(.34,1.56,.64,1) .15s both,champGlow 2.1s ease-in-out 1s infinite}
+@keyframes champGlow{0%,100%{filter:drop-shadow(0 0 18px rgba(245,166,35,.6))}50%{filter:drop-shadow(0 0 34px rgba(245,166,35,1))}}
+.champ-team{font-family:'Black Han Sans';font-size:38px;letter-spacing:2px;color:var(--text);margin-bottom:4px;animation:champRise .5s cubic-bezier(.22,1,.36,1) .3s both}
+.champ-inner.champ-mine .champ-team{color:var(--accent);text-shadow:0 0 30px rgba(245,166,35,.55)}
+.champ-sub{font-size:13px;color:var(--text2);margin-bottom:16px;animation:champRise .5s ease-out .42s both}
+.champ-stats{display:flex;justify-content:center;gap:0;margin-bottom:18px;animation:champRise .5s ease-out .52s both}
+.champ-stat{flex:1;padding:0 6px;border-right:1px solid var(--border)}
+.champ-stat:last-child{border-right:none}
+.champ-stat-v{font-family:'Bebas Neue';font-size:24px;color:var(--accent);letter-spacing:1px}
+.champ-stat-l{font-size:9px;color:var(--text3);letter-spacing:1px;margin-top:1px}
+.champ-mvp{background:var(--bg3);border-radius:8px;padding:10px 12px;margin-bottom:18px;animation:champRise .5s ease-out .6s both}
+.champ-mvp-l{font-size:9px;letter-spacing:2px;color:var(--text3);margin-bottom:4px}
+.champ-mvp-n{font-family:'Noto Sans KR';font-size:15px;font-weight:700;color:var(--text)}
+.champ-mvp-s{font-family:'JetBrains Mono';font-size:11px;color:var(--text2);margin-top:2px}
+.champ-btns{display:flex;gap:8px;animation:champRise .5s ease-out .7s both}
+.champ-btns .btn{flex:1;padding:13px;font-size:14px}
+/* 내 팀 우승 전용 이펙트 */
+.champ-ray{position:absolute;top:50%;left:50%;width:2px;height:150vmax;transform-origin:top center;
+  background:linear-gradient(to bottom,rgba(245,166,35,.42),transparent 62%);animation:champSpin 14s linear infinite}
+@keyframes champSpin{from{transform:translate(-50%,0) rotate(0)}to{transform:translate(-50%,0) rotate(360deg)}}
+.champ-burst{position:absolute;top:50%;left:50%;width:22vmax;height:22vmax;margin:-11vmax 0 0 -11vmax;border-radius:50%;
+  background:radial-gradient(circle,rgba(245,166,35,.5),transparent 68%);animation:champBurst 1.5s ease-out forwards}
+@keyframes champBurst{from{transform:scale(.2);opacity:.95}to{transform:scale(5);opacity:0}}
+.confetti{position:absolute;top:-24px;width:9px;height:15px;opacity:0;animation:confettiFall linear forwards}
+@keyframes confettiFall{0%{opacity:1;transform:translateY(0) rotate(0)}100%{opacity:.15;transform:translateY(112vh) rotate(760deg)}}
+@media (prefers-reduced-motion:reduce){
+  .champ-inner,.champ-trophy,.champ-team,.champ-sub,.champ-stats,.champ-mvp,.champ-btns{animation:none}
+  .champ-ray,.champ-burst,.confetti{display:none}
+}
 #turn-modal{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:300;display:none;align-items:center;justify-content:center}
 .turn-modal-inner{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:24px;min-width:340px;max-width:460px;width:90%}
 .turn-modal-title{font-family:'Black Han Sans';font-size:20px;color:var(--accent);letter-spacing:2px;margin-bottom:16px;text-align:center}
@@ -641,6 +694,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
       <!-- 탭 3: 시즌 메인 -->
       <div class="season-slide">
         <div class="season-slide-body">
+          <div id="season-dev-panel"></div>
           <div id="season-next-game"></div>
           <div>
             <div class="season-section-title" style="display:flex;justify-content:space-between;align-items:center;border-bottom:none;padding-bottom:0;margin-bottom:4px;">
@@ -711,6 +765,20 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
   </div>
+</div>
+
+<!-- ── 포스트시즌 화면 ── -->
+<div id="postseason-screen">
+  <div class="ps-title">POSTSEASON</div>
+  <div class="ps-bracket" id="ps-bracket"></div>
+  <div id="ps-dev-panel" style="width:100%;max-width:500px;"></div>
+  <button class="btn" id="ps-exit-btn" style="margin-top:22px;max-width:500px;width:100%;padding:12px;" onclick="exitSeasonMode()">시즌 종료</button>
+</div>
+
+<!-- ── 우승 팝업 ── -->
+<div id="champion-modal">
+  <div id="champion-fx" aria-hidden="true"></div>
+  <div class="champ-inner" id="champion-inner"></div>
 </div>
 
 <!-- ── 게임 화면 하단 내비게이션 ── -->
@@ -1127,6 +1195,9 @@ async function startSeasonMode() {
   SS.standings  = initStandings(teams);
   SS.playerStats= {};
   SS.phase      = 'season';
+  SS._ps        = null;   // 이전 시즌 포스트시즌 대진표 제거
+  SS.champion   = null;
+  SS.championShown = false;
   // 이전 시즌(다른 팀)의 경기 진행 중 저장 데이터가 남아있으면
   // 새 시즌 첫 경기에 잘못 복원되지 않도록 삭제
   if (typeof clearGameState === 'function') clearGameState();
@@ -1141,7 +1212,9 @@ async function startSeasonMode() {
 async function resumeSeasonMode() {
   if (!loadSeasonState()) { alert('저장된 시즌이 없습니다.'); return; }
   await loadAllTeamData(SS.year, SS.teams, SS.nameKor);
-  if (SS.phase === 'postseason') showPostseasonScreen();
+  // 'done'(우승 확정)도 포스트시즌 화면을 보여준다.
+  // 시즌 화면으로 보내면 다음 경기가 없는 빈 상태가 된다.
+  if (SS.phase === 'postseason' || SS.phase === 'done') showPostseasonScreen();
   else showSeasonScreen();
 }
 

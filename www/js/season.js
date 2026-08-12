@@ -26,6 +26,8 @@ const SS = {
   pitcherFatigue: {},
   starterRotation: [],
   starterRotationIndex: 0,
+  champion: null,        // 한국시리즈 우승 팀 코드 (시즌 종료 후)
+  championShown: false,  // 우승 팝업을 이미 띄웠는지 (재접속 시 재생 방지)
 };
 
 // ── localStorage 키 ──────────────────────────────────────
@@ -251,6 +253,8 @@ function saveSeasonState() {
       starterRotationIndex: SS.starterRotationIndex,
       catcherFatigue:  SS.catcherFatigue || {},
       _ps:             SS._ps || null,   // 포스트시즌 대진표(시리즈 전적 포함)
+      champion:        SS.champion || null,
+      championShown:   !!SS.championShown,
     });
     localStorage.setItem(LS_KEY, dataStr);
 
@@ -1355,6 +1359,7 @@ function exitSeasonMode() {
   document.getElementById('season-screen').style.display     = 'none';
   document.getElementById('postseason-screen').style.display = 'none';
   document.getElementById('turn-modal').style.display        = 'none';
+  document.getElementById('champion-modal').classList.remove('show');
   document.getElementById('setup-screen').style.display      = 'flex';
   // 이어하기 버튼 숨기기
   document.getElementById('season-resume-btn').style.display = 'none';
@@ -1791,6 +1796,9 @@ function refreshSeasonUI() {
   document.getElementById('season-standings').innerHTML = renderStandingsTable();
   document.getElementById('season-next-game').innerHTML = renderTodayGame();
 
+  const devEl = document.getElementById('season-dev-panel');
+  if (devEl) devEl.innerHTML = renderDevPanel('season');
+
   // 헤더 팀명 미리 업데이트
   const curGame = SS.schedule[SS.gameIdx];
   if (curGame) {
@@ -2027,7 +2035,10 @@ function onPostseasonGameEnd(stage, homeScore, awayScore) {
   document.getElementById('game-over').classList.remove('show');
   document.getElementById('game-bottom-nav').style.display = 'none';
   if (typeof closeMobileLineupSheet === 'function') closeMobileLineupSheet();
+
   showPostseasonScreen();
+  // 한국시리즈가 끝났다면 그 위에 우승 팝업을 띄운다
+  if (stage === 'ks' && s.done) checkSeasonChampion();
 }
 
 // ── 포스트시즌 화면 ──────────────────────────────────────
@@ -2050,16 +2061,23 @@ function renderPostseasonUI() {
     const hKor = s.home ? (SS.nameKor[s.home] || s.home) : '미정';
     const aKor = s.away ? (SS.nameKor[s.away] || s.away) : '미정';
     const done = s.done ? '종료' : (s.home && s.away ? '진행중' : '대기');
-    h += `<div class="ps-series ${s.done ? 'ps-done' : ''}" id="ps-${stage}">
+    // 우승이 확정된 한국시리즈는 흐리게 처리하지 않고 강조한다
+    const champ = stage === 'ks' && s.done ? getSeriesWinner(s) : null;
+    const cls = champ ? 'ps-champ' : (s.done ? 'ps-done' : '');
+    h += `<div class="ps-series ${cls}" id="ps-${stage}">
       <div class="ps-label">${s.label} (${s.needed}승제)</div>
       <div class="ps-matchup">${aKor} <span>${s.wins[1]}</span> : <span>${s.wins[0]}</span> ${hKor}</div>
       <div class="ps-status">${done}</div>
       ${(!s.done && s.home && s.away)
         ? `<button class="btn primary" onclick="playPsSeries('${stage}')">경기 진행</button>`
         : ''}
+      ${champ ? `<div class="ps-champ-tag">🏆 ${SS.nameKor[champ] || champ} 우승</div>` : ''}
     </div>`;
   });
   el.innerHTML = h;
+
+  const devEl = document.getElementById('ps-dev-panel');
+  if (devEl) devEl.innerHTML = renderDevPanel('postseason');
 }
 
 async function playPsSeries(stage) {
@@ -2078,9 +2096,328 @@ async function playPsSeries(stage) {
     // 자동 진행: 시리즈 끝날 때까지
     while (!s.done) simSeriesGame(s, SS.myTeam);
     advancePostseasonBracket(stage);
+    checkSeasonChampion();
     saveSeasonState();
     renderPostseasonUI();
   }
+}
+
+// ═══════════════════════════════════════════════════════
+//  시즌 종료 — 우승 판정 및 이벤트 팝업
+// ═══════════════════════════════════════════════════════
+
+// 시리즈 승자 팀 코드. 아직 안 끝났으면 null.
+function getSeriesWinner(s) {
+  if (!s || !s.done) return null;
+  return s.wins[0] >= s.needed ? s.home : s.away;
+}
+
+// 한국시리즈가 끝났으면 우승팀을 확정하고 팝업을 띄운다.
+// 자동 진행/직접 플레이 양쪽 경로에서 모두 호출된다.
+function checkSeasonChampion() {
+  if (!SS._ps || !SS._ps.ks) return null;
+  const winner = getSeriesWinner(SS._ps.ks);
+  if (!winner) return null;
+
+  if (SS.champion !== winner) {
+    SS.champion = winner;
+    SS.championShown = false;
+  }
+  SS.phase = 'done';
+
+  if (!SS.championShown) {
+    SS.championShown = true;
+    saveSeasonState();
+    showChampionModal(winner);
+  }
+  return winner;
+}
+
+// 우승팀의 정규시즌 성적 + 한국시리즈 전적을 모아 팝업에 넘길 값으로 만든다.
+function buildChampionSummary(teamCode) {
+  const st = (SS.standings && SS.standings[teamCode]) || { w: 0, l: 0, d: 0, rs: 0, ra: 0 };
+  const ks = (SS._ps && SS._ps.ks) || { wins: [0, 0], games: [], home: null };
+  const isHome = ks.home === teamCode;
+  const seriesW = isHome ? ks.wins[0] : ks.wins[1];
+  const seriesL = isHome ? ks.wins[1] : ks.wins[0];
+
+  const ranked = getSortedStandings();
+  const seed = ranked.findIndex(t => t.team === teamCode) + 1;
+
+  return {
+    teamCode,
+    teamKor: (SS.nameKor && SS.nameKor[teamCode]) || teamCode,
+    year: SS.year || '',
+    w: st.w, l: st.l, d: st.d,
+    pct: (st.w + st.l) > 0 ? st.w / (st.w + st.l) : 0,
+    seed: seed > 0 ? seed : '-',
+    seriesW, seriesL,
+    seriesGames: ks.games ? ks.games.length : 0,
+  };
+}
+
+// 우승팀에서 시즌 누적 성적이 가장 좋은 타자를 뽑는다 (SS.playerStats 기반).
+// playerStats는 한국어 팀명으로 저장되므로 nameKor로 맞춘다.
+function pickChampionMVP(teamCode) {
+  const teamKor = (SS.nameKor && SS.nameKor[teamCode]) || teamCode;
+  const rows = Object.values(SS.playerStats || {})
+    .filter(p => p.team === teamKor && (p.PA || 0) >= 30);
+  if (!rows.length) return null;
+  // 간이 지표: 안타 + 홈런*3 + 타점*1.2
+  rows.sort((a, b) =>
+    ((b.H || 0) + (b.HR || 0) * 3 + (b.RBI || 0) * 1.2) -
+    ((a.H || 0) + (a.HR || 0) * 3 + (a.RBI || 0) * 1.2));
+  const p = rows[0];
+  const ab = Math.max((p.PA || 0) - (p.BB || 0), 1);
+  return { name: p.name, avg: ((p.H || 0) / ab).toFixed(3).replace(/^0/, ''), HR: p.HR || 0, RBI: p.RBI || 0 };
+}
+
+function showChampionModal(teamCode) {
+  const modal = document.getElementById('champion-modal');
+  const inner = document.getElementById('champion-inner');
+  if (!modal || !inner) return;
+
+  const c = buildChampionSummary(teamCode);
+  const isMine = teamCode === SS.myTeam;
+  const mvp = pickChampionMVP(teamCode);
+
+  inner.className = 'champ-inner' + (isMine ? ' champ-mine' : '');
+  inner.innerHTML = `
+    <div class="champ-year">${c.year} SEASON</div>
+    <div class="champ-label">한국시리즈 우승</div>
+    <div class="champ-trophy">🏆</div>
+    <div class="champ-team">${c.teamKor}</div>
+    <div class="champ-sub">${isMine
+      ? '우리 팀이 정상에 올랐습니다!'
+      : `${c.teamKor}가 올 시즌 정상에 올랐습니다.`}</div>
+    <div class="champ-stats">
+      <div class="champ-stat"><div class="champ-stat-v">${c.seed}</div><div class="champ-stat-l">정규시즌</div></div>
+      <div class="champ-stat"><div class="champ-stat-v">${c.w}-${c.l}-${c.d}</div><div class="champ-stat-l">정규 전적</div></div>
+      <div class="champ-stat"><div class="champ-stat-v">${c.seriesW}-${c.seriesL}</div><div class="champ-stat-l">KS 전적</div></div>
+    </div>
+    ${mvp ? `<div class="champ-mvp">
+      <div class="champ-mvp-l">시즌 최고 타자</div>
+      <div class="champ-mvp-n">${mvp.name}</div>
+      <div class="champ-mvp-s">타율 ${mvp.avg} · ${mvp.HR}홈런 · ${mvp.RBI}타점</div>
+    </div>` : ''}
+    <div class="champ-btns">
+      <button class="btn primary" onclick="closeChampionModal()">확인</button>
+    </div>`;
+
+  modal.classList.add('show');
+  if (isMine) playChampionEffects();
+}
+
+// 내 팀 우승 전용 연출: 회전 광선 + 중앙 폭발 + 색종이
+function playChampionEffects() {
+  const fx = document.getElementById('champion-fx');
+  if (!fx) return;
+  fx.innerHTML = '';
+
+  if (typeof window !== 'undefined' && window.matchMedia &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const burst = document.createElement('div');
+  burst.className = 'champ-burst';
+  fx.appendChild(burst);
+
+  for (let i = 0; i < 10; i++) {
+    const ray = document.createElement('div');
+    ray.className = 'champ-ray';
+    ray.style.transform = `translate(-50%,0) rotate(${i * 36}deg)`;
+    ray.style.animationDelay = `${-i * 1.4}s`;
+    fx.appendChild(ray);
+  }
+
+  const colors = ['#f5a623', '#ffd700', '#2dcc6f', '#3b82f6', '#e8340a', '#ffffff'];
+  for (let i = 0; i < 90; i++) {
+    const p = document.createElement('div');
+    p.className = 'confetti';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.background = colors[i % colors.length];
+    p.style.animationDuration = (2.4 + Math.random() * 2.2) + 's';
+    p.style.animationDelay = (Math.random() * 2.4) + 's';
+    p.style.width = (6 + Math.random() * 6) + 'px';
+    p.style.height = (10 + Math.random() * 10) + 'px';
+    fx.appendChild(p);
+  }
+}
+
+window.closeChampionModal = function() {
+  const modal = document.getElementById('champion-modal');
+  if (!modal) return;
+  modal.classList.remove('show');
+  const fx = document.getElementById('champion-fx');
+  if (fx) fx.innerHTML = '';   // 애니메이션 노드 정리
+  showPostseasonScreen();
+};
+
+// ═══════════════════════════════════════════════════════
+//  개발자 모드 전용 — 시즌 막바지 테스트 도구
+// ═══════════════════════════════════════════════════════
+
+function devEnabled() {
+  return typeof isDevMode === 'function' && isDevMode();
+}
+
+// 내 팀의 마지막 정규시즌 경기가 속한 턴의 시작 인덱스.
+// 그 턴 앞까지만 시뮬레이션하면 "최종전 1경기 전" 상태가 된다.
+function findFinalGameTurnStart() {
+  if (!SS.schedule || !SS.schedule.length) return -1;
+  let lastMyIdx = -1;
+  for (let i = SS.schedule.length - 1; i >= 0; i--) {
+    const g = SS.schedule[i];
+    if (g.home === SS.myTeam || g.away === SS.myTeam) { lastMyIdx = i; break; }
+  }
+  if (lastMyIdx < 0) return -1;
+  const targetTurn = SS.schedule[lastMyIdx].turn;
+  let start = lastMyIdx;
+  while (start > 0 && SS.schedule[start - 1].turn === targetTurn) start--;
+  return start;
+}
+
+// 시즌 종료 1경기 전(내 팀 최종전 턴)까지 한 번에 진행한다.
+window.devFastForwardToFinalGame = function() {
+  if (!devEnabled()) return;
+  const stopIdx = findFinalGameTurnStart();
+  if (stopIdx < 0) { alert('일정을 찾을 수 없습니다.'); return; }
+  if (SS.gameIdx >= stopIdx) { alert('이미 최종전 턴입니다.'); return; }
+
+  const games = stopIdx - SS.gameIdx;
+  const turns = SS.schedule[stopIdx].turn - SS.schedule[SS.gameIdx].turn;
+  if (!confirm(`남은 ${turns}턴 (${games}경기)을 한 번에 시뮬레이션합니다.\n내 팀 최종전 직전에서 멈춥니다.\n\n계속할까요?`)) return;
+
+  const t0 = Date.now();
+  let curTurn = SS.schedule[SS.gameIdx].turn;
+  for (let i = SS.gameIdx; i < stopIdx; i++) {
+    const g = SS.schedule[i];
+    // 턴이 바뀌는 순간 직전 턴 기준으로 피로도를 회복시킨다
+    // (processTurnFatigueRecovery는 SS.gameIdx-1의 턴을 "방금 끝난 턴"으로 본다)
+    if (g.turn !== curTurn) {
+      SS.gameIdx = i;
+      if (typeof processTurnFatigueRecovery === 'function') processTurnFatigueRecovery();
+      curTurn = g.turn;
+    }
+    if (!g.result) {
+      g.result = simGameFast(g.home, g.away);
+      applyResult(g);
+    }
+  }
+  SS.gameIdx = stopIdx;
+  if (typeof processTurnFatigueRecovery === 'function') processTurnFatigueRecovery();
+
+  clearGameState();
+  saveSeasonState();
+  refreshSeasonUI();
+  alert(`${games}경기 시뮬레이션 완료 (${((Date.now() - t0) / 1000).toFixed(1)}초)\n` +
+        `이제 ${SS.schedule[stopIdx].turn}턴 — 내 팀 최종전입니다.`);
+};
+
+// 내 팀이 우승할 수 있는 데이터를 만든다.
+// 정규시즌 전 경기를 내 팀 우위로 재작성하고, 한국시리즈 3승 0패까지 채워
+// 1경기만 이기면 우승이 확정되는 상태로 만든다.
+window.devSetupChampionshipRun = function() {
+  if (!devEnabled()) return;
+  if (!SS.schedule || !SS.schedule.length) { alert('시즌 데이터가 없습니다.'); return; }
+  if (!confirm(
+    '내 팀이 "우승 직전"인 상태로 시즌 데이터를 덮어씁니다.\n\n' +
+    '· 정규시즌 144경기 결과를 내 팀 우위로 재작성 (1위 확정)\n' +
+    '· 하위 시리즈는 자동 소화\n' +
+    '· 한국시리즈 3승 0패 — 1승만 남은 상태\n\n' +
+    '현재 시즌 기록은 사라집니다. 계속할까요?')) return;
+
+  // 1) 팀별 전력 순서: 내 팀이 최상위
+  const order = [SS.myTeam, ...SS.teams.filter(t => t !== SS.myTeam)];
+  const strength = {};
+  order.forEach((t, i) => { strength[t] = order.length - i; });
+
+  // 2) 정규시즌 전 경기 재작성 (7경기마다 이변을 넣어 전적이 극단으로 가지 않게 한다)
+  SS.standings = initStandings(SS.teams);
+  SS.schedule.forEach((g, i) => {
+    const favHome = strength[g.home] > strength[g.away];
+    const homeWin = (i % 7 === 0) ? !favHome : favHome;
+    g.result = homeWin ? { homeScore: 5, awayScore: 3 } : { homeScore: 2, awayScore: 6 };
+    applyResult(g);
+  });
+  SS.gameIdx = SS.schedule.length;
+  SS.phase   = 'postseason';
+
+  // 3) 대진표를 새로 만들고 하위 시리즈를 홈 팀 승리로 소화
+  SS.champion = null;
+  SS.championShown = false;
+  SS._ps = buildPostseason();
+  ['wc', 'semi', 'play'].forEach(stage => {
+    const s = SS._ps[stage];
+    while (!s.done) {
+      s.games.push({ homeScore: 4, awayScore: 2 });
+      s.wins[0]++;
+      if (s.wins[0] >= s.needed) s.done = true;
+    }
+    advancePostseasonBracket(stage);
+  });
+
+  // 4) 한국시리즈: 1위(=내 팀)가 홈이므로 wins[0]이 내 팀 승수
+  const ks = SS._ps.ks;
+  ks.wins = [3, 0];
+  ks.games = [
+    { homeScore: 5, awayScore: 2 },
+    { homeScore: 3, awayScore: 1 },
+    { homeScore: 7, awayScore: 4 },
+  ];
+
+  clearGameState();
+  saveSeasonState();
+
+  document.getElementById('season-screen').style.display = 'none';
+  showPostseasonScreen();
+
+  const st = SS.standings[SS.myTeam];
+  alert(`준비 완료.\n\n정규시즌 ${st.w}승 ${st.l}패 ${st.d}무 → 1위\n` +
+        `한국시리즈 3승 0패 — [경기 진행]으로 1승만 더 하면 우승입니다.`);
+};
+
+// 우승 팝업만 미리 확인 (시즌 데이터는 건드리지 않는다)
+window.devPreviewChampion = function(which) {
+  if (!devEnabled()) return;
+  if (!SS._ps) SS._ps = buildPostseason();
+  const team = which === 'other'
+    ? (SS.teams.find(t => t !== SS.myTeam) || SS.myTeam)
+    : SS.myTeam;
+  showChampionModal(team);
+};
+
+function renderDevPanel(context) {
+  if (!devEnabled()) return '';
+
+  if (context === 'postseason') {
+    return `<div class="dev-panel" style="margin-top:18px;margin-bottom:0;">
+      <div class="dev-panel-title">DEBUG</div>
+      <div class="dev-panel-btns">
+        <button class="dev-btn" onclick="devSetupChampionshipRun()">🏆 우승 직전 상태</button>
+        <button class="dev-btn alt" onclick="devPreviewChampion('mine')">팝업(내 팀)</button>
+        <button class="dev-btn alt" onclick="devPreviewChampion('other')">팝업(타 팀)</button>
+      </div>
+    </div>`;
+  }
+
+  const stopIdx = findFinalGameTurnStart();
+  const canFF = stopIdx >= 0 && SS.gameIdx < stopIdx;
+  const left  = canFF ? (stopIdx - SS.gameIdx) : 0;
+
+  return `<div class="dev-panel">
+    <div class="dev-panel-title">DEBUG — 시즌 막바지 테스트</div>
+    <div class="dev-panel-btns">
+      <button class="dev-btn" onclick="devFastForwardToFinalGame()" ${canFF ? '' : 'disabled style="opacity:.4"'}>
+        ⏭ 최종전까지 (${left}경기)
+      </button>
+      <button class="dev-btn" onclick="devSetupChampionshipRun()">🏆 우승 직전 상태</button>
+    </div>
+    <div class="dev-panel-btns" style="margin-top:8px;">
+      <button class="dev-btn alt" onclick="devPreviewChampion('mine')">팝업(내 팀)</button>
+      <button class="dev-btn alt" onclick="devPreviewChampion('other')">팝업(타 팀)</button>
+    </div>
+    <div class="dev-note">개발자 모드에서만 보입니다. 우승 직전 상태는 시즌 기록을 덮어씁니다.</div>
+  </div>`;
 }
 
 // ── AdMob 광고 매니저 ──────────────────────────────────────
@@ -2246,6 +2583,14 @@ if (typeof globalThis !== 'undefined') {
     recordPitcherFatigue,
     recordCatcherFatigue,
     getSortedStandings,
+    buildPostseason,
+    advancePostseasonBracket,
+    getSeriesWinner,
+    checkSeasonChampion,
+    buildChampionSummary,
+    pickChampionMVP,
+    findFinalGameTurnStart,
+    renderDevPanel,
   });
 }
 

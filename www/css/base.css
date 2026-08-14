@@ -1,0 +1,179 @@
+/* ═══════════════════════════════════════════════════════
+   기본 · 공용 컴포넌트
+   리셋 / body / 버튼 / 스크롤바 / 로딩 / 셋업 화면
+   ═══════════════════════════════════════════════════════ */
+
+/* ── 리셋 ─────────────────────────────────────────── */
+*{margin:0;padding:0;box-sizing:border-box}
+
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--font-body);
+  font-size:var(--fs-5);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* ── 스크롤바 ─────────────────────────────────────── */
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:var(--r-xs)}
+
+/* ── 버튼 ─────────────────────────────────────────── */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  padding:var(--sp-5) var(--sp-10);
+  border-radius:var(--r-lg);
+  font-family:var(--font-display);
+  font-size:var(--fs-6);
+  letter-spacing:1px;
+  cursor:pointer;
+  transition:all var(--t-base);
+  border:1px solid var(--border2);
+  background:var(--bg3);
+  color:var(--text2);
+  text-decoration:none;
+  user-select:none;
+}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:var(--accent);color:var(--on-accent);border:none;box-shadow:0 4px 15px rgba(245,166,35,.2)}
+.btn.primary:hover{background:var(--accent-hi);transform:translateY(-1px)}
+.btn.danger{background:rgba(232,52,10,.15);color:var(--accent2);border-color:var(--accent2)}
+.btn.danger:hover{background:var(--accent2);color:var(--white)}
+
+.btn-start{
+  background:var(--accent);color:var(--on-accent);border:none;
+  padding:13px 44px;
+  border-radius:var(--r-lg);
+  font-family:var(--font-display);
+  font-size:var(--fs-6);
+  letter-spacing:2px;cursor:pointer;
+  transition:all var(--t-base);
+  box-shadow:0 4px 20px rgba(245,166,35,.3);
+}
+.btn-start:hover{background:var(--accent-hi);transform:translateY(-1px)}
+.btn-start:disabled{background:var(--border2);color:var(--text3);cursor:not-allowed;transform:none;box-shadow:none}
+
+/* 시즌 화면에서 가로 꽉 채우는 큰 버튼 */
+.btn-block{width:100%;padding:var(--sp-7);font-size:var(--fs-6)}
+
+/* ── 로딩 ─────────────────────────────────────────── */
+.loading-overlay{
+  position:fixed;inset:0;
+  background:var(--overlay-loading);
+  z-index:var(--z-modal);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:var(--sp-7);
+}
+.loading-spinner{
+  width:38px;height:38px;
+  border:3px solid var(--border);
+  border-top-color:var(--accent);
+  border-radius:50%;
+  animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{color:var(--text2);font-size:var(--fs-5)}
+.loading-sub{color:var(--text3);font-size:var(--fs-3)}
+
+/* ── 셋업 화면 ────────────────────────────────────── */
+#setup-screen{
+  position:fixed;inset:0;
+  background:var(--bg);
+  z-index:var(--z-screen);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:var(--sp-9);
+}
+#setup-screen h2{
+  font-family:var(--font-display);
+  font-size:var(--fs-9);
+  color:var(--accent);
+  margin-bottom:var(--sp-2);
+  letter-spacing:2px;
+}
+.subtitle{color:var(--text2);margin-bottom:var(--sp-11);font-size:var(--fs-5)}
+
+.setup-grid{
+  display:grid;grid-template-columns:1fr 80px 1fr;
+  gap:var(--sp-8);max-width:600px;width:100%;align-items:center;
+}
+.setup-card{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:var(--r-lg);
+  padding:var(--sp-7);
+}
+.setup-card h3{
+  font-size:var(--fs-3);color:var(--text2);
+  letter-spacing:2px;text-transform:uppercase;margin-bottom:var(--sp-5);
+}
+.setup-year,.team-select{
+  width:100%;
+  background:var(--bg3);
+  border:1px solid var(--border2);
+  color:var(--text);
+  border-radius:var(--r-lg);
+  font-family:var(--font-body);
+  cursor:pointer;
+}
+.setup-year{padding:7px var(--sp-5);font-size:var(--fs-4);margin-bottom:var(--sp-4)}
+.team-select{padding:9px var(--sp-5);font-size:var(--fs-5);text-align:center}
+.setup-year:focus,.team-select:focus{outline:none;border-color:var(--accent)}
+
+/* 시즌 모드 진입 그룹 */
+.setup-action-group{display:flex;flex-direction:column;gap:var(--sp-6);width:100%;max-width:320px;margin-top:var(--sp-9)}
+.setup-card-season{display:flex;flex-direction:column;gap:var(--sp-6);padding:var(--sp-9)}
+.setup-team-pick{text-align:center}
+.setup-team-pick h3{margin-bottom:var(--sp-4)}
+.setup-action-group .btn-start + .btn-start,
+.setup-card-season .btn-start{margin-top:var(--sp-2)}
+
+.vs-div{text-align:center;font-family:var(--font-num);font-size:var(--fs-10);color:var(--text3)}
+.start-area{text-align:center;margin-top:var(--sp-9)}
+.setup-notice{color:var(--text3);font-size:var(--fs-3);margin-top:var(--sp-5)}
+
+.mode-tabs{display:flex;gap:var(--sp-4);margin-bottom:var(--sp-9)}
+.mode-tab{
+  padding:var(--sp-4) var(--sp-9);
+  border:1px solid var(--border2);
+  border-radius:var(--r-md);
+  cursor:pointer;
+  font-family:var(--font-body);
+  font-size:var(--fs-5);
+  background:var(--bg3);
+  color:var(--text2);
+  transition:all var(--t-base);
+}
+.mode-tab.active{background:var(--accent);color:var(--on-accent);border-color:var(--accent);font-weight:var(--fw-bold)}
+
+/* ── 모달 ─────────────────────────────────────────
+   표시 여부는 JS가 element.style.display 로 직접 제어한다
+   (인라인 스타일이 클래스보다 우선하므로 그대로 동작한다).
+   안드로이드 뒤로가기 핸들러가 style.display 값을 읽어
+   열린 모달을 판별하므로, 이 값을 클래스 토글로 바꾸지 말 것. */
+.modal-backdrop{
+  position:fixed;inset:0;
+  background:var(--overlay);
+  z-index:var(--z-modal);
+  display:none;align-items:center;justify-content:center;
+}
+.modal-backdrop-soft{background:var(--overlay-soft)}
+.modal-panel-sm{min-width:320px;max-width:400px;padding:var(--sp-9)}
+.modal-panel-md{min-width:340px;max-width:480px;padding:var(--sp-9)}
+.modal-list{display:flex;flex-direction:column;gap:var(--sp-4);max-height:400px;overflow-y:auto;margin-bottom:var(--sp-8)}
+.modal-list-tight{gap:var(--sp-2);max-height:450px}
+.modal-actions{text-align:center}
+.modal-actions .btn + .btn{margin-left:var(--sp-4)}
+
+/* ── 공용 유틸 ────────────────────────────────────
+   JS 템플릿에서 반복되던 인라인 style을 대체한다. */
+.u-left{text-align:left}
+.u-center{text-align:center}
+.u-right{text-align:right}
+.u-bold{font-weight:var(--fw-bold)}
+.u-accent{color:var(--accent)}
+.u-muted{color:var(--text3)}
+.u-mono-cap{font-family:var(--font-mono);font-size:var(--fs-2);color:var(--text3)}
+.u-empty{padding:var(--sp-7);color:var(--text3);text-align:center;font-size:var(--fs-4)}
+.u-hidden{display:none}

@@ -1,0 +1,398 @@
+/* ═══════════════════════════════════════════════════════
+   시즌 · 포스트시즌
+   순위표 / 일정 / 탭 내비 / 턴 결과 / 우승 팝업 / 개발자 패널
+   ═══════════════════════════════════════════════════════ */
+
+/* ── 시즌 화면 골격 ───────────────────────────────── */
+#season-screen{
+  position:fixed;inset:0;
+  background:var(--bg);
+  z-index:var(--z-season);
+  display:none;flex-direction:column;
+  padding:0;overflow:hidden;
+}
+.season-header{background:var(--bg2);border-bottom:1px solid var(--border);padding:var(--sp-6) var(--sp-9);display:flex;align-items:center;justify-content:space-between}
+.season-header h2{font-family:var(--font-display);font-size:var(--fs-7);color:var(--accent);letter-spacing:2px}
+.season-body{display:flex;flex-direction:column;padding:var(--sp-9);gap:var(--sp-9);height:calc(100vh - 54px);overflow-y:auto;max-width:700px;margin:0 auto}
+.season-section-title{font-size:var(--fs-2);letter-spacing:2px;color:var(--text2);text-transform:uppercase;margin-bottom:var(--sp-5);border-bottom:1px solid var(--border);padding-bottom:var(--sp-3)}
+
+/* 섹션 제목에 우측 액션이 붙는 변형 */
+.season-section-title.has-action{display:flex;justify-content:space-between;align-items:center;border-bottom:none;padding-bottom:0;margin-bottom:var(--sp-2)}
+
+/* ── 시즌 탭 슬라이드 ─────────────────────────────── */
+#season-slides-wrap{flex:1;overflow:hidden;position:relative}
+#season-slides{display:flex;width:500%;height:100%;transform:translateX(-40%);transition:transform .35s cubic-bezier(.25,.46,.45,.94)}
+.season-slide{width:20%;height:100%;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+.season-slide-body{padding:var(--sp-8) var(--sp-9) 80px;max-width:700px;margin:0 auto;display:flex;flex-direction:column;gap:var(--sp-9)}
+
+/* 슬라이드를 화면 중앙에 놓는 변형 (나가기 탭) */
+.season-slide-centered{min-height:calc(100dvh - 62px);justify-content:center;align-items:center}
+.season-exit-card{text-align:center;display:flex;flex-direction:column;align-items:center;gap:var(--sp-10)}
+.season-exit-icon{
+  width:88px;height:88px;border-radius:50%;
+  background:rgba(232,52,10,.1);border:2px solid var(--accent2);
+  display:flex;align-items:center;justify-content:center;
+}
+.season-exit-title{font-family:var(--font-display);font-size:var(--fs-8)}
+.season-exit-desc{color:var(--text2);font-size:var(--fs-5)}
+.season-exit-btn{padding:var(--sp-6) var(--sp-12);font-size:var(--fs-6)}
+
+/* 광고 보상 버튼 */
+#ad-reward-container{margin-bottom:var(--sp-6)}
+.btn-reward{width:100%;padding:var(--sp-6);display:flex;align-items:center;justify-content:center;gap:var(--sp-4)}
+
+/* ── 진행률 ───────────────────────────────────────── */
+.progress-bar-wrap{background:var(--bg3);border-radius:var(--r-sm);height:6px;margin-bottom:var(--sp-2);overflow:hidden}
+.progress-bar-fill{height:100%;background:var(--accent);border-radius:var(--r-sm);transition:width .3s}
+.progress-label{font-size:var(--fs-2);color:var(--text3);margin-bottom:var(--sp-8)}
+/* 섹션 제목 우측에 붙는 변형 */
+.progress-label-inline{font-size:var(--fs-4);font-weight:var(--fw-normal);margin-bottom:0}
+.progress-bar-spaced{margin-bottom:var(--sp-6)}
+
+/* ── 순위표 ───────────────────────────────────────── */
+.standings-table{
+  width:100%;border-collapse:collapse;
+  font-size:var(--fs-4);font-family:var(--font-mono);
+  background:var(--bg2);border-radius:var(--r-lg);overflow:hidden;
+  box-shadow:var(--shadow-card);
+}
+.standings-table th{padding:var(--sp-5) var(--sp-4);text-align:center;color:var(--text2);font-size:var(--fs-2);background:var(--bg3);border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:1px}
+.standings-table td{padding:var(--sp-5) var(--sp-4);text-align:center;border-bottom:1px solid rgba(255,255,255,.03);color:var(--text);transition:background var(--t-base)}
+.standings-table tr:hover td{background:rgba(255,255,255,.02)}
+.standings-table td:nth-child(2){text-align:left;font-family:var(--font-body);font-weight:500}
+.standings-table .my-team-row{background:rgba(245,166,35,.08)}
+.standings-table .my-team-row td{color:var(--accent);font-weight:var(--fw-bold)}
+.standings-table .rank-cell{font-family:var(--font-num);font-size:var(--fs-6);color:var(--text3)}
+.standings-table .my-team-row .rank-cell{color:var(--accent)}
+.standings-table .col-rank{width:40px}
+.streak-win{color:var(--accent3);font-weight:var(--fw-bold)}
+.streak-loss{color:var(--accent2);font-weight:var(--fw-bold)}
+
+/* ── 다음 경기 카드 ───────────────────────────────── */
+.next-game-card{background:var(--panel);border:1px solid var(--border2);border-radius:var(--r-lg);padding:var(--sp-7);margin-bottom:var(--sp-6)}
+.next-game-card.my-game{border-color:var(--accent);background:rgba(245,166,35,.06)}
+.ng-label{font-size:var(--fs-2);color:var(--text2);letter-spacing:1px;margin-bottom:var(--sp-3)}
+.ng-matchup{font-family:var(--font-num);font-size:var(--fs-9);letter-spacing:2px;margin-bottom:var(--sp-5)}
+.ng-matchup span{color:var(--text3);font-size:var(--fs-6);margin:0 var(--sp-4)}
+.ng-btn{margin-top:var(--sp-2)}
+.ng-sidenote{font-size:var(--fs-2);color:var(--text3);letter-spacing:1px;text-align:center;margin-bottom:var(--sp-2)}
+.ng-matchup-center{text-align:center;margin-bottom:0}
+.ng-matchup-empty{font-size:var(--fs-7);color:var(--text2);text-align:center}
+.ng-vs{font-size:var(--fs-6);font-weight:var(--fw-normal);color:var(--text3);margin:0 var(--sp-4)}
+
+/* ── 주간 일정 ────────────────────────────────────── */
+.weekly-cal{background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;margin-bottom:var(--sp-6);font-size:var(--fs-3)}
+.weekly-cal-header{background:var(--bg2);padding:var(--sp-4);text-align:center;color:var(--text);border-bottom:1px solid var(--border);font-weight:var(--fw-bold)}
+.wc-grid{display:grid;grid-template-columns:repeat(7,1fr);background:var(--bg3)}
+.wc-day-th{text-align:center;padding:var(--sp-2);font-size:var(--fs-1);color:var(--text2);border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
+.wc-day-th:last-child{border-right:none}
+.wc-cell{text-align:center;padding:var(--sp-4) var(--sp-2);border-right:1px solid var(--border);background:var(--panel);min-height:90px;display:flex;flex-direction:column;justify-content:flex-start;align-items:center;gap:var(--sp-2)}
+.wc-cell:last-child{border-right:none}
+.wc-date{font-size:var(--fs-1);color:var(--text3);margin-bottom:var(--sp-1);font-weight:var(--fw-bold)}
+.wc-match{color:var(--text);font-size:var(--fs-2);line-height:1.2}
+.wc-result{font-family:var(--font-mono);font-size:var(--fs-3);font-weight:var(--fw-bold);margin-top:var(--sp-1)}
+.wc-win{color:var(--accent3)}
+.wc-loss{color:var(--accent2)}
+.wc-draw{color:var(--text2)}
+.wc-rest{color:var(--text3);font-size:var(--fs-2);margin-top:var(--sp-4)}
+.wc-today{background:rgba(245,166,35,.07);box-shadow:inset 0 -2px 0 var(--accent)}
+/* 다가오는 턴 뷰: 열 개수는 런타임에 정해지므로 grid-template-columns만 인라인 */
+.wc-grid-turns{border-top:none}
+.wc-cell-turn{min-height:80px}
+.wc-cell-blank{background:var(--panel)}
+.wc-rest-sm{font-size:var(--fs-1)}
+.wc-games{display:flex;flex-direction:column;gap:var(--sp-1);width:100%}
+.wc-match-mini{font-size:8px;color:var(--text2);font-weight:var(--fw-normal)}
+.wc-match-mine{color:var(--accent);font-weight:var(--fw-bold)}
+.wc-score{font-family:var(--font-mono)}
+
+/* ── 하단 탭 내비게이션 ───────────────────────────── */
+#season-bottom-nav{height:62px;background:var(--bg2);border-top:1px solid var(--border);display:flex;flex-shrink:0}
+.snav-btn{
+  flex:1;display:flex;align-items:center;justify-content:center;
+  font-size:var(--fs-9);cursor:pointer;border:none;background:transparent;color:var(--text3);
+  transition:color var(--t-base),background var(--t-fast);
+  padding:0;-webkit-tap-highlight-color:transparent;
+  user-select:none;-webkit-touch-callout:none;
+}
+.snav-btn.snav-active{color:var(--accent)}
+.snav-btn.snav-exit-btn{color:var(--accent2)}
+.snav-btn.snav-disabled{cursor:default;pointer-events:none;opacity:.15}
+.snav-btn:not(.snav-disabled):active{background:var(--bg3)}
+.snav-btn img{width:36px;height:36px;object-fit:contain;filter:invert(1);opacity:.5;transition:all var(--t-base) ease}
+.snav-btn.snav-active img{opacity:1;filter:invert(1) brightness(1.5) drop-shadow(0 0 8px var(--accent));transform:scale(1.1)}
+.snav-btn:hover img{opacity:.8;transform:scale(1.05)}
+
+/* ── 플로팅 PLAY 버튼 ─────────────────────────────── */
+#season-play-btn{
+  position:absolute;bottom:62px;left:50%;transform:translateX(-50%);
+  width:80px;height:40px;border-radius:var(--r-pill) var(--r-pill) 0 0;
+  background:var(--accent);border:none;cursor:pointer;
+  display:none;align-items:center;justify-content:center;flex-direction:column;gap:0;
+  box-shadow:0 -4px 20px rgba(245,166,35,.45);
+  transition:background var(--t-base),transform .1s;
+  overflow:hidden;z-index:var(--z-float-btn);
+  user-select:none;-webkit-touch-callout:none;
+}
+#season-play-btn:active{transform:translateX(-50%) scale(.96)}
+#season-play-btn.visible{display:flex}
+.play-btn-ball{width:36px;height:36px;position:relative;margin:0 auto}
+.play-btn-ball svg{position:absolute;inset:0}
+.play-btn-svg{position:absolute;inset:0}
+.play-btn-text{font-family:var(--font-num);font-size:var(--fs-5);color:var(--on-accent);letter-spacing:3px;position:relative;z-index:1}
+.play-btn-label{font-family:var(--font-num);font-size:var(--fs-3);color:var(--on-accent);letter-spacing:2px;text-align:center;width:100%;line-height:1;margin-top:-2px}
+
+/* ── 타선 편집 드래그 ─────────────────────────────── */
+.lnp-drag-item{
+  display:flex;align-items:center;padding:var(--sp-5) var(--sp-6);
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-lg);
+  gap:var(--sp-5);user-select:none;touch-action:none;
+  transition:opacity var(--t-fast),border-color var(--t-fast);
+}
+.lnp-drag-item.lnp-dragging{opacity:.35;border-color:var(--accent)}
+.lnp-drag-item.lnp-over{border-color:var(--accent3);background:rgba(45,204,111,.07)}
+.drag-handle{color:var(--text3);font-size:var(--fs-7);cursor:grab;padding:var(--sp-2)}
+.drag-handle-row{display:flex;align-items:center;gap:var(--sp-3);padding:0 var(--sp-3)}
+#lineup-drag-list{display:flex;flex-direction:column;gap:var(--sp-4)}
+.lnp-edit-order{font-family:var(--font-num);font-size:var(--fs-7);color:var(--text3);min-width:16px;text-align:center}
+.lnp-edit-main{flex:1}
+.lnp-edit-name{font-weight:var(--fw-bold);color:var(--text);font-size:var(--fs-6)}
+.lnp-edit-pos{font-size:var(--fs-2);color:var(--text2)}
+.lnp-edit-sub{font-size:var(--fs-3);color:var(--text3);font-family:var(--font-mono)}
+.lnp-editor-empty{color:var(--text3);text-align:center;padding:40px}
+
+/* ═══════════════════════════════════════════════════
+   경기 전 설정 모달 (선발 투수 선택 · 타순 설정)
+   ═══════════════════════════════════════════════════ */
+.pick-row{
+  display:flex;align-items:center;padding:var(--sp-5);
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--r-md);cursor:pointer;
+}
+.pick-row.is-selected{border-color:var(--accent)}
+.pick-radio{margin-right:var(--sp-5)}
+.pick-main{flex:1}
+.pick-name{font-weight:var(--fw-bold);color:var(--text);font-size:var(--fs-6)}
+.pick-name-row{display:flex;align-items:center}
+.pick-sub{font-family:var(--font-mono);font-size:var(--fs-3);color:var(--text2)}
+.pick-status{font-size:var(--fs-3);font-weight:var(--fw-bold)}
+.pick-starter-tag{
+  color:var(--accent4);border-radius:var(--r-xs);background:rgba(85,0,0,.5);
+  font-size:var(--fs-1);padding:var(--sp-1) var(--sp-2);margin-left:var(--sp-2);
+}
+
+.lnp-row{
+  display:flex;align-items:center;padding:var(--sp-4) var(--sp-6);
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-md);
+}
+.lnp-order{width:24px;font-family:var(--font-num);font-size:var(--fs-7);color:var(--text2);text-align:center}
+.lnp-main{flex:1;margin-left:var(--sp-4)}
+.lnp-name{font-weight:var(--fw-bold);color:var(--text);font-size:var(--fs-5)}
+.lnp-pos{font-size:var(--fs-2);color:var(--text2);margin-left:var(--sp-2)}
+.lnp-sub{font-family:var(--font-mono);font-size:var(--fs-2);color:var(--text3)}
+.lnp-move{display:flex;flex-direction:column;gap:var(--sp-2)}
+.lnp-move-btn{padding:var(--sp-2);font-size:var(--fs-2);background:var(--bg3);border:none}
+
+/* ═══════════════════════════════════════════════════
+   투수 관리 패널 (선발 로테이션 · 불펜)
+   ═══════════════════════════════════════════════════ */
+.fatig-card{background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden}
+.fatig-card + .fatig-card{margin-top:var(--sp-7)}
+.fatig-head{padding:9px var(--sp-7);background:var(--bg2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.fatig-head-title{font-size:var(--fs-2);letter-spacing:2px;text-transform:uppercase;color:var(--text2)}
+.fatig-head-hint{font-size:var(--fs-1);color:var(--text3)}
+
+.fatig-row{display:flex;align-items:center;gap:var(--sp-4);padding:9px var(--sp-6);border-bottom:1px solid var(--border)}
+/* 선발 로테이션 행: 드래그 가능 + 다음 선발 강조 */
+.rot-item{border-left:3px solid transparent;background:transparent;touch-action:none}
+.rot-item.is-next{background:rgba(245,166,35,.07);border-left-color:var(--accent)}
+.rot-handle{cursor:grab;color:var(--text3);flex-shrink:0;padding:var(--sp-1) var(--sp-2);display:flex;align-items:center}
+.fatig-rank{font-family:var(--font-num);font-size:var(--fs-7);color:var(--text3);min-width:18px;text-align:center;flex-shrink:0}
+
+.fatig-main{flex:1;min-width:0}
+.fatig-name-row{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap}
+.fatig-name{font-weight:var(--fw-bold);font-size:var(--fs-5);color:var(--text)}
+.rot-item.is-next .fatig-name{color:var(--accent)}
+.fatig-era{font-family:var(--font-mono);font-size:var(--fs-2);color:var(--text3)}
+
+.fatig-badge-next{
+  font-size:var(--fs-1);background:rgba(245,166,35,.2);color:var(--accent);
+  border:1px solid rgba(245,166,35,.5);border-radius:var(--r-lg);
+  padding:1px var(--sp-3);white-space:nowrap;
+}
+.fatig-role{font-size:var(--fs-1);border:1px solid currentColor;border-radius:var(--r-lg);padding:1px var(--sp-2)}
+.fatig-role.role-closer{color:var(--accent2)}
+.fatig-role.role-setup{color:var(--role-setup)}
+.fatig-role.role-mid{color:var(--text3)}
+
+.fatig-right{display:flex;align-items:center;gap:var(--sp-3);flex-shrink:0}
+.fatig-gauge-col{width:56px}
+.fatig-gauge{background:rgba(255,255,255,.08);border-radius:var(--r-xs);height:7px;overflow:hidden}
+.fatig-gauge-fill{height:100%;border-radius:var(--r-xs)}
+.fatig-status{font-size:var(--fs-1);text-align:center;margin-top:var(--sp-1)}
+.fatig-move-btn{
+  border:1px solid var(--border2);background:transparent;color:var(--text3);
+  border-radius:var(--r-sm);padding:3px 7px;font-size:var(--fs-2);
+  cursor:pointer;white-space:nowrap;font-family:var(--font-body);
+}
+.fatig-empty{padding:var(--sp-7);color:var(--text3);text-align:center;font-size:var(--fs-4)}
+
+/* ── 포스트시즌 ───────────────────────────────────── */
+#postseason-screen{
+  position:fixed;inset:0;background:var(--bg);
+  z-index:var(--z-postseason);
+  display:none;flex-direction:column;align-items:center;justify-content:flex-start;
+  padding:var(--sp-12);overflow-y:auto;
+}
+.ps-title{font-family:var(--font-display);font-size:var(--fs-9);color:var(--accent);letter-spacing:3px;margin-bottom:var(--sp-10)}
+.ps-bracket{display:flex;flex-direction:column;gap:var(--sp-7);width:100%;max-width:500px}
+.ps-series{background:var(--panel);border:1px solid var(--border2);border-radius:var(--r-lg);padding:var(--sp-7) var(--sp-8)}
+.ps-series.ps-done{opacity:.5}
+.ps-label{font-size:var(--fs-2);color:var(--accent);letter-spacing:2px;margin-bottom:var(--sp-2)}
+.ps-matchup{font-family:var(--font-num);font-size:var(--fs-8);letter-spacing:2px;margin-bottom:var(--sp-3)}
+.ps-matchup span{color:var(--accent)}
+.ps-status{font-size:var(--fs-2);color:var(--text3);margin-bottom:var(--sp-4)}
+/* 우승 확정 시리즈는 흐리게 하지 않고 강조 */
+.ps-series.ps-champ{opacity:1;border-color:var(--accent);background:rgba(245,166,35,.09);box-shadow:0 0 24px rgba(245,166,35,.18)}
+.ps-champ-tag{font-family:var(--font-display);font-size:var(--fs-5);color:var(--accent);letter-spacing:2px;margin-top:var(--sp-3)}
+
+/* 포스트시즌 화면 폭 제한 요소 */
+.ps-width{width:100%;max-width:500px}
+#ps-exit-btn{margin-top:var(--sp-9);max-width:500px;width:100%;padding:var(--sp-6)}
+
+/* ── 턴 결과 모달 ─────────────────────────────────── */
+#turn-modal{position:fixed;inset:0;background:var(--overlay);z-index:var(--z-modal);display:none;align-items:center;justify-content:center}
+.turn-modal-inner{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r-xl);padding:var(--sp-10);min-width:340px;max-width:460px;width:90%}
+.turn-modal-title{font-family:var(--font-display);font-size:var(--fs-7);color:var(--accent);letter-spacing:2px;margin-bottom:var(--sp-8);text-align:center}
+.turn-my-label{font-size:var(--fs-2);color:var(--accent);letter-spacing:2px;text-transform:uppercase;margin-bottom:var(--sp-3)}
+.turn-my-score{font-family:var(--font-num);font-size:var(--fs-9);letter-spacing:2px;margin-bottom:var(--sp-8);display:flex;gap:var(--sp-5);align-items:center}
+.turn-my-score b{color:var(--text2);font-size:var(--fs-8)}
+.turn-divider{border:none;border-top:1px solid var(--border);margin:var(--sp-6) 0}
+.turn-other-title{font-size:var(--fs-2);color:var(--text2);letter-spacing:2px;text-transform:uppercase;margin-bottom:var(--sp-4)}
+.turn-row{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-2) 0;border-bottom:1px solid var(--border);font-size:var(--fs-4)}
+.tr-team{flex:1;color:var(--text2)}
+.tr-team.tr-win{color:var(--text);font-weight:var(--fw-bold)}
+.tr-score{font-family:var(--font-mono);font-size:var(--fs-6);color:var(--text);min-width:18px;text-align:center}
+.tr-vs{color:var(--text3);font-size:var(--fs-3)}
+.tr-win{color:var(--accent3)}
+.turn-preview{margin:var(--sp-3) 0 var(--sp-5);border-left:2px solid var(--border2);padding-left:var(--sp-4)}
+.turn-preview-row{font-size:var(--fs-2);color:var(--text3);padding:1px 0}
+.turn-modal-actions{margin-top:var(--sp-8)}
+/* 자동 진행된 턴 결과 요약 */
+.turn-skip-title{font-size:var(--fs-7);margin-bottom:var(--sp-6);font-family:var(--font-display)}
+.turn-skip-table{font-size:var(--fs-5);width:100%;margin-bottom:var(--sp-9)}
+
+/* ═══════════════════════════════════════════════════
+   개발자 모드 패널
+   ═══════════════════════════════════════════════════ */
+.dev-panel{border:1px dashed rgba(124,58,237,.55);background:rgba(124,58,237,.07);border-radius:var(--r-lg);padding:var(--sp-5);margin-bottom:var(--sp-7)}
+.dev-panel.dev-panel-ps{margin-top:var(--sp-7);margin-bottom:0}
+.dev-panel-title{font-size:var(--fs-1);letter-spacing:2px;color:var(--dev-text);margin-bottom:var(--sp-4);text-transform:uppercase}
+.dev-panel-btns{display:flex;gap:var(--sp-4);flex-wrap:wrap}
+.dev-panel-btns + .dev-panel-btns{margin-top:var(--sp-4)}
+.dev-btn{
+  flex:1 1 140px;background:var(--dev);color:var(--white);border:none;
+  border-radius:var(--r-md);padding:9px var(--sp-5);
+  font-size:var(--fs-4);font-family:var(--font-body);font-weight:var(--fw-bold);
+  cursor:pointer;transition:filter var(--t-fast),transform .1s;
+}
+.dev-btn:hover{filter:brightness(1.12)}
+.dev-btn:active{transform:scale(.97)}
+.dev-btn.alt{background:var(--dev-alt)}
+.dev-btn:disabled{opacity:.4;cursor:default}
+.dev-note{font-size:var(--fs-2);color:var(--text3);margin-top:7px;line-height:1.5}
+
+/* 개발자 모드 전용: 즉시 시뮬레이션 버튼 */
+#season-instant-sim-btn{
+  position:absolute;bottom:62px;left:calc(50% - 96px);transform:translateX(-50%);
+  width:64px;height:34px;border-radius:var(--r-pill) var(--r-pill) 0 0;
+  background:var(--dev);border:none;cursor:pointer;
+  display:none;align-items:center;justify-content:center;
+  box-shadow:0 -4px 16px rgba(124,58,237,.45);
+  transition:background var(--t-base),transform .1s;
+  z-index:var(--z-float-btn);user-select:none;-webkit-touch-callout:none;
+}
+#season-instant-sim-btn:active{transform:translateX(-50%) scale(.96)}
+#season-instant-sim-btn.visible{display:flex}
+#season-instant-sim-btn span{font-family:var(--font-num);font-size:var(--fs-3);color:var(--white);letter-spacing:1px}
+
+/* ═══════════════════════════════════════════════════
+   우승 팝업
+   ═══════════════════════════════════════════════════ */
+#champion-modal{
+  position:fixed;inset:0;background:var(--overlay);
+  z-index:var(--z-champion);
+  display:none;align-items:center;justify-content:center;overflow:hidden;
+}
+#champion-modal.show{display:flex}
+#champion-fx{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+
+.champ-inner{
+  position:relative;z-index:2;text-align:center;
+  padding:var(--sp-11) var(--sp-10);
+  max-width:440px;width:90%;
+  background:var(--bg2);border:1px solid var(--border2);
+  border-radius:var(--r-2xl);box-shadow:var(--shadow-modal);
+  animation:champRise .55s cubic-bezier(.22,1,.36,1) both;
+}
+.champ-inner.champ-mine{
+  border-color:var(--accent);
+  box-shadow:0 0 0 1px rgba(245,166,35,.35),0 0 70px rgba(245,166,35,.32),var(--shadow-modal);
+}
+@keyframes champRise{from{transform:translateY(26px) scale(.94);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
+
+.champ-year{font-family:var(--font-mono);font-size:var(--fs-3);letter-spacing:4px;color:var(--text2);margin-bottom:var(--sp-1)}
+.champ-label{font-family:var(--font-display);font-size:var(--fs-6);letter-spacing:3px;color:var(--accent);margin-bottom:var(--sp-7)}
+.champ-trophy{font-size:var(--fs-13);line-height:1;margin-bottom:var(--sp-5);animation:champTrophy .8s cubic-bezier(.34,1.56,.64,1) .15s both}
+@keyframes champTrophy{0%{transform:scale(0) rotate(-25deg);opacity:0}70%{transform:scale(1.22) rotate(6deg)}100%{transform:scale(1) rotate(0);opacity:1}}
+.champ-inner.champ-mine .champ-trophy{
+  filter:drop-shadow(0 0 22px rgba(245,166,35,.85));
+  animation:champTrophy .8s cubic-bezier(.34,1.56,.64,1) .15s both,champGlow 2.1s ease-in-out 1s infinite;
+}
+@keyframes champGlow{0%,100%{filter:drop-shadow(0 0 18px rgba(245,166,35,.6))}50%{filter:drop-shadow(0 0 34px rgba(245,166,35,1))}}
+
+.champ-team{font-family:var(--font-display);font-size:var(--fs-11);letter-spacing:2px;color:var(--text);margin-bottom:var(--sp-2);animation:champRise .5s cubic-bezier(.22,1,.36,1) .3s both}
+.champ-inner.champ-mine .champ-team{color:var(--accent);text-shadow:0 0 30px rgba(245,166,35,.55)}
+.champ-sub{font-size:var(--fs-5);color:var(--text2);margin-bottom:var(--sp-8);animation:champRise .5s ease-out .42s both}
+
+.champ-stats{display:flex;justify-content:center;gap:0;margin-bottom:var(--sp-7);animation:champRise .5s ease-out .52s both}
+.champ-stat{flex:1;padding:0 var(--sp-3);border-right:1px solid var(--border)}
+.champ-stat:last-child{border-right:none}
+.champ-stat-v{font-family:var(--font-num);font-size:var(--fs-8);color:var(--accent);letter-spacing:1px}
+.champ-stat-l{font-size:var(--fs-1);color:var(--text3);letter-spacing:1px;margin-top:1px}
+
+.champ-mvp{background:var(--bg3);border-radius:var(--r-lg);padding:var(--sp-5) var(--sp-6);margin-bottom:var(--sp-7);animation:champRise .5s ease-out .6s both}
+.champ-mvp-l{font-size:var(--fs-1);letter-spacing:2px;color:var(--text3);margin-bottom:var(--sp-2)}
+.champ-mvp-n{font-family:var(--font-body);font-size:var(--fs-6);font-weight:var(--fw-bold);color:var(--text)}
+.champ-mvp-s{font-family:var(--font-mono);font-size:var(--fs-3);color:var(--text2);margin-top:var(--sp-1)}
+
+.champ-btns{display:flex;gap:var(--sp-4);animation:champRise .5s ease-out .7s both}
+.champ-btns .btn{flex:1;padding:var(--sp-6);font-size:var(--fs-6)}
+
+/* 내 팀 우승 전용 이펙트 */
+.champ-ray{
+  position:absolute;top:50%;left:50%;width:2px;height:150vmax;transform-origin:top center;
+  background:linear-gradient(to bottom,rgba(245,166,35,.42),transparent 62%);
+  animation:champSpin 14s linear infinite;
+}
+@keyframes champSpin{from{transform:translate(-50%,0) rotate(0)}to{transform:translate(-50%,0) rotate(360deg)}}
+.champ-burst{
+  position:absolute;top:50%;left:50%;width:22vmax;height:22vmax;margin:-11vmax 0 0 -11vmax;border-radius:50%;
+  background:radial-gradient(circle,rgba(245,166,35,.5),transparent 68%);
+  animation:champBurst 1.5s ease-out forwards;
+}
+@keyframes champBurst{from{transform:scale(.2);opacity:.95}to{transform:scale(5);opacity:0}}
+.confetti{position:absolute;top:-24px;width:9px;height:15px;opacity:0;animation:confettiFall linear forwards}
+/* 색종이 색상 — JS가 confetti-c1 ~ c6 를 순환 적용한다 */
+.confetti-c1{background:var(--accent)}
+.confetti-c2{background:var(--gold)}
+.confetti-c3{background:var(--accent3)}
+.confetti-c4{background:var(--accent4)}
+.confetti-c5{background:var(--accent2)}
+.confetti-c6{background:var(--white)}
+@keyframes confettiFall{0%{opacity:1;transform:translateY(0) rotate(0)}100%{opacity:.15;transform:translateY(112vh) rotate(760deg)}}
+
+@media (prefers-reduced-motion:reduce){
+  .champ-inner,.champ-trophy,.champ-team,.champ-sub,.champ-stats,.champ-mvp,.champ-btns{animation:none}
+  .champ-ray,.champ-burst,.confetti{display:none}
+}

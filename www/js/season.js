@@ -884,8 +884,8 @@ function renderStandingsTable() {
   let h = `<table class="standings-table">
     <thead>
       <tr>
-        <th style="width:40px">순위</th>
-        <th style="text-align:left">팀명</th>
+        <th class="col-rank">순위</th>
+        <th class="u-left">팀명</th>
         <th>경기</th>
         <th>승</th>
         <th>패</th>
@@ -915,7 +915,7 @@ function renderStandingsTable() {
 
     h += `<tr class="${isMine ? 'my-team-row' : ''}">
       <td class="rank-cell">${displayedRank}</td>
-      <td style="text-align:left">
+      <td class="u-left">
         <b>${SS.nameKor[t.team] || t.team}</b>
       </td>
       <td>${t.games || (t.w+t.l+t.d)}</td>
@@ -935,7 +935,7 @@ let tempGameSetup = { myPitcher: null, myLineup: [], wizardMode: false, currentM
 
 function renderTodayGame() {
   const curGame = SS.schedule[SS.gameIdx];
-  if (!curGame) return '<div style="color:var(--accent)">시즌 종료</div>';
+  if (!curGame) return '<div class="u-accent">시즌 종료</div>';
 
   const turn = curGame.turn;
   let myGameIdx = -1;
@@ -960,13 +960,13 @@ function renderTodayGame() {
 
     return `
       <div class="next-game-card my-game">
-        <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-align:center;margin-bottom:4px;">원정 &nbsp;····&nbsp; 홈</div>
-        <div class="ng-matchup" style="text-align:center;margin-bottom:0;">${leftKor} <span style="font-size:14px;font-weight:400;color:var(--text3);margin:0 8px">vs</span> ${rightKor}</div>
+        <div class="ng-sidenote">원정 &nbsp;····&nbsp; 홈</div>
+        <div class="ng-matchup ng-matchup-center">${leftKor} <span class="ng-vs">vs</span> ${rightKor}</div>
       </div>`;
   } else {
     return `
       <div class="next-game-card">
-        <div class="ng-matchup" style="font-size:20px;color:var(--text2);text-align:center">내 팀 경기 없음</div>
+        <div class="ng-matchup ng-matchup-empty">내 팀 경기 없음</div>
       </div>`;
   }
 }
@@ -988,16 +988,16 @@ function openPitcherModal(isWizard = false) {
      const isSelected = tempGameSetup.myPitcher ? (tempGameSetup.myPitcher.name === p.name) : (idx === 0);
      if (isSelected && !tempGameSetup.myPitcher) tempGameSetup.myPitcher = p;
      
-     const isStarterLabel = p.isStarter ? '<span style="color:var(--accent4);border-radius:2px;background:rgba(85,0,0,0.5);font-size:9px;padding:2px 4px;margin-left:4px">선발</span>' : '';
+     const isStarterLabel = p.isStarter ? '<span class="pick-starter-tag">선발</span>' : '';
 
      html += `
-       <label style="display:flex;align-items:center;padding:10px;background:var(--bg2);border:1px solid ${isSelected ? 'var(--accent)' : 'var(--border)'};border-radius:6px;cursor:pointer;">
-         <input type="radio" name="temp-pitcher" value="${p.name}" ${isSelected ? 'checked' : ''} onchange="selectTempPitcher('${p.name}')" style="margin-right:10px;">
-         <div style="flex:1;">
-           <div style="font-weight:700;color:var(--text);font-size:14px;display:flex;align-items:center">${formatPlayerName(p.name)} ${isStarterLabel}</div>
-           <div style="font-family:'JetBrains Mono';font-size:11px;color:var(--text2)">ERA: ${p.ERA.toFixed(2)} | IP: ${p.IP.toFixed(1)}</div>
+       <label class="pick-row${isSelected ? ' is-selected' : ''}">
+         <input type="radio" name="temp-pitcher" value="${p.name}" ${isSelected ? 'checked' : ''} onchange="selectTempPitcher('${p.name}')" class="pick-radio">
+         <div class="pick-main">
+           <div class="pick-name pick-name-row">${formatPlayerName(p.name)} ${isStarterLabel}</div>
+           <div class="pick-sub">ERA: ${p.ERA.toFixed(2)} | IP: ${p.IP.toFixed(1)}</div>
          </div>
-         <div style="font-size:11px;color:${statusColor};font-weight:700">${mult >= 99 ? '등판불가' : mult > 1 ? '피로누적' : '정상'}</div>
+         <div class="pick-status" style="color:${statusColor}">${mult >= 99 ? '등판불가' : mult > 1 ? '피로누적' : '정상'}</div>
        </label>`;
   });
   
@@ -1038,15 +1038,15 @@ function renderLineupList() {
   let html = '';
   tempGameSetup.myLineup.forEach((p, idx) => {
      html += `
-       <div style="display:flex;align-items:center;padding:8px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;">
-         <div style="width:24px;font-family:'Bebas Neue';font-size:18px;color:var(--text2);text-align:center">${idx+1}</div>
-         <div style="flex:1;margin-left:8px;">
-           <div style="font-weight:700;color:var(--text);font-size:13px;">${formatPlayerName(p.name)} <span style="font-size:10px;color:var(--text2);margin-left:4px;">${p.pos}</span></div>
-           <div style="font-family:'JetBrains Mono';font-size:10px;color:var(--text3)">AVG: ${p.AVG.toFixed(3)} | HR: ${p.HR}</div>
+       <div class="lnp-row">
+         <div class="lnp-order">${idx+1}</div>
+         <div class="lnp-main">
+           <div class="lnp-name">${formatPlayerName(p.name)} <span class="lnp-pos">${p.pos}</span></div>
+           <div class="lnp-sub">AVG: ${p.AVG.toFixed(3)} | HR: ${p.HR}</div>
          </div>
-         <div style="display:flex;flex-direction:column;gap:4px;">
-            <button class="btn" style="padding:4px;font-size:10px;background:var(--bg3);border:none" onclick="moveUpLineup(${idx})" ${idx === 0 ? 'disabled' : ''}>▲</button>
-            <button class="btn" style="padding:4px;font-size:10px;background:var(--bg3);border:none" onclick="moveDownLineup(${idx})" ${idx === tempGameSetup.myLineup.length-1 ? 'disabled' : ''}>▼</button>
+         <div class="lnp-move">
+            <button class="btn lnp-move-btn" onclick="moveUpLineup(${idx})" ${idx === 0 ? 'disabled' : ''}>▲</button>
+            <button class="btn lnp-move-btn" onclick="moveDownLineup(${idx})" ${idx === tempGameSetup.myLineup.length-1 ? 'disabled' : ''}>▼</button>
          </div>
        </div>`;
   });
@@ -1187,16 +1187,16 @@ function showTurnResultsModalForAutoSkipped(turn) {
   let trs = turnGames.map(g => {
     const aName = SS.nameKor[g.away] || g.away;
     const hName = SS.nameKor[g.home] || g.home;
-    const aStyled = (aName === myTeamKor) ? `<span style="color:var(--accent)">${aName}</span>` : aName;
-    const hStyled = (hName === myTeamKor) ? `<span style="color:var(--accent)">${hName}</span>` : hName;
-    return `<tr><td style="text-align:right">${aStyled}</td><td style="font-weight:700;text-align:center">${g.result.awayScore} : ${g.result.homeScore}</td><td style="text-align:left">${hStyled}</td></tr>`;
+    const aStyled = (aName === myTeamKor) ? `<span class="u-accent">${aName}</span>` : aName;
+    const hStyled = (hName === myTeamKor) ? `<span class="u-accent">${hName}</span>` : hName;
+    return `<tr><td class="u-right">${aStyled}</td><td class="u-bold u-center">${g.result.awayScore} : ${g.result.homeScore}</td><td class="u-left">${hStyled}</td></tr>`;
   }).join('');
-  let html = `<div style="text-align:center;">
-    <div style="font-size:18px;margin-bottom:12px;font-family:'Black Han Sans'">종료된 경기 결과</div>
-    <table class="standings-table" style="font-size:13px;width:100%;margin-bottom:20px;">
+  let html = `<div class="u-center">
+    <div class="turn-skip-title">종료된 경기 결과</div>
+    <table class="standings-table turn-skip-table">
       ${trs}
     </table>
-    <button class="btn primary" style="width:100%; padding:14px; font-size:16px;" onclick="closeTurnModal()">확인</button>
+    <button class="btn primary btn-block" onclick="closeTurnModal()">확인</button>
   </div>`;
   const m = document.getElementById('turn-modal');
   m.querySelector('.turn-modal-inner').innerHTML = html;
@@ -1224,13 +1224,13 @@ function renderUpcomingTurns() {
   const half = Math.floor(COLS / 2); // 2
   const colWidthPct = Math.floor(100 / COLS);
 
-  let html = `<div class="weekly-cal" style="margin-bottom:12px;"><div class="wc-grid" style="grid-template-columns:repeat(${COLS},1fr);border-top:none;">`;
+  let html = `<div class="weekly-cal"><div class="wc-grid wc-grid-turns" style="grid-template-columns:repeat(${COLS},1fr)">`;
 
   for (let i = -half; i <= half; i++) {
     const turnVal = actualCurTurn + i;
 
     if (turnVal < 1 || turnVal > 144) {
-      html += `<div class="wc-cell" style="min-height:80px;background:var(--panel);"></div>`;
+      html += `<div class="wc-cell wc-cell-turn wc-cell-blank"></div>`;
       continue;
     }
 
@@ -1238,14 +1238,14 @@ function renderUpcomingTurns() {
     const isToday = turnVal === actualCurTurn;
     const cellClass = 'wc-cell' + (isToday ? ' wc-today' : '');
 
-    html += `<div class="${cellClass}" style="min-height:80px;"><div class="wc-date">T${turnVal}</div>`;
+    html += `<div class="${cellClass} wc-cell-turn"><div class="wc-date">T${turnVal}</div>`;
 
     if (!games.length) {
-      html += `<div class="wc-rest" style="font-size:9px">휴식</div></div>`;
+      html += `<div class="wc-rest wc-rest-sm">휴식</div></div>`;
       continue;
     }
 
-    let gHtml = `<div style="display:flex;flex-direction:column;gap:2px;width:100%">`;
+    let gHtml = `<div class="wc-games">`;
     games.sort((a,b) => {
       const aMine = (a.home===myTeam||a.away===myTeam)?1:0;
       const bMine = (b.home===myTeam||b.away===myTeam)?1:0;
@@ -1254,8 +1254,7 @@ function renderUpcomingTurns() {
       const isMyMatch = (game.home===myTeam||game.away===myTeam);
       const hKor = SS.nameKor[game.home]||game.home;
       const aKor = SS.nameKor[game.away]||game.away;
-      const txtColor = isMyMatch ? 'var(--accent)' : 'var(--text2)';
-      const bold = isMyMatch ? '700' : '400';
+      const matchCls = 'wc-match wc-match-mini' + (isMyMatch ? ' wc-match-mine' : '');
 
       if (game.result) {
         const hs = game.result.homeScore;
@@ -1263,9 +1262,9 @@ function renderUpcomingTurns() {
         const resultClass = isMyMatch
           ? ((game.home===myTeam&&hs>as)||(game.away===myTeam&&as>hs) ? 'wc-win'
           : (hs===as ? 'wc-draw' : 'wc-loss')) : '';
-        gHtml += `<div class="wc-match" style="font-size:8px;color:${txtColor};font-weight:${bold}">${aKor} <span class="${resultClass}" style="font-family:'JetBrains Mono'">${as} vs ${hs}</span> ${hKor}</div>`;
+        gHtml += `<div class="${matchCls}">${aKor} <span class="wc-score ${resultClass}">${as} vs ${hs}</span> ${hKor}</div>`;
       } else {
-        gHtml += `<div class="wc-match" style="font-size:8px;color:${txtColor};font-weight:${bold}">${aKor} vs ${hKor}</div>`;
+        gHtml += `<div class="${matchCls}">${aKor} vs ${hKor}</div>`;
       }
     });
     gHtml += `</div>`;
@@ -1316,24 +1315,24 @@ async function showTurnResults(myGameIdx) {
     const hName = SS.nameKor[g.home] || g.home;
     const aName = SS.nameKor[g.away] || g.away;
     const myTeamKor = SS.myTeamKor;
-    const aStyled = (aName === myTeamKor) ? `<span style="color:var(--accent)">${aName}</span>` : aName;
-    const hStyled = (hName === myTeamKor) ? `<span style="color:var(--accent)">${hName}</span>` : hName;
+    const aStyled = (aName === myTeamKor) ? `<span class="u-accent">${aName}</span>` : aName;
+    const hStyled = (hName === myTeamKor) ? `<span class="u-accent">${hName}</span>` : hName;
 
     otherRows += `
       <tr>
-        <td style="text-align:right">${aStyled}</td>
-        <td style="font-weight:700;text-align:center">${g.result.awayScore} : ${g.result.homeScore}</td>
-        <td style="text-align:left">${hStyled}</td>
+        <td class="u-right">${aStyled}</td>
+        <td class="u-bold u-center">${g.result.awayScore} : ${g.result.homeScore}</td>
+        <td class="u-left">${hStyled}</td>
       </tr>`;
   });
 
   const modal = document.getElementById('turn-modal');
-  let html = `<div style="text-align:center;">
-    <div style="font-size:18px;margin-bottom:12px;font-family:'Black Han Sans'">종료된 경기 결과</div>
-    <table class="standings-table" style="font-size:13px;width:100%;margin-bottom:20px;">
+  let html = `<div class="u-center">
+    <div class="turn-skip-title">종료된 경기 결과</div>
+    <table class="standings-table turn-skip-table">
       ${otherRows}
     </table>
-    <button class="btn primary" style="width:100%; padding:14px; font-size:16px;" onclick="closeTurnModal()">확인</button>
+    <button class="btn primary btn-block" onclick="closeTurnModal()">확인</button>
   </div>`;
   modal.querySelector('.turn-modal-inner').innerHTML = html;
 
@@ -1458,86 +1457,78 @@ function renderFatiguePanel() {
   let starterRows = '';
   starters.forEach((p, idx) => {
     const { staminaPct, status, statusColor, stColor } = getPitcherFatigueInfo(p, teamCode, true);
-    const isNext    = p.name === nextStarterName;
-    const rowBg    = isNext ? 'rgba(245,166,35,.07)' : 'transparent';
-    const leftBdr  = isNext ? '3px solid var(--accent)' : '3px solid transparent';
-    const nameClr  = isNext ? 'var(--accent)' : 'var(--text)';
-    const nextBadge = isNext
-      ? `<span style="font-size:9px;background:rgba(245,166,35,.2);color:var(--accent);border:1px solid rgba(245,166,35,.5);border-radius:8px;padding:1px 6px;white-space:nowrap;">다음 선발</span>`
-      : '';
+    const isNext = p.name === nextStarterName;
+    const nextBadge = isNext ? `<span class="fatig-badge-next">다음 선발</span>` : '';
 
     starterRows += `
-      <div class="rot-item" data-idx="${idx}"
-           style="display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--border);background:${rowBg};border-left:${leftBdr};touch-action:none;">
-        <div class="rot-handle" style="cursor:grab;color:var(--text3);flex-shrink:0;padding:2px 4px;display:flex;align-items:center;">
+      <div class="fatig-row rot-item${isNext ? ' is-next' : ''}" data-idx="${idx}">
+        <div class="rot-handle">
           <svg width="14" height="12" viewBox="0 0 16 14" fill="currentColor"><rect y="0" width="16" height="2" rx="1"/><rect y="6" width="16" height="2" rx="1"/><rect y="12" width="16" height="2" rx="1"/></svg>
         </div>
-        <div style="font-family:'Bebas Neue';font-size:18px;color:var(--text3);min-width:18px;text-align:center;flex-shrink:0">${idx + 1}</div>
-        <div style="flex:1;min-width:0;">
-          <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-            <span style="font-weight:700;font-size:13px;color:${nameClr}">${formatPlayerName(p.name)}</span>
+        <div class="fatig-rank">${idx + 1}</div>
+        <div class="fatig-main">
+          <div class="fatig-name-row">
+            <span class="fatig-name">${formatPlayerName(p.name)}</span>
             ${nextBadge}
           </div>
-          <div style="font-family:'JetBrains Mono';font-size:10px;color:var(--text3)">ERA ${p.ERA ? p.ERA.toFixed(2) : '-'} · IP ${p.IP ? p.IP.toFixed(1) : 0}</div>
+          <div class="fatig-era">ERA ${p.ERA ? p.ERA.toFixed(2) : '-'} · IP ${p.IP ? p.IP.toFixed(1) : 0}</div>
         </div>
-        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
-          <div style="width:56px;">
-            <div style="background:rgba(255,255,255,.08);border-radius:2px;height:7px;overflow:hidden;">
-              <div style="background:${stColor};width:${staminaPct}%;height:100%;border-radius:2px;"></div>
+        <div class="fatig-right">
+          <div class="fatig-gauge-col">
+            <div class="fatig-gauge">
+              <div class="fatig-gauge-fill" style="background:${stColor};width:${staminaPct}%"></div>
             </div>
-            <div style="font-size:9px;color:${statusColor};text-align:center;margin-top:2px;">${status}</div>
+            <div class="fatig-status" style="color:${statusColor}">${status}</div>
           </div>
-          <button onclick="fatigMoveToReliever('${p.name}')" title="불펜으로 이동"
-            style="border:1px solid var(--border2);background:transparent;color:var(--text3);border-radius:4px;padding:3px 7px;font-size:10px;cursor:pointer;white-space:nowrap;font-family:'Noto Sans KR';">불펜↓</button>
+          <button class="fatig-move-btn" onclick="fatigMoveToReliever('${p.name}')" title="불펜으로 이동">불펜↓</button>
         </div>
       </div>`;
   });
 
-  if (!starterRows) starterRows = `<div style="padding:14px;color:var(--text3);text-align:center;font-size:12px">선발 투수 없음</div>`;
+  if (!starterRows) starterRows = `<div class="fatig-empty">선발 투수 없음</div>`;
 
   // ── 불펜 행 렌더링
   let relieverRows = '';
   relievers.forEach(p => {
     const { staminaPct, status, statusColor, stColor } = getPitcherFatigueInfo(p, teamCode, false);
     const roleLabel = p.ERA < 3.0 ? '마무리' : p.ERA < 4.0 ? '셋업' : '계투';
-    const roleClr   = p.ERA < 3.0 ? 'var(--accent2)' : p.ERA < 4.0 ? '#f59e0b' : 'var(--text3)';
+    const roleCls   = p.ERA < 3.0 ? 'role-closer' : p.ERA < 4.0 ? 'role-setup' : 'role-mid';
 
     relieverRows += `
-      <div style="display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--border);">
-        <div style="flex:1;min-width:0;">
-          <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-            <span style="font-weight:700;font-size:13px;color:var(--text)">${formatPlayerName(p.name)}</span>
-            <span style="font-size:9px;color:${roleClr};border:1px solid ${roleClr};border-radius:8px;padding:1px 5px;">${roleLabel}</span>
+      <div class="fatig-row">
+        <div class="fatig-main">
+          <div class="fatig-name-row">
+            <span class="fatig-name">${formatPlayerName(p.name)}</span>
+            <span class="fatig-role ${roleCls}">${roleLabel}</span>
           </div>
-          <div style="font-family:'JetBrains Mono';font-size:10px;color:var(--text3)">ERA ${p.ERA ? p.ERA.toFixed(2) : '-'} · IP ${p.IP ? p.IP.toFixed(1) : 0}</div>
+          <div class="fatig-era">ERA ${p.ERA ? p.ERA.toFixed(2) : '-'} · IP ${p.IP ? p.IP.toFixed(1) : 0}</div>
         </div>
-        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
-          <div style="width:56px;">
-            <div style="background:rgba(255,255,255,.08);border-radius:2px;height:7px;overflow:hidden;">
-              <div style="background:${stColor};width:${staminaPct}%;height:100%;border-radius:2px;"></div>
+        <div class="fatig-right">
+          <div class="fatig-gauge-col">
+            <div class="fatig-gauge">
+              <div class="fatig-gauge-fill" style="background:${stColor};width:${staminaPct}%"></div>
             </div>
-            <div style="font-size:9px;color:${statusColor};text-align:center;margin-top:2px;">${status}</div>
+            <div class="fatig-status" style="color:${statusColor}">${status}</div>
           </div>
-          <button onclick="fatigMoveToStarter('${p.name}')" title="선발로 이동"
-            style="border:1px solid var(--border2);background:transparent;color:var(--text3);border-radius:4px;padding:3px 7px;font-size:10px;cursor:pointer;white-space:nowrap;font-family:'Noto Sans KR';">선발↑</button>
+          <button class="fatig-move-btn" onclick="fatigMoveToStarter('${p.name}')" title="선발로 이동">선발↑</button>
         </div>
       </div>`;
   });
 
-  if (!relieverRows) relieverRows = `<div style="padding:14px;color:var(--text3);text-align:center;font-size:12px">불펜 투수 없음</div>`;
+  if (!relieverRows) relieverRows = `<div class="fatig-empty">불펜 투수 없음</div>`;
 
   return `
-    <div style="background:var(--panel);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:14px;">
-      <div style="padding:9px 14px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text2);">선발 로테이션</span>
-        <span style="font-size:9px;color:var(--text3);">≡ 드래그로 순서 변경</span>
+    <div class="fatig-card">
+      <div class="fatig-head">
+        <span class="fatig-head-title">선발 로테이션</span>
+        <span class="fatig-head-hint">≡ 드래그로 순서 변경</span>
       </div>
       <div id="rotation-list">${starterRows}</div>
     </div>
-    <div style="background:var(--panel);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
-      <div style="padding:9px 14px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text2);">불펜</span>
-        <span style="font-size:9px;color:var(--text3);">상태 · 역할 · 체력순</span>
+    <div class="fatig-card">
+      <div class="fatig-head">
+        <span class="fatig-head-title">불펜</span>
+        <span class="fatig-head-hint">상태 · 역할 · 체력순</span>
       </div>
       <div>${relieverRows}</div>
     </div>`;
@@ -1693,27 +1684,27 @@ function renderLineupEditorTab() {
   const el = document.getElementById('season-lineup-editor');
   if (!el) return;
 
-  if (!SS.myTeamKor) { el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:40px">시즌 시작 후 사용 가능합니다</div>'; return; }
+  if (!SS.myTeamKor) { el.innerHTML = '<div class="lnp-editor-empty">시즌 시작 후 사용 가능합니다</div>'; return; }
   if (tempGameSetup.myLineup.length === 0) {
     const hH = DB.hitters.filter(r => r.team === SS.myTeamKor).map(buildHitter).sort((a,b) => b.G - a.G);
     tempGameSetup.myLineup = buildLineup(hH);
   }
 
-  let html = `<div id="lineup-drag-list" style="display:flex;flex-direction:column;gap:8px;">`;
+  let html = `<div id="lineup-drag-list">`;
 
   tempGameSetup.myLineup.forEach((p, idx) => {
     html += `<div class="lnp-drag-item" data-idx="${idx}">
-      <div class="drag-handle" data-idx="${idx}" style="display:flex;align-items:center;gap:6px;padding:0 6px;cursor:grab;color:var(--text3);">
+      <div class="drag-handle drag-handle-row" data-idx="${idx}">
         <svg width="16" height="14" viewBox="0 0 16 14" fill="currentColor">
           <rect y="0" width="16" height="2" rx="1"/>
           <rect y="6" width="16" height="2" rx="1"/>
           <rect y="12" width="16" height="2" rx="1"/>
         </svg>
-        <span style="font-family:'Bebas Neue';font-size:20px;color:var(--text3);min-width:16px;text-align:center">${idx+1}</span>
+        <span class="lnp-edit-order">${idx+1}</span>
       </div>
-      <div style="flex:1">
-        <div style="font-weight:700;color:var(--text);font-size:14px">${formatPlayerName(p.name)} <span style="font-size:10px;color:var(--text2)">${p.pos}</span></div>
-        <div style="font-size:11px;color:var(--text3);font-family:'JetBrains Mono'">AVG:${p.AVG.toFixed(3)} HR:${p.HR} RBI:${p.RBI}</div>
+      <div class="lnp-edit-main">
+        <div class="lnp-edit-name">${formatPlayerName(p.name)} <span class="lnp-edit-pos">${p.pos}</span></div>
+        <div class="lnp-edit-sub">AVG:${p.AVG.toFixed(3)} HR:${p.HR} RBI:${p.RBI}</div>
       </div>
     </div>`;
   });
@@ -2229,12 +2220,12 @@ function playChampionEffects() {
     fx.appendChild(ray);
   }
 
-  const colors = ['#f5a623', '#ffd700', '#2dcc6f', '#3b82f6', '#e8340a', '#ffffff'];
+  // 색상은 .confetti-c1 ~ c6 클래스로 정의되어 있다 (season.css)
+  const COLOR_VARIANTS = 6;
   for (let i = 0; i < 90; i++) {
     const p = document.createElement('div');
-    p.className = 'confetti';
+    p.className = `confetti confetti-c${(i % COLOR_VARIANTS) + 1}`;
     p.style.left = Math.random() * 100 + '%';
-    p.style.background = colors[i % colors.length];
     p.style.animationDuration = (2.4 + Math.random() * 2.2) + 's';
     p.style.animationDelay = (Math.random() * 2.4) + 's';
     p.style.width = (6 + Math.random() * 6) + 'px';
@@ -2390,7 +2381,7 @@ function renderDevPanel(context) {
   if (!devEnabled()) return '';
 
   if (context === 'postseason') {
-    return `<div class="dev-panel" style="margin-top:18px;margin-bottom:0;">
+    return `<div class="dev-panel dev-panel-ps">
       <div class="dev-panel-title">DEBUG</div>
       <div class="dev-panel-btns">
         <button class="dev-btn" onclick="devSetupChampionshipRun()">🏆 우승 직전 상태</button>
@@ -2407,12 +2398,12 @@ function renderDevPanel(context) {
   return `<div class="dev-panel">
     <div class="dev-panel-title">DEBUG — 시즌 막바지 테스트</div>
     <div class="dev-panel-btns">
-      <button class="dev-btn" onclick="devFastForwardToFinalGame()" ${canFF ? '' : 'disabled style="opacity:.4"'}>
+      <button class="dev-btn" onclick="devFastForwardToFinalGame()" ${canFF ? '' : 'disabled'}>
         ⏭ 최종전까지 (${left}경기)
       </button>
       <button class="dev-btn" onclick="devSetupChampionshipRun()">🏆 우승 직전 상태</button>
     </div>
-    <div class="dev-panel-btns" style="margin-top:8px;">
+    <div class="dev-panel-btns">
       <button class="dev-btn alt" onclick="devPreviewChampion('mine')">팝업(내 팀)</button>
       <button class="dev-btn alt" onclick="devPreviewChampion('other')">팝업(타 팀)</button>
     </div>

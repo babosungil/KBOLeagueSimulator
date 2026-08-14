@@ -1572,14 +1572,14 @@ async function endGame() {
   const hKor = gs.homeTeam;
   const aKor = gs.awayTeam;
   document.getElementById('go-score').innerHTML = `
-    <div style="display:flex; flex-direction:column; align-items:center; width:100%;">
-      <div style="display:flex; justify-content:space-between; width:100%; max-width:400px; font-family:'Black Han Sans'; font-size:24px; color:var(--text2); margin-bottom:10px;">
-        <span style="flex:1; text-align:center;">${hKor}</span>
-        <span style="flex:1; text-align:center;">${aKor}</span>
+    <div class="gos-wrap">
+      <div class="gos-teams">
+        <span class="gos-team">${hKor}</span>
+        <span class="gos-team">${aKor}</span>
       </div>
-      <div style="display:flex; justify-content:center; align-items:center; gap:30px; font-family:'Bebas Neue'; font-size:80px; letter-spacing:4px;">
+      <div class="gos-nums">
         <span>${gs.homeScore}</span>
-        <span style="font-size:40px; color:var(--text3);">:</span>
+        <span class="gos-colon">:</span>
         <span>${gs.awayScore}</span>
       </div>
     </div>
@@ -1618,7 +1618,7 @@ function buildFinalScoreboard() {
   const maxInn = Math.max(9, gs.isTop ? gs.inning - 1 : gs.inning);
   let h = `<tr><th>팀</th>`;
   for (let i = 1; i <= maxInn; i++) h += `<th class="${i > 9 ? 'ext-cell' : ''}">${i}</th>`;
-  h += '<th style="color:var(--accent)">R</th></tr>';
+  h += '<th class="u-accent">R</th></tr>';
   ['away', 'home'].forEach(side => {
     const team = side === 'away' ? gs.awayTeam : gs.homeTeam;
     const score = side === 'away' ? gs.awayScore : gs.homeScore;
@@ -1652,7 +1652,7 @@ function buildBoxScore() {
       </tr>`;
       totPA += ts.PA; totH += ts.H; totHR += ts.HR || 0; totRBI += ts.RBI || 0; totK += ts.K || 0; totBB += ts.BB || 0; totSB += ts.SB || 0;
     });
-    h += `<tr style="font-weight:700;color:var(--accent)">
+    h += `<tr class="bs-total">
       <td>합계</td><td>${totPA}</td><td>${totH}</td><td>${totHR}</td><td>${totRBI}</td><td>${totK}</td><td>${totBB}</td><td>${totSB}</td>
     </tr></table>`;
     div.innerHTML = h; wrap.appendChild(div);
@@ -1721,7 +1721,7 @@ function updateBatUI(b) {
   const pitcher = (gs && gs.curHP && gs.curAP) ? (gs.isTop ? gs.curHP : gs.curAP) : null;
   const pl = pitcher ? calcPlatoon(b.hand, pitcher.hand) : null;
   const platoonTag = (pl && pl.advantage === 'batter')
-    ? `<span style="margin-left:6px;font-size:9px;padding:1px 5px;border-radius:8px;background:rgba(45,204,111,.2);color:#2dcc6f;border:1px solid #2dcc6f">유리</span>` : '';
+    ? `<span class="edge-tag edge-tag-left">유리</span>` : '';
 
   const bHandKR = b.hand === 'L' ? '좌' : '우';
   document.getElementById('b-info').innerHTML = `${bHandKR}타${platoonTag}`;
@@ -1754,7 +1754,7 @@ function updatePitUI(p) {
 
   const plPit = batter ? calcPlatoon(batter.hand, p.hand) : null;
   const platoonTagPit = (plPit && plPit.advantage === 'pitcher')
-    ? `<span style="margin-right:6px;font-size:9px;padding:1px 5px;border-radius:8px;background:rgba(45,204,111,.2);color:#2dcc6f;border:1px solid #2dcc6f">유리</span>` : '';
+    ? `<span class="edge-tag edge-tag-right">유리</span>` : '';
 
   const pHandKR = p.hand === 'L' ? '좌' : '우';
   document.getElementById('p-team').innerHTML = `${platoonTagPit}${pHandKR}투`;
@@ -2019,8 +2019,7 @@ function updateFml(trace) {
   }
   el.innerHTML = trace.steps.map((s, i) => {
     const isLast = i === trace.steps.length - 1;
-    const style = isLast ? ' style="color:var(--accent);margin-top:4px"' : '';
-    return `<div class="fr"${style}><span class="fk">${s.label}</span><span class="fv">${s.value}</span></div>`;
+    return `<div class="fr${isLast ? ' fr-final' : ''}"><span class="fk">${s.label}</span><span class="fv">${s.value}</span></div>`;
   }).join('');
 }
 

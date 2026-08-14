@@ -1,0 +1,71 @@
+/* ═══════════════════════════════════════════════════════
+   폰트 (로컬 번들)
+   ───────────────────────────────────────────────────────
+   Google Fonts를 @import로 불러오면 오프라인·저속 네트워크에서
+   폰트가 통째로 시스템 기본값으로 대체되어 화면이 무너진다.
+   Capacitor 앱은 오프라인 구동이 기본이므로 전부 번들에 포함한다.
+
+   서브셋 기준
+     · 한글 : KS X 1001 상용 2350자 + 프로젝트 소스/CSV에 실제로 등장하는 문자
+     · 라틴 : ASCII + Latin-1 + 상용 문장부호
+     · 이모지(🏆 ⚾ 등)는 포함하지 않는다 — 시스템 이모지 폰트가 처리한다.
+
+   굵기
+     400·700 2종만 번들한다. 그 사이 값(500·600)이나 그 위(800·900)를
+     지정하면 브라우저가 굵기를 합성해 글자가 뭉개지므로,
+     CSS에서는 var(--fw-normal) / var(--fw-bold)만 사용할 것.
+
+   라이선스: 4종 모두 SIL Open Font License 1.1 — 앱 번들 배포 가능.
+   재생성: python tools/build-fonts.py
+   (선수 CSV에 새 한글 음절이 추가되면 다시 실행할 것)
+   ═══════════════════════════════════════════════════════ */
+
+/* ── 본문 · 한글 ──────────────────────────────────── */
+@font-face{
+  font-family:'Noto Sans KR';
+  font-style:normal;
+  font-weight:400;
+  font-display:swap;
+  src:url('../assets/fonts/NotoSansKR-Regular.woff2') format('woff2');
+}
+@font-face{
+  font-family:'Noto Sans KR';
+  font-style:normal;
+  font-weight:700;
+  font-display:swap;
+  src:url('../assets/fonts/NotoSansKR-Bold.woff2') format('woff2');
+}
+
+/* ── 타이틀 · 팀명 (단일 굵기) ────────────────────── */
+@font-face{
+  font-family:'Black Han Sans';
+  font-style:normal;
+  font-weight:400;
+  font-display:swap;
+  src:url('../assets/fonts/BlackHanSans-Regular.woff2') format('woff2');
+}
+
+/* ── 점수 · 숫자 (단일 굵기) ──────────────────────── */
+@font-face{
+  font-family:'Bebas Neue';
+  font-style:normal;
+  font-weight:400;
+  font-display:swap;
+  src:url('../assets/fonts/BebasNeue-Regular.woff2') format('woff2');
+}
+
+/* ── 기록 · 스탯 ──────────────────────────────────── */
+@font-face{
+  font-family:'JetBrains Mono';
+  font-style:normal;
+  font-weight:400;
+  font-display:swap;
+  src:url('../assets/fonts/JetBrainsMono-Regular.woff2') format('woff2');
+}
+@font-face{
+  font-family:'JetBrains Mono';
+  font-style:normal;
+  font-weight:700;
+  font-display:swap;
+  src:url('../assets/fonts/JetBrainsMono-Bold.woff2') format('woff2');
+}

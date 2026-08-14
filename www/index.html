@@ -4,631 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>2026 프로리그 144</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@300;400;500;700&family=Bebas+Neue&family=JetBrains+Mono:wght@400;700&display=swap');
-:root{--bg:#0a0c10;--bg2:#111318;--bg3:#181c24;--border:#1e2430;--border2:#2a3040;--text:#e8eaf0;--text2:#8890a0;--text3:#4a5468;--accent:#f5a623;--accent2:#e8340a;--accent3:#2dcc6f;--accent4:#3b82f6;--panel:#13161e}
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-serif;font-size:13px;min-height:100vh;overflow-x:hidden}
-#header{position:fixed;top:0;left:0;width:100%;z-index:100;background:var(--bg2);border-bottom:1px solid var(--border);transition:all 0.4s ease;overflow:hidden;height:70px;}
-#header.minimized{height:60px;background:transparent;border-bottom:none;box-shadow:none;}
-
-.header-max, .header-min{width:100%;height:100%;display:flex;align-items:center;transition:opacity 0.2s, transform 0.3s;}
-.header-max{flex-direction:column;justify-content:center;padding:10px 10px;}
-.header-min{position:absolute;top:0;left:0;width:100%;height:100%;padding:0 20px;display:flex;justify-content:space-between;align-items:flex-start;opacity:0;pointer-events:none;transform:translateY(0);}
-
-#header.minimized .header-max{opacity:0;pointer-events:none;transform:translateY(-20px);}
-#header.minimized .header-min{opacity:1;pointer-events:auto;transform:translateY(0);}
-
-/* 헤더용 점수판 스타일 */
-.header-sb-table{border-collapse:collapse;width:100%;max-width:600px;font-family:'JetBrains Mono';font-size:10px;color:var(--text2);}
-.header-sb-table th, .header-sb-table td{padding:2px 4px;text-align:center;border:1px solid var(--border);min-width:22px;}
-.header-sb-table th{font-size:9px;background:rgba(255,255,255,0.03);}
-.header-sb-table .tc{text-align:center;color:var(--text);font-weight:700;min-width:60px;font-family:'Noto Sans KR';}
-.header-sb-table .tot{font-weight:700;color:var(--accent);font-size:11px;}
-.header-sb-table .current-inn{background:rgba(245,166,35,0.15);color:var(--accent);}
-
-/* 최소화 모드 팀 스코어 (세로 배치 및 이전 스타일 복원) */
-.min-team-box{display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg2);padding:6px 20px;border-radius:0 0 12px 12px;border:1px solid var(--border);border-top:none;box-shadow:0 4px 15px rgba(0,0,0,0.3);min-width:100px;transition:all 0.3s ease;text-align:center;}
-.min-team-box.attacking{background:var(--accent);border-color:var(--accent);box-shadow:0 0 20px rgba(245,166,35,0.3);}
-.min-team-name{font-size:11px;font-family:'Noto Sans KR';letter-spacing:1px;color:var(--text2);margin-bottom:2px;transition:color 0.3s ease;}
-.min-team-score{font-family:'Bebas Neue';font-size:24px;color:var(--accent);letter-spacing:1px;line-height:1;transition:color 0.3s ease;}
-
-.min-team-box.attacking .min-team-name{color:rgba(0,0,0,0.6);font-weight:700;}
-.min-team-box.attacking .min-team-score{color:#000;}
-.min-vs{font-family:'Bebas Neue';font-size:18px;color:var(--text3);margin:0 10px;}
-#main{display:flex;flex-direction:column;align-items:center;padding:0 8px;padding-top:70px;padding-bottom:80px;gap:4px;height:100vh;overflow-y:auto;overflow-x:hidden}
-.scoreboard{width:100%;max-width:800px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;overflow-x:auto;margin:0 auto}
-#field-panel{width:100%;max-width:800px;display:flex;flex-direction:column;gap:10px}
-#atbat-panel{width:100%;max-width:800px;display:flex;flex-direction:column;border:1px solid var(--border);border-radius:6px;background:var(--panel);overflow:hidden}
-#lineup-panel{width:100%;max-width:800px;display:flex;flex-direction:row;flex-wrap:wrap;border:1px solid var(--border);border-radius:6px;background:var(--panel);overflow:hidden}
-
-.diamond-svg{width:100%;height:100%;display:block;}
-.diamond-wrap{position:relative;width:100%;max-width:500px;margin:10px auto;background:transparent;border:none;overflow:visible;padding:10px;}
-
-/* 가운데 정렬된 SBO */
-.center-sbo-display {position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);display:flex;flex-direction:column;gap:8px;z-index:5;}
-.sbo-row{display:flex;align-items:center;gap:10px;}
-.sbo-lbl{font-family:'Bebas Neue';font-size:24px;color:#fff;width:15px;text-align:center;text-shadow:0 2px 4px rgba(0,0,0,0.8);}
-.sbo-dots{display:flex;gap:8px;}
-.sbo-dot{width:18px;height:18px;border-radius:50%;background:#222;border:2px solid #444;box-shadow:inset 0 2px 4px rgba(0,0,0,0.5);}
-.sbo-dot.ab{background:#2dcc6f;border-color:#2dcc6f;box-shadow:0 0 12px #2dcc6f;}
-.sbo-dot.as{background:#f5a623;border-color:#f5a623;box-shadow:0 0 12px #f5a623;}
-.sbo-dot.ao{background:#e8340a;border-color:#e8340a;box-shadow:0 0 12px #e8340a;}
-
-/* 거대한 투구 결과 뱃지 */
-.last-pitch{position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);z-index:20;width:100%;display:flex;justify-content:center;pointer-events:none;}
-.pitch-badge{padding:20px 40px;border-radius:16px;font-size:36px;font-family:'Black Han Sans',sans-serif;color:#fff;background:rgba(15,20,25,0.95);box-shadow:0 15px 40px rgba(0,0,0,0.8);border:3px solid;animation:badgeIn 0.3s cubic-bezier(0.175,0.885,0.32,1.275) forwards;text-align:center;white-space:nowrap;}
-@keyframes badgeIn{from{transform:scale(0.5);opacity:0}to{transform:scale(1);opacity:1}}
-.badge-ball{border-color:var(--accent3);text-shadow:0 0 10px var(--accent3);color:var(--accent3);}
-.badge-strike{border-color:var(--accent);text-shadow:0 0 10px var(--accent);color:var(--accent);}
-.badge-foul{border-color:var(--accent2);text-shadow:0 0 10px var(--accent2);color:var(--accent2);}
-.badge-hit{border-color:var(--accent4);text-shadow:0 0 10px var(--accent4);color:var(--accent4);}
-.badge-out{border-color:var(--accent2);text-shadow:0 0 10px var(--accent2);color:var(--accent2);}
-.badge-hr{border-color:var(--accent4);text-shadow:0 0 20px var(--accent4);font-size:46px;color:var(--accent4);}
-.badge-walk{border-color:var(--accent3);text-shadow:0 0 10px var(--accent3);color:var(--accent3);}
-.badge-k{border-color:var(--accent2);text-shadow:0 0 15px var(--accent2);font-size:46px;color:var(--accent2);}
-.badge-steal{border-color:var(--accent4);text-shadow:0 0 10px var(--accent4);color:var(--accent4);}
-.badge-bunt{background:rgba(100,200,100,.2);border:1px solid #64c864;color:#64c864}
-.badge-fineplay{border-color:#00e5ff;text-shadow:0 0 15px #00e5ff;color:#00e5ff;font-size:36px}
-.badge-error{border-color:#ff9800;text-shadow:0 0 15px #ff9800;color:#ff9800;font-size:36px}
-.badge-ext{background:rgba(245,166,35,.5);border:2px solid var(--accent);color:var(--accent);font-size:14px;animation:badgeIn .3s ease}
-.count-section{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:300px;margin:0 auto;width:100%}
-.count-box{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center}
-.count-box .label{font-size:10px;color:var(--text2);letter-spacing:1px;text-transform:uppercase}
-.count-box .dots{display:flex;justify-content:center;gap:5px;margin-top:5px}
-.dot{width:11px;height:11px;border-radius:50%;border:2px solid var(--border2);background:transparent;transition:all .2s}
-.dot.ab{background:var(--accent4);border-color:var(--accent4);box-shadow:0 0 6px var(--accent4)}
-.dot.as{background:var(--accent);border-color:var(--accent);box-shadow:0 0 6px var(--accent)}
-.dot.ao{background:var(--accent2);border-color:var(--accent2);box-shadow:0 0 6px var(--accent2)}
-.pitch-counter{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:9px 12px;display:flex;justify-content:space-between;align-items:center;max-width:300px;width:100%;margin:0 auto}
-.pc-item{text-align:center}
-.pc-label{font-size:10px;color:var(--text2)}
-.pc-val{font-family:'JetBrains Mono';font-size:17px;color:var(--text);margin-top:1px}
-.pc-val.hl{color:var(--accent)}
-.pc-val.hl{color:var(--accent)}
-.sb-table{border-collapse:collapse;width:100%;font-family:'JetBrains Mono';font-size:11px}
-.sb-table td,.sb-table th{padding:3px 5px;text-align:center;border:1px solid var(--border);min-width:20px}
-.sb-table th{color:var(--text2);background:var(--bg3);font-size:9px}
-.sb-table .tc{text-align:left;color:var(--text);font-weight:700;min-width:52px;font-size:11px}
-.sb-table .tot{font-weight:700;color:var(--accent)}
-.sb-table .ci{background:rgba(245,166,35,.08)}
-.situation-bar{max-width:320px;width:100%;margin:0 auto;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:8px 14px;display:flex;gap:14px;align-items:center;font-size:12px}
-.sit-item{display:flex;flex-direction:column;align-items:center;gap:3px}
-.sit-label{font-size:10px;color:var(--text2);letter-spacing:1px;font-weight:500}
-.sit-val{font-family:'JetBrains Mono';font-size:14px;color:var(--text);font-weight:700}
-.sit-val.risp{color:var(--accent3)}
-.panel-header{padding:10px 14px;background:var(--bg2);border-bottom:1px solid var(--border);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--text2);display:flex;justify-content:space-between;align-items:center;font-weight:700}
-.pitcher-card{padding:10px 14px;border-bottom:1px solid var(--border);background:var(--panel);position:relative;overflow:hidden;z-index:1;text-align:right}
-.pitcher-card::after{content:'';position:absolute;top:50%;right:40%;transform:translateY(-50%);width:110px;height:110px;background:url('assets/baseball_icon_1_transparent.png') no-repeat center / contain;opacity:0.15;z-index:0;filter:invert(1);pointer-events:none}
-.pitcher-card .pname{font-family:'Black Han Sans';font-size:26px;letter-spacing:1px;position:relative;z-index:1}
-.pitcher-card .pteam{color:var(--text);font-size:12px;position:relative;z-index:1;font-weight:500;margin-top:2px;text-align:left}
-.matchup-tap-area{cursor:pointer}
-#player-popup{position:fixed;inset:0;background:rgba(0,0,0,.58);z-index:320;display:none;align-items:center;justify-content:center}
-.player-popup-panel{background:var(--panel);border:1px solid var(--border2);border-radius:12px;padding:16px 18px;width:min(320px,86vw);max-height:80vh;overflow-y:auto;box-shadow:0 14px 35px rgba(0,0,0,.45)}
-.player-popup-title{font-family:'Black Han Sans';font-size:16px;color:var(--text);letter-spacing:1px;margin-bottom:10px}
-.player-popup-section-title{font-size:11px;color:var(--accent);letter-spacing:1px;margin:14px 0 4px;text-transform:uppercase}
-.player-popup-section-title:first-child{margin-top:0}
-.player-popup-row{display:flex;justify-content:space-between;font-size:12px;color:var(--text2);padding:5px 0;border-bottom:1px solid var(--border)}
-.player-popup-row:last-child{border-bottom:none}
-.player-popup-row .v{color:var(--text);font-weight:700;font-family:'JetBrains Mono'}
-.player-popup-empty{font-size:12px;color:var(--text3);text-align:center;padding:14px 0}
-.stamina-wrap{margin-top:7px;position:relative;z-index:1}
-.stamina-label{display:flex;justify-content:space-between;font-size:10px;color:var(--text2);margin-bottom:3px}
-.stamina-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden}
-.stamina-fill{height:100%;border-radius:2px;transition:width .5s,background .5s}
-.pitcher-role-badge{font-size:9px;padding:2px 6px;border-radius:10px;font-family:'Noto Sans KR'}
-.role-starter{background:rgba(59,130,246,.2);color:var(--accent4);border:1px solid rgba(59,130,246,.4)}
-.role-middle{background:rgba(100,100,100,.2);color:var(--text2);border:1px solid rgba(100,100,100,.4)}
-.role-closer{background:rgba(232,52,10,.2);color:var(--accent2);border:1px solid rgba(232,52,10,.4)}
-.batter-card{padding:10px 14px;border-bottom:1px solid var(--border);position:relative;overflow:hidden;z-index:1}
-.batter-card::after{content:'';position:absolute;top:50%;left:40%;transform:translateY(-50%);width:110px;height:110px;background:url('assets/baseball_icon_2_transparent.png') no-repeat center / contain;opacity:0.15;z-index:0;filter:invert(1);pointer-events:none}
-.profile-tooltip{margin-top:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;font-size:10px;line-height:1.8;color:var(--text2)}
-.pt-name{font-family:'Black Han Sans';font-size:14px;color:var(--text);letter-spacing:1px}
-.pt-pos{font-size:10px;color:var(--accent);letter-spacing:1px;margin-bottom:3px}
-.pt-row{color:var(--text2)}
-.batter-card .bname{font-family:'Black Han Sans';font-size:26px;position:relative;z-index:1}
-.batter-card .binfo{color:var(--text);font-size:12px;position:relative;z-index:1;font-weight:500;margin-top:2px;text-align:right}
-.atbat-vs-wrap{position:relative;display:flex;border-bottom:1px solid var(--border)}
-.atbat-vs-overlay{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'Bebas Neue';font-size:clamp(70px,9vw,110px);color:rgba(128,128,128,0.15);letter-spacing:6px;pointer-events:none;z-index:10;line-height:1;white-space:nowrap;user-select:none}
-.today-stats{padding:10px 30px;border-bottom:1px solid var(--border);font-size:12px}
-.today-stats .ts-title{color:var(--text2);font-size:11px;letter-spacing:1px;margin-bottom:6px;font-weight:700}
-.ts-row{display:flex;justify-content:space-between;padding:2px 0}
-.ts-k{color:var(--text2)}.ts-v{font-family:'JetBrains Mono';color:var(--text)}
-.tab-bar{display:flex;border-bottom:1px solid var(--border)}
-.tab{flex:1;padding:8px;text-align:center;font-size:11px;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
-.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
-.tab-content{flex:1;overflow-y:auto}
-.log-panel{padding:8px 0}
-.log-entry{padding:8px 14px;border-bottom:1px solid var(--border);font-size:12px;display:flex;gap:10px;align-items:flex-start;animation:logIn .2s ease;line-height:1.4}
-@keyframes logIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
-.log-inn{color:var(--text2);font-family:'JetBrains Mono';font-size:11px;min-width:32px;font-weight:700;margin-top:1px}
-.log-msg{color:var(--text);flex:1;font-weight:500}
-.log-msg.hit{color:var(--accent3)}.log-msg.hr{color:var(--accent);font-weight:700}
-.log-msg.out{color:var(--text2)}.log-msg.score{color:var(--accent);font-weight:700}
-.log-msg.steal{color:#a855f7}.log-msg.bunt{color:#64c864}
-.log-msg.fineplay{color:#00e5ff;font-weight:700}.log-msg.error{color:#ff9800;font-weight:700}
-.log-msg.change{color:var(--accent4)}.log-msg.ext{color:var(--accent);font-weight:700}
-.formula-panel{padding:12px 14px;font-size:12px;line-height:1.8}
-.fs-section{margin-bottom:14px}
-.fs-title{color:var(--accent);font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;border-bottom:1px solid var(--border);padding-bottom:4px;font-weight:700}
-.fr{display:flex;justify-content:space-between;padding:2px 0}
-.fk{color:var(--text2)}.fv{font-family:'JetBrains Mono';color:var(--text);font-weight:700}
-#lineup-panel{display:flex;flex-direction:row;flex-wrap:wrap;overflow:hidden}
-.lineup-half{flex:1 1 300px;overflow-y:auto;border-bottom:1px solid var(--border)}
-.lineup-half:last-child{border-bottom:none}
-.lineup-title{padding:7px 12px;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text2);border-bottom:1px solid var(--border);background:var(--bg2);position:sticky;top:0}
-.lr{display:flex;align-items:center;padding:5px 10px;border-bottom:1px solid var(--border);gap:7px;transition:background .15s}
-.lr:hover{background:var(--bg3)}.lr.batting{background:rgba(245,166,35,.07)}
-.lr.batting .lr-name{color:var(--accent)}
-.lr-num{font-family:'JetBrains Mono';color:var(--text3);font-size:11px;min-width:14px;text-align:right}
-.lr-pos{font-size:9px;color:var(--text2);background:var(--border);border-radius:3px;padding:1px 4px;min-width:26px;text-align:center}
-.lr-name{font-size:12px;flex:1}
-.lr-avg{font-family:'JetBrains Mono';font-size:10px;color:var(--text2)}
-.lr-today{font-size:10px;color:var(--text3);min-width:54px;text-align:right;font-family:'JetBrains Mono'}
-.lr-today.gh{color:var(--accent3)}.lr-today.ghr{color:var(--accent)}
-/* ── 셋업 화면 ── */
-#setup-screen{position:fixed;inset:0;background:var(--bg);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
-#setup-screen h2{font-family:'Black Han Sans';font-size:26px;color:var(--accent);margin-bottom:4px;letter-spacing:2px}
-.subtitle{color:var(--text2);margin-bottom:28px;font-size:13px}
-.setup-grid{display:grid;grid-template-columns:1fr 80px 1fr;gap:16px;max-width:600px;width:100%;align-items:center}
-.setup-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px}
-.setup-card h3{font-size:11px;color:var(--text2);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px}
-.setup-year{width:100%;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:7px 10px;border-radius:7px;font-family:'Noto Sans KR';font-size:12px;cursor:pointer;margin-bottom:8px}
-.setup-year:focus{outline:none;border-color:var(--accent)}
-.team-select{width:100%;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 10px;border-radius:7px;font-family:'Noto Sans KR';font-size:13px;cursor:pointer;text-align:center}
-.team-select:focus{outline:none;border-color:var(--accent)}
-.vs-div{text-align:center;font-family:'Bebas Neue';font-size:30px;color:var(--text3)}
-.start-area{text-align:center;margin-top:20px}
-.btn-start{background:var(--accent);color:#000;border:none;padding:13px 44px;border-radius:8px;font-family:'Black Han Sans';font-size:15px;letter-spacing:2px;cursor:pointer;transition:all .2s;box-shadow:0 4px 20px rgba(245,166,35,.3)}
-.btn-start:hover{background:#ffc142;transform:translateY(-1px)}
-.btn-start:disabled{background:var(--border2);color:var(--text3);cursor:not-allowed;transform:none;box-shadow:none}
-.btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 24px;border-radius:8px;font-family:'Black Han Sans';font-size:14px;letter-spacing:1px;cursor:pointer;transition:all .2s;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);text-decoration:none;user-select:none}
-.btn:active{transform:scale(.97)}
-.btn.primary{background:var(--accent);color:#000;border:none;box-shadow:0 4px 15px rgba(245,166,35,.2)}
-.btn.primary:hover{background:#ffc142;transform:translateY(-1px)}
-.btn.danger{background:rgba(232,52,10,.15);color:var(--accent2);border-color:var(--accent2)}
-.btn.danger:hover{background:var(--accent2);color:#fff}
-.setup-notice{color:var(--text3);font-size:11px;margin-top:10px}
-.mode-tabs{display:flex;gap:8px;margin-bottom:20px}
-.mode-tab{padding:8px 20px;border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-family:'Noto Sans KR';font-size:13px;background:var(--bg3);color:var(--text2);transition:all .2s}
-.mode-tab.active{background:var(--accent);color:#000;border-color:var(--accent);font-weight:700}
-#season-screen{position:fixed;inset:0;background:var(--bg);z-index:190;display:none;flex-direction:column;padding:0;overflow:hidden}
-.season-header{background:var(--bg2);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;justify-content:space-between}
-.season-header h2{font-family:'Black Han Sans';font-size:18px;color:var(--accent);letter-spacing:2px}
-.season-body{display:flex;flex-direction:column;padding:20px;gap:20px;height:calc(100vh - 54px);overflow-y:auto;max-width:700px;margin:0 auto}
-.season-section-title{font-size:10px;letter-spacing:2px;color:var(--text2);text-transform:uppercase;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:6px}
-.progress-bar-wrap{background:var(--bg3);border-radius:4px;height:6px;margin-bottom:4px;overflow:hidden}
-.progress-bar-fill{height:100%;background:var(--accent);border-radius:4px;transition:width .3s}
-.progress-label{font-size:10px;color:var(--text3);margin-bottom:16px}
-.standings-table{width:100%;border-collapse:collapse;font-size:12px;font-family:'JetBrains Mono';background:var(--bg2);border-radius:10px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.25);}
-.standings-table th{padding:10px 8px;text-align:center;color:var(--text2);font-size:10px;background:var(--bg3);border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:1px;}
-.standings-table td{padding:10px 8px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.03);color:var(--text);transition:background 0.2s;}
-.standings-table tr:hover td{background:rgba(255,255,255,0.02);}
-.standings-table td:nth-child(2){text-align:left;font-family:'Noto Sans KR';font-weight:500;}
-.standings-table .my-team-row{background:rgba(245,166,35,0.08);}
-.standings-table .my-team-row td{color:var(--accent);font-weight:700;}
-.standings-table .rank-cell{font-family:'Bebas Neue';font-size:16px;color:var(--text3);}
-.standings-table .my-team-row .rank-cell{color:var(--accent);}
-.streak-win{color:var(--accent3);font-weight:700;}
-.streak-loss{color:var(--accent2);font-weight:700;}
-.next-game-card{background:var(--panel);border:1px solid var(--border2);border-radius:8px;padding:14px;margin-bottom:12px}
-.next-game-card.my-game{border-color:var(--accent);background:rgba(245,166,35,.06)}
-.ng-label{font-size:10px;color:var(--text2);letter-spacing:1px;margin-bottom:6px}
-.ng-matchup{font-family:'Bebas Neue';font-size:26px;letter-spacing:2px;margin-bottom:10px}
-.ng-matchup span{color:var(--text3);font-size:16px;margin:0 8px}
-.ng-btn{margin-top:4px}
-#postseason-screen{position:fixed;inset:0;background:var(--bg);z-index:195;display:none;flex-direction:column;align-items:center;justify-content:flex-start;padding:30px;overflow-y:auto}
-.ps-title{font-family:'Black Han Sans';font-size:28px;color:var(--accent);letter-spacing:3px;margin-bottom:24px}
-.ps-bracket{display:flex;flex-direction:column;gap:14px;width:100%;max-width:500px}
-.ps-series{background:var(--panel);border:1px solid var(--border2);border-radius:8px;padding:14px 18px}
-.ps-series.ps-done{opacity:.5}
-.ps-label{font-size:10px;color:var(--accent);letter-spacing:2px;margin-bottom:4px}
-.ps-matchup{font-family:'Bebas Neue';font-size:22px;letter-spacing:2px;margin-bottom:6px}
-.ps-matchup span{color:var(--accent)}
-.ps-status{font-size:10px;color:var(--text3);margin-bottom:8px}
-.ps-series.ps-champ{opacity:1;border-color:var(--accent);background:rgba(245,166,35,.09);box-shadow:0 0 24px rgba(245,166,35,.18)}
-.ps-champ-tag{font-family:'Black Han Sans';font-size:13px;color:var(--accent);letter-spacing:2px;margin-top:6px}
-/* ── 개발자 모드 패널 ── */
-.dev-panel{border:1px dashed rgba(124,58,237,.55);background:rgba(124,58,237,.07);border-radius:8px;padding:10px;margin-bottom:14px}
-.dev-panel-title{font-size:9px;letter-spacing:2px;color:#a78bfa;margin-bottom:8px;text-transform:uppercase}
-.dev-panel-btns{display:flex;gap:8px;flex-wrap:wrap}
-.dev-btn{flex:1 1 140px;background:#7c3aed;color:#fff;border:none;border-radius:6px;padding:9px 10px;font-size:12px;font-family:'Noto Sans KR';font-weight:600;cursor:pointer;transition:filter .15s,transform .1s}
-.dev-btn:hover{filter:brightness(1.12)}
-.dev-btn:active{transform:scale(.97)}
-.dev-btn.alt{background:#b45309}
-.dev-note{font-size:10px;color:var(--text3);margin-top:7px;line-height:1.5}
-/* ── 우승 팝업 ── */
-#champion-modal{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:400;display:none;align-items:center;justify-content:center;overflow:hidden}
-#champion-modal.show{display:flex}
-#champion-fx{position:absolute;inset:0;pointer-events:none;overflow:hidden}
-.champ-inner{position:relative;z-index:2;text-align:center;padding:30px 26px;max-width:440px;width:90%;
-  background:var(--bg2);border:1px solid var(--border2);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.6);
-  animation:champRise .55s cubic-bezier(.22,1,.36,1) both}
-.champ-inner.champ-mine{border-color:var(--accent);box-shadow:0 0 0 1px rgba(245,166,35,.35),0 0 70px rgba(245,166,35,.32),0 20px 60px rgba(0,0,0,.6)}
-@keyframes champRise{from{transform:translateY(26px) scale(.94);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
-.champ-year{font-family:'JetBrains Mono';font-size:11px;letter-spacing:4px;color:var(--text2);margin-bottom:2px}
-.champ-label{font-family:'Black Han Sans';font-size:15px;letter-spacing:3px;color:var(--accent);margin-bottom:14px}
-.champ-trophy{font-size:66px;line-height:1;margin-bottom:10px;animation:champTrophy .8s cubic-bezier(.34,1.56,.64,1) .15s both}
-@keyframes champTrophy{0%{transform:scale(0) rotate(-25deg);opacity:0}70%{transform:scale(1.22) rotate(6deg)}100%{transform:scale(1) rotate(0);opacity:1}}
-.champ-inner.champ-mine .champ-trophy{filter:drop-shadow(0 0 22px rgba(245,166,35,.85));animation:champTrophy .8s cubic-bezier(.34,1.56,.64,1) .15s both,champGlow 2.1s ease-in-out 1s infinite}
-@keyframes champGlow{0%,100%{filter:drop-shadow(0 0 18px rgba(245,166,35,.6))}50%{filter:drop-shadow(0 0 34px rgba(245,166,35,1))}}
-.champ-team{font-family:'Black Han Sans';font-size:38px;letter-spacing:2px;color:var(--text);margin-bottom:4px;animation:champRise .5s cubic-bezier(.22,1,.36,1) .3s both}
-.champ-inner.champ-mine .champ-team{color:var(--accent);text-shadow:0 0 30px rgba(245,166,35,.55)}
-.champ-sub{font-size:13px;color:var(--text2);margin-bottom:16px;animation:champRise .5s ease-out .42s both}
-.champ-stats{display:flex;justify-content:center;gap:0;margin-bottom:18px;animation:champRise .5s ease-out .52s both}
-.champ-stat{flex:1;padding:0 6px;border-right:1px solid var(--border)}
-.champ-stat:last-child{border-right:none}
-.champ-stat-v{font-family:'Bebas Neue';font-size:24px;color:var(--accent);letter-spacing:1px}
-.champ-stat-l{font-size:9px;color:var(--text3);letter-spacing:1px;margin-top:1px}
-.champ-mvp{background:var(--bg3);border-radius:8px;padding:10px 12px;margin-bottom:18px;animation:champRise .5s ease-out .6s both}
-.champ-mvp-l{font-size:9px;letter-spacing:2px;color:var(--text3);margin-bottom:4px}
-.champ-mvp-n{font-family:'Noto Sans KR';font-size:15px;font-weight:700;color:var(--text)}
-.champ-mvp-s{font-family:'JetBrains Mono';font-size:11px;color:var(--text2);margin-top:2px}
-.champ-btns{display:flex;gap:8px;animation:champRise .5s ease-out .7s both}
-.champ-btns .btn{flex:1;padding:13px;font-size:14px}
-/* 내 팀 우승 전용 이펙트 */
-.champ-ray{position:absolute;top:50%;left:50%;width:2px;height:150vmax;transform-origin:top center;
-  background:linear-gradient(to bottom,rgba(245,166,35,.42),transparent 62%);animation:champSpin 14s linear infinite}
-@keyframes champSpin{from{transform:translate(-50%,0) rotate(0)}to{transform:translate(-50%,0) rotate(360deg)}}
-.champ-burst{position:absolute;top:50%;left:50%;width:22vmax;height:22vmax;margin:-11vmax 0 0 -11vmax;border-radius:50%;
-  background:radial-gradient(circle,rgba(245,166,35,.5),transparent 68%);animation:champBurst 1.5s ease-out forwards}
-@keyframes champBurst{from{transform:scale(.2);opacity:.95}to{transform:scale(5);opacity:0}}
-.confetti{position:absolute;top:-24px;width:9px;height:15px;opacity:0;animation:confettiFall linear forwards}
-@keyframes confettiFall{0%{opacity:1;transform:translateY(0) rotate(0)}100%{opacity:.15;transform:translateY(112vh) rotate(760deg)}}
-@media (prefers-reduced-motion:reduce){
-  .champ-inner,.champ-trophy,.champ-team,.champ-sub,.champ-stats,.champ-mvp,.champ-btns{animation:none}
-  .champ-ray,.champ-burst,.confetti{display:none}
-}
-#turn-modal{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:300;display:none;align-items:center;justify-content:center}
-.turn-modal-inner{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:24px;min-width:340px;max-width:460px;width:90%}
-.turn-modal-title{font-family:'Black Han Sans';font-size:20px;color:var(--accent);letter-spacing:2px;margin-bottom:16px;text-align:center}
-.turn-my-label{font-size:10px;color:var(--accent);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
-.turn-my-score{font-family:'Bebas Neue';font-size:28px;letter-spacing:2px;margin-bottom:16px;display:flex;gap:10px;align-items:center}
-.turn-my-score b{color:var(--text2);font-size:22px}
-.turn-divider{border:none;border-top:1px solid var(--border);margin:12px 0}
-.turn-other-title{font-size:10px;color:var(--text2);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
-.turn-row{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px}
-.tr-team{flex:1;color:var(--text2)}
-.tr-team.tr-win{color:var(--text);font-weight:700}
-.tr-score{font-family:'JetBrains Mono';font-size:14px;color:var(--text);min-width:18px;text-align:center}
-.tr-vs{color:var(--text3);font-size:11px}
-.tr-win{color:var(--accent3)}
-.turn-preview{margin:6px 0 10px;border-left:2px solid var(--border2);padding-left:8px}
-.turn-preview-row{font-size:10px;color:var(--text3);padding:1px 0}
-/* ── 로딩 ── */
-.loading-overlay{position:fixed;inset:0;background:rgba(10,12,16,.92);z-index:300;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
-.loading-spinner{width:38px;height:38px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.loading-text{color:var(--text2);font-size:13px}
-.loading-sub{color:var(--text3);font-size:11px}
-/* ── 게임 종료 ── */
-.game-over{position:fixed;inset:0;background:rgba(10,12,16,.97);z-index:200;display:none;flex-direction:column;align-items:center;justify-content:flex-start;padding:20px;overflow-y:auto}
-.game-over.show{display:flex}
-.go-title{font-family:'Black Han Sans';font-size:38px;color:var(--accent);letter-spacing:4px;margin-bottom:4px;margin-top:10px}
-.go-score{font-family:'Bebas Neue';font-size:64px;letter-spacing:8px}
-.go-winner{color:var(--accent3);font-size:16px;margin-bottom:16px}
-.go-ext-badge{background:rgba(245,166,35,.2);border:1px solid var(--accent);color:var(--accent);padding:3px 12px;border-radius:12px;font-size:12px;margin-bottom:6px;display:inline-block}
-.boxscore-wrap{width:100%;max-width:780px;display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
-.bs-section{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden}
-.bs-title{padding:8px 14px;background:var(--bg2);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text2);border-bottom:1px solid var(--border)}
-.bs-table{width:100%;border-collapse:collapse;font-family:'JetBrains Mono';font-size:11px}
-.bs-table th{padding:4px 7px;text-align:center;color:var(--text3);font-size:9px;border-bottom:1px solid var(--border);background:var(--bg3)}
-.bs-table th:first-child{text-align:left;min-width:80px}
-.bs-table td{padding:3px 7px;text-align:center;border-bottom:1px solid rgba(30,36,48,.5)}
-.bs-table td:first-child{text-align:left;color:var(--text)}
-.bs-table tr:last-child td{border-bottom:none}
-.bs-table .highlight{color:var(--accent)}
-.mvp-section{background:var(--panel);border:1px solid var(--accent);border-radius:10px;overflow:hidden;width:100%;max-width:780px;margin-bottom:14px}
-.mvp-header{padding:8px 14px;background:rgba(245,166,35,.1);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);border-bottom:1px solid rgba(245,166,35,.3)}
-.mvp-body{display:grid;grid-template-columns:1fr 1fr}
-.mvp-card{padding:12px 16px;border-right:1px solid var(--border)}
-.mvp-card:last-child{border-right:none}
-.mvp-tag{font-size:9px;color:var(--text2);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
-.mvp-name{font-family:'Black Han Sans';font-size:20px;letter-spacing:1px;color:var(--accent)}
-.mvp-stats{font-size:11px;color:var(--text2);margin-top:3px}
-.mvp-stats span{color:var(--text);font-family:'JetBrains Mono'}
-.sb-full{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;width:100%;max-width:780px;margin-bottom:14px}
-.sb-full-table{width:100%;border-collapse:collapse;font-family:'JetBrains Mono';font-size:11px}
-.sb-full-table th{padding:4px 6px;text-align:center;color:var(--text2);font-size:9px;background:var(--bg3)}
-.sb-full-table td{padding:3px 6px;text-align:center;border-top:1px solid var(--border)}
-.sb-full-table .tc2{text-align:left;font-weight:700;min-width:60px}
-.sb-full-table .ci2{background:rgba(245,166,35,.05)}
-.sb-full-table .tot2{color:var(--accent);font-weight:700}
-.ext-cell{color:var(--accent);font-size:10px}
-/* ── 연장 배너 ── */
-.extra-overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.7);z-index:150;pointer-events:none}
-.extra-banner{font-family:'Black Han Sans';font-size:48px;color:var(--accent);letter-spacing:6px;text-shadow:0 0 40px rgba(245,166,35,.7);animation:extIn .6s ease}
-@keyframes extIn{0%{transform:scale(.5);opacity:0}80%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
-
-/* ── 연출 이펙트 ── */
-.fullscreen-overlay { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(10, 12, 16, 1); z-index: 500; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
-.fullscreen-overlay.show { opacity: 1; pointer-events: all; }
-.score-vs-container { display: flex; align-items: center; gap: 40px; animation: scaleUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-.score-team-col { display: flex; flex-direction: column; align-items: center; gap: 15px; }
-.score-team-name { font-family: 'Black Han Sans'; font-size: 36px; color: var(--text); letter-spacing: 2px; }
-.score-vs { font-family: 'Black Han Sans'; font-size: 48px; color: var(--text3); }
-.score-number-wrap { overflow: hidden; height: 100px; }
-.score-number-inner { display: flex; flex-direction: column; transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
-.score-number { font-family: 'Bebas Neue'; font-size: 100px; color: var(--text); letter-spacing: 5px; height: 100px; display: flex; justify-content: center; align-items: center; line-height: 1; margin: 0; padding: 0; }
-.score-number-new { color: var(--accent); }
-.score-animate-up { transform: translateY(-100px); }
-.go-overlay-text { font-family: 'Black Han Sans'; font-size: 64px; color: var(--accent3); letter-spacing: 6px; margin-bottom: 10px; animation: scaleUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-.go-overlay-score { font-family: 'Bebas Neue'; font-size: 48px; color: var(--text); letter-spacing: 5px; animation: fadeIn 1s ease; }
-@keyframes scaleUp { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-/* ── 경기 시작 (VS Matchup) 연출 ── */
-#match-start-overlay {
-  background: radial-gradient(circle at center, rgba(24, 28, 36, 0.98) 0%, rgba(10, 12, 16, 0.99) 100%);
-  backdrop-filter: blur(10px);
-}
-.ms-sub-tag {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 13px;
-  letter-spacing: 4px;
-  color: var(--accent);
-  margin-bottom: 24px;
-  text-transform: uppercase;
-  font-weight: 700;
-  opacity: 0;
-}
-#match-start-overlay.show .ms-sub-tag {
-  animation: fadeIn 0.4s ease 0.1s forwards;
-}
-.ms-vs-stage {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 20px;
-  margin-bottom: 30px;
-  width: 100%;
-  max-width: 500px;
-}
-.ms-team-box {
-  font-family: 'Black Han Sans', sans-serif;
-  font-size: 42px;
-  letter-spacing: 2px;
-  color: #ffffff;
-  padding: 16px 28px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1.5px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  min-width: 120px;
-  text-align: center;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  opacity: 0;
-}
-.ms-team-box.away {
-  border-color: rgba(59, 130, 246, 0.4);
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(10, 12, 16, 0.4));
-  color: #60a5fa;
-}
-.ms-team-box.home {
-  border-color: rgba(245, 166, 35, 0.4);
-  background: linear-gradient(135deg, rgba(245, 166, 35, 0.15), rgba(10, 12, 16, 0.4));
-  color: var(--accent);
-}
-#match-start-overlay.show .ms-team-box.away {
-  animation: msSlideInLeft 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.15s forwards;
-}
-#match-start-overlay.show .ms-team-box.home {
-  animation: msSlideInRight 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.15s forwards;
-}
-@keyframes msSlideInLeft {
-  from { transform: translateX(-80px) scale(0.8); opacity: 0; }
-  to { transform: translateX(0) scale(1); opacity: 1; }
-}
-@keyframes msSlideInRight {
-  from { transform: translateX(80px) scale(0.8); opacity: 0; }
-  to { transform: translateX(0) scale(1); opacity: 1; }
-}
-.ms-vs-badge {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 56px;
-  color: #ffffff;
-  letter-spacing: 2px;
-  text-shadow: 0 0 20px rgba(255, 255, 255, 0.6);
-  opacity: 0;
-}
-#match-start-overlay.show .ms-vs-badge {
-  animation: msVsPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.35s forwards;
-}
-@keyframes msVsPop {
-  0% { transform: scale(0); opacity: 0; }
-  70% { transform: scale(1.3); opacity: 1; }
-  100% { transform: scale(1); opacity: 1; }
-}
-.ms-playball {
-  font-family: 'Black Han Sans', sans-serif;
-  font-size: 32px;
-  letter-spacing: 4px;
-  color: var(--accent3);
-  text-shadow: 0 0 25px rgba(45, 204, 111, 0.6);
-  opacity: 0;
-}
-#match-start-overlay.show .ms-playball {
-  animation: msPlayballUp 0.4s ease 0.55s forwards;
-}
-@keyframes msPlayballUp {
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
-@keyframes popRunner {
-  0%   { transform: scale(0.4); fill: #f5a623; opacity: 0.6; }
-  40%  { transform: scale(2.1); fill: #ffffff;  opacity: 1; }
-  70%  { transform: scale(1.15); fill: #ffffff; }
-  100% { transform: scale(1);   fill: #ffffff; }
-}
-.pop-anim { animation: popRunner 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); transform-origin: center; transform-box: fill-box; }
-
-/* 공수 교대 연출 - 세로형 */
-#inning-overlay { overflow: hidden; transition: opacity 0s; }
-.inning-stage { display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; width: 100%; height: 100%; }
-
-.inning-label-slot { position: absolute; top: 15%; height: 30px; width: 100%; display: flex; justify-content: center; align-items: center; overflow: visible; }
-.inning-label { position: absolute; font-family: 'Black Han Sans'; letter-spacing: 2px; color: var(--text2); font-size: 22px; text-transform: uppercase; opacity: 0.7; white-space: nowrap; }
-.inning-label.new { color: var(--accent); opacity: 0.9; }
-
-.inning-team-slot { position: absolute; display: flex; align-items: center; justify-content: center; width: 100%; }
-.inning-team-text { font-family: 'Black Han Sans'; font-size: 84px; letter-spacing: 4px; padding: 14px 32px; border-radius: 16px; }
-.inning-team-text.old { color: var(--text2); background: rgba(255,255,255,0.05); }
-.inning-team-text.new { color: var(--accent); background: rgba(245,166,35,0.12); }
-
-@keyframes ioOldOut { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-80px) scale(0.6); opacity: 0; } }
-@keyframes ioNewIn  { 0% { transform: translateY(80px) scale(0.6); opacity: 0; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
-@keyframes ioLabelOldOut { 0% { transform: translateY(0); opacity: 0.7; } 100% { transform: translateY(30px); opacity: 0; } }
-@keyframes ioLabelNewIn  { 0% { transform: translateY(-30px); opacity: 0; } 100% { transform: translateY(0); opacity: 0.9; } }
-
-.io-old-anim { animation: ioOldOut 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
-.io-new-anim { animation: ioNewIn  0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
-.io-label-old-anim { animation: ioLabelOldOut 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
-.io-label-new-anim { animation: ioLabelNewIn  0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
-
-@keyframes hrCelebration {
-  0% { box-shadow: inset 0 0 50px rgba(245, 166, 35, 0.5); border-color: #f5a623; }
-  25% { box-shadow: inset 0 0 50px rgba(45, 204, 111, 0.5); border-color: #2dcc6f; }
-  50% { box-shadow: inset 0 0 50px rgba(59, 130, 246, 0.5); border-color: #3b82f6; }
-  75% { box-shadow: inset 0 0 50px rgba(232, 52, 10, 0.5); border-color: #e8340a; }
-  100% { box-shadow: inset 0 0 50px rgba(245, 166, 35, 0.5); border-color: #f5a623; }
-}
-.hr-celebration-active { animation: hrCelebration 0.3s infinite; }@keyframes extIn{from{transform:scale(1.5);opacity:0}to{transform:scale(1);opacity:1}}
-::-webkit-scrollbar{width:3px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
-/* ── 주간 일정 ── */
-.weekly-cal{background:var(--panel);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:12px;font-size:11px}
-.weekly-cal-header{background:var(--bg2);padding:8px;text-align:center;color:var(--text);border-bottom:1px solid var(--border);font-weight:700}
-.wc-grid{display:grid;grid-template-columns:repeat(7,1fr);background:var(--bg3)}
-.wc-day-th{text-align:center;padding:4px;font-size:9px;color:var(--text2);border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
-.wc-day-th:last-child{border-right:none}
-.wc-cell{text-align:center;padding:8px 4px;border-right:1px solid var(--border);background:var(--panel);min-height:90px;display:flex;flex-direction:column;justify-content:flex-start;align-items:center;gap:4px}
-.wc-cell:last-child{border-right:none}
-.wc-date{font-size:9px;color:var(--text3);margin-bottom:2px;font-weight:700}
-.wc-match{color:var(--text);font-size:10px;line-height:1.2}
-.wc-result{font-family:'JetBrains Mono';font-size:11px;font-weight:700;margin-top:2px}
-.wc-win{color:var(--accent3)}
-.wc-loss{color:var(--accent2)}
-.wc-draw{color:var(--text2)}
-.wc-rest{color:var(--text3);font-size:10px;margin-top:8px}
-.wc-today{background:rgba(245,166,35,.07);box-shadow:inset 0 -2px 0 var(--accent)}
-@media(max-width:880px){#main{grid-template-columns:1fr 280px}#lineup-panel{display:none}}
-/* ── 시즌 탭 슬라이드 ── */
-#season-screen{flex-direction:column;overflow:hidden}
-#season-slides-wrap{flex:1;overflow:hidden;position:relative;}
-#season-slides{display:flex;width:500%;height:100%;transform:translateX(-40%);transition:transform .35s cubic-bezier(.25,.46,.45,.94);}
-.season-slide{width:20%;height:100%;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
-.season-slide-body{padding:16px 20px 80px;max-width:700px;margin:0 auto;display:flex;flex-direction:column;gap:20px;}
-/* ── 하단 탭 내비게이션 ── */
-#season-bottom-nav{height:62px;background:var(--bg2);border-top:1px solid var(--border);display:flex;flex-shrink:0;}
-.snav-btn{flex:1;display:flex;align-items:center;justify-content:center;font-size:26px;cursor:pointer;border:none;background:transparent;color:var(--text3);transition:color .2s,background .15s;padding:0;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-touch-callout:none;}
-.snav-btn.snav-active{color:var(--accent);}
-.snav-btn.snav-exit-btn{color:var(--accent2);}
-.snav-btn.snav-disabled{cursor:default;pointer-events:none;opacity:.15;}
-.snav-btn:not(.snav-disabled):active{background:var(--bg3);}
-/* ── 타선 드래그 ── */
-.lnp-drag-item{display:flex;align-items:center;padding:10px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;gap:10px;user-select:none;touch-action:none;transition:opacity .15s,border-color .15s;}
-.lnp-drag-item.lnp-dragging{opacity:.35;border-color:var(--accent);}
-.lnp-drag-item.lnp-over{border-color:var(--accent3);background:rgba(45,204,111,.07);}
-.drag-handle{color:var(--text3);font-size:18px;cursor:grab;padding:4px;}
-/* ── 플로팅 PLAY 버튼 ── */
-#season-play-btn{position:absolute;bottom:62px;left:50%;transform:translateX(-50%);width:80px;height:40px;border-radius:40px 40px 0 0;background:var(--accent);border:none;cursor:pointer;display:none;align-items:center;justify-content:center;flex-direction:column;gap:0;box-shadow:0 -4px 20px rgba(245,166,35,.45);transition:background .2s,transform .1s;overflow:hidden;z-index:110;user-select:none;-webkit-touch-callout:none;}
-#season-play-btn:active{transform:translateX(-50%) scale(.96);}
-#season-play-btn.visible{display:flex;}
-/* ── 개발자 모드 전용: 즉시 시뮬레이션 버튼 ── */
-#season-instant-sim-btn{position:absolute;bottom:62px;left:calc(50% - 96px);transform:translateX(-50%);width:64px;height:34px;border-radius:34px 34px 0 0;background:#7c3aed;border:none;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 -4px 16px rgba(124,58,237,.45);transition:background .2s,transform .1s;z-index:110;user-select:none;-webkit-touch-callout:none;}
-#season-instant-sim-btn:active{transform:translateX(-50%) scale(.96);}
-#season-instant-sim-btn.visible{display:flex;}
-#season-instant-sim-btn span{font-family:'Bebas Neue';font-size:11px;color:#fff;letter-spacing:1px;}
-.play-btn-ball{width:36px;height:36px;position:relative;margin:0 auto;}
-.play-btn-ball svg{position:absolute;inset:0;}
-.play-btn-label{font-family:'Bebas Neue';font-size:11px;color:#000;letter-spacing:2px;text-align:center;width:100%;line-height:1;margin-top:-2px;}
-
-/* ── 게임 화면 하단 내비게이션 ── */
-#game-bottom-nav{position:fixed;bottom:0;left:0;width:100%;height:62px;background:var(--bg2);border-top:1px solid var(--border);display:none;z-index:180;padding:0 10px;}
-.gnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;border:none;background:transparent;color:var(--text3);transition:all .2s;height:100%;user-select:none;-webkit-touch-callout:none;}
-.gnav-btn.gnav-lineup{display:none;}
-.gnav-spacer{display:none;flex:1;height:100%;}
-.gnav-btn:active{background:var(--bg3);}
-.gnav-btn svg{color:currentColor;}
-.gnav-btn span{font-size:10px;font-weight:700;letter-spacing:1px;}
-.gnav-btn.play{color:var(--accent);transform:scale(1.1);}
-.gnav-btn.play.playing{color:var(--accent2);}
-.gnav-btn.play:active{transform:scale(1.05);}
-.gnav-btn.exit{color:var(--accent2);}
-#mobile-lineup-sheet{position:fixed;inset:0;z-index:260;display:none;background:rgba(0,0,0,.58);}
-#mobile-lineup-sheet.open{display:block;}
-.lineup-sheet-panel{position:fixed;left:0;right:0;bottom:62px;width:100%;height:calc(100vh - 62px);background:var(--panel);border-top:1px solid var(--border2);border-radius:12px 12px 0 0;box-shadow:0 -14px 35px rgba(0,0,0,.45);overflow:hidden;transform:translateY(100%);animation:lineupSheetIn .2s ease forwards;display:flex;flex-direction:column;}
-@keyframes lineupSheetIn{to{transform:translateY(0)}}
-.lineup-sheet-head{height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0;}
-.lineup-sheet-title{font-family:'Black Han Sans';font-size:15px;letter-spacing:2px;color:var(--text);}
-.lineup-sheet-close{width:36px;height:36px;border:none;background:transparent;color:var(--text2);display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:6px;}
-.lineup-sheet-close:active{background:var(--bg3);color:var(--text);}
-.lineup-sheet-tabs{display:flex;background:var(--bg2);border-top:1px solid var(--border);order:3;flex-shrink:0;}
-.lineup-sheet-tab{flex:1;height:52px;border:none;background:transparent;color:var(--text2);font-size:15px;font-weight:700;letter-spacing:1px;cursor:pointer;border-top:3px solid transparent;}
-.lineup-sheet-tab.active{color:var(--accent);border-top-color:var(--accent);}
-.lineup-sheet-body{order:2;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
-.mobile-lineup-list{display:none;}
-.mobile-lineup-list.active{display:block;}
-#mobile-lineup-sheet .lr{padding:8px 14px;gap:11px;min-height:44px;}
-#mobile-lineup-sheet .lr-num{font-size:16px;min-width:21px;}
-#mobile-lineup-sheet .lr-pos{font-size:14px;min-width:39px;padding:2px 6px;}
-#mobile-lineup-sheet .lr-name{font-size:18px;font-weight:700;}
-#mobile-lineup-sheet .lr-avg{font-size:15px;}
-#mobile-lineup-sheet .lr-today{font-size:15px;min-width:81px;}
-.lineup-nav-blocker{position:fixed;left:0;right:0;bottom:0;height:62px;background:#000;display:flex;align-items:center;justify-content:center;color:var(--text);}
-.lineup-nav-close{width:42px;height:42px;display:flex;align-items:center;justify-content:center;border-radius:50%;color:var(--text);}
-@media(max-width:880px){.gnav-spacer{display:block}.gnav-btn.gnav-lineup{display:flex}}
-.sub-sheet-panel{position:fixed;left:0;right:0;bottom:62px;width:100%;height:calc(100vh - 62px);background:var(--panel);border-top:1px solid var(--border2);border-radius:12px 12px 0 0;box-shadow:0 -14px 35px rgba(0,0,0,.45);overflow:hidden;display:flex;flex-direction:column;}
-.sub-sheet-head{height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0;}
-.sub-sheet-title{font-family:'Black Han Sans';font-size:16px;letter-spacing:2px;color:var(--text);}
-.sub-sheet-context{font-size:11px;color:var(--text2);text-align:right;line-height:1.4;}
-.sub-sheet-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 10px 14px;}
-.sub-card{display:flex;align-items:center;gap:10px;padding:12px 10px;border-bottom:1px solid var(--border);background:rgba(255,255,255,.02);cursor:pointer;}
-.sub-card:active{background:var(--bg3);}
-.sub-rank{font-family:'JetBrains Mono';font-size:15px;color:var(--text3);min-width:24px;text-align:right;}
-.sub-main{flex:1;min-width:0;}
-.sub-name-row{display:flex;align-items:center;gap:7px;margin-bottom:5px;}
-.sub-name{font-size:17px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.sub-badge{font-size:10px;color:var(--accent);border:1px solid rgba(245,166,35,.45);background:rgba(245,166,35,.12);border-radius:10px;padding:1px 6px;white-space:nowrap;}
-.sub-badge.good{color:var(--accent3);border-color:rgba(45,204,111,.45);background:rgba(45,204,111,.12);}
-.sub-badge.warn{color:var(--accent2);border-color:rgba(232,52,10,.45);background:rgba(232,52,10,.12);}
-.sub-meta{font-family:'JetBrains Mono';font-size:12px;color:var(--text2);line-height:1.5;}
-.sub-reason{font-size:11px;color:var(--text3);margin-top:3px;line-height:1.35;}
-.sub-score{font-family:'JetBrains Mono';font-size:13px;color:var(--accent3);text-align:right;min-width:42px;}
-.sub-empty{padding:28px 12px;text-align:center;color:var(--text3);font-size:13px;}
-.sub-stamina{height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:7px;}
-.sub-stamina-fill{height:100%;border-radius:2px;}
-/* 투수 교체 카드 전용 스타일 */
-.sub-card.is-pitcher{padding:14px 12px;}
-.sub-card.is-pitcher .sub-name{font-size:20px;font-weight:900;letter-spacing:-0.3px;}
-.sub-card.is-pitcher .sub-meta{font-size:13px;color:var(--text);margin-top:2px;}
-.sub-card.is-pitcher .sub-stamina{height:6px;margin-top:10px;}
-/* 그룹 라벨 */
-.sub-group-label{padding:16px 12px 10px;font-family:'Black Han Sans';font-size:28px;letter-spacing:2px;color:var(--accent);background:var(--bg2);border-bottom:1px solid var(--border);border-top:1px solid var(--border);text-transform:uppercase;}
-
-
-
-/* 내비게이션 아이콘 스타일 */
-.snav-btn img {
-  width: 36px;
-  height: 36px;
-  object-fit: contain;
-  filter: invert(1);
-  opacity: 0.5;
-  transition: all 0.2s ease;
-}
-.snav-btn.snav-active img {
-  opacity: 1;
-  filter: invert(1) brightness(1.5) drop-shadow(0 0 8px var(--accent));
-  transform: scale(1.1);
-}
-.snav-btn:hover img {
-  opacity: 0.8;
-  transform: scale(1.05);
-}
-
-</style>
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/game.css">
+<link rel="stylesheet" href="css/season.css">
 </head>
 <body>
 
@@ -636,18 +16,18 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 <div id="setup-screen">
   <h2>⚾ 2026 프로리그 144</h2>
 
-  <div class="setup-action-group" style="display:flex;flex-direction:column;gap:12px;width:100%;max-width:320px;margin-top:20px;">
+  <div class="setup-action-group">
     <!-- 내팀 선택과 시즌 시작 그룹 -->
-    <div class="setup-card" style="display:flex;flex-direction:column;gap:12px;padding:20px;">
-      <div style="text-align:center;">
-        <h3 style="margin-bottom:8px;">내 팀 선택</h3>
+    <div class="setup-card setup-card-season">
+      <div class="setup-team-pick">
+        <h3>내 팀 선택</h3>
         <select class="team-select" id="myteam-select"></select>
       </div>
-      <button class="btn-start" id="season-start-btn" disabled onclick="startSeasonMode()" style="width:100%;padding:14px;margin-top:4px;">시즌 시작</button>
+      <button class="btn-start btn-block" id="season-start-btn" disabled onclick="startSeasonMode()">시즌 시작</button>
     </div>
 
     <!-- 이어하기 버튼 -->
-    <button class="btn-start" id="season-resume-btn" disabled onclick="resumeSeasonMode()" style="width:100%;padding:14px;">이어하기</button>
+    <button class="btn-start btn-block" id="season-resume-btn" disabled onclick="resumeSeasonMode()">이어하기</button>
   </div>
 
   <p class="setup-notice" id="setup-notice">데이터 로딩 중...</p>
@@ -667,14 +47,14 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 
       <!-- 탭 1: 나가기 -->
       <div class="season-slide">
-        <div class="season-slide-body" style="min-height:calc(100dvh - 62px);justify-content:center;align-items:center;">
-          <div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:24px;">
-            <div style="width:88px;height:88px;border-radius:50%;background:rgba(232,52,10,.1);border:2px solid var(--accent2);display:flex;align-items:center;justify-content:center;">
+        <div class="season-slide-body season-slide-centered">
+          <div class="season-exit-card">
+            <div class="season-exit-icon">
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </div>
-            <div style="font-family:'Black Han Sans';font-size:24px;">시즌 나가기</div>
-            <div style="color:var(--text2);font-size:13px;">현재까지의 기록은 자동 저장됩니다.</div>
-            <button class="btn danger" style="padding:13px 48px;font-size:15px;" onclick="exitSeasonMode()">나가기</button>
+            <div class="season-exit-title">시즌 나가기</div>
+            <div class="season-exit-desc">현재까지의 기록은 자동 저장됩니다.</div>
+            <button class="btn danger season-exit-btn" onclick="exitSeasonMode()">나가기</button>
           </div>
         </div>
       </div>
@@ -682,8 +62,8 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
       <!-- 탭 2: 투수 상태 -->
       <div class="season-slide">
         <div class="season-slide-body">
-          <div id="ad-reward-container" style="margin-bottom:12px;">
-            <button class="btn primary" id="btn-reward-ad" onclick="window.showRewardAdAndRecover()" style="width:100%; padding:12px; display:flex; align-items:center; justify-content:center; gap:8px;">
+          <div id="ad-reward-container">
+            <button class="btn primary btn-reward" id="btn-reward-ad" onclick="window.showRewardAdAndRecover()">
               <span>📺 광고 시청하고 전원 체력 회복</span>
             </button>
           </div>
@@ -697,11 +77,11 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
           <div id="season-dev-panel"></div>
           <div id="season-next-game"></div>
           <div>
-            <div class="season-section-title" style="display:flex;justify-content:space-between;align-items:center;border-bottom:none;padding-bottom:0;margin-bottom:4px;">
+            <div class="season-section-title has-action">
               <span>경기 일정</span>
-              <span class="progress-label" id="season-progress-label" style="font-size:12px;font-weight:normal;margin-bottom:0;">0 / 144</span>
+              <span class="progress-label progress-label-inline" id="season-progress-label">0 / 144</span>
             </div>
-            <div class="progress-bar-wrap" style="margin-bottom:12px;"><div class="progress-bar-fill" id="season-progress-bar" style="width:0%"></div></div>
+            <div class="progress-bar-wrap progress-bar-spaced"><div class="progress-bar-fill" id="season-progress-bar" style="width:0%"></div></div>
             <div id="season-upcoming-turns"></div>
           </div>
           <div>
@@ -728,14 +108,14 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 
   <!-- 플로팅 PLAY 버튼 (3번 탭 전용, 내 팀 경기 있을때만 표시) -->
   <button id="season-play-btn" onclick="executeGame()" title="경기 진행">
-    <svg viewBox="0 0 80 40" xmlns="http://www.w3.org/2000/svg" width="80" height="40" style="position:absolute;inset:0;">
+    <svg class="play-btn-svg" viewBox="0 0 80 40" xmlns="http://www.w3.org/2000/svg" width="80" height="40">
       <circle cx="40" cy="40" r="36" fill="rgba(0,0,0,0.12)"/>
       <path d="M40 4 Q52 18 52 40" fill="none" stroke="rgba(0,0,0,0.2)" stroke-width="2"/>
       <path d="M40 4 Q28 18 28 40" fill="none" stroke="rgba(0,0,0,0.2)" stroke-width="2"/>
       <path d="M4 40 Q18 28 40 28" fill="none" stroke="rgba(0,0,0,0.2)" stroke-width="2"/>
       <path d="M76 40 Q62 28 40 28" fill="none" stroke="rgba(0,0,0,0.2)" stroke-width="2"/>
     </svg>
-    <span style="font-family:'Bebas Neue';font-size:13px;color:#000;letter-spacing:3px;position:relative;z-index:1;">PLAY</span>
+    <span class="play-btn-text">PLAY</span>
   </button>
 
   <!-- 개발자 모드 전용: 즉시 시뮬레이션 버튼 (경기 시작 전, 시즌 화면) -->
@@ -771,8 +151,8 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 <div id="postseason-screen">
   <div class="ps-title">POSTSEASON</div>
   <div class="ps-bracket" id="ps-bracket"></div>
-  <div id="ps-dev-panel" style="width:100%;max-width:500px;"></div>
-  <button class="btn" id="ps-exit-btn" style="margin-top:22px;max-width:500px;width:100%;padding:12px;" onclick="exitSeasonMode()">시즌 종료</button>
+  <div id="ps-dev-panel" class="ps-width"></div>
+  <button class="btn" id="ps-exit-btn" onclick="exitSeasonMode()">시즌 종료</button>
 </div>
 
 <!-- ── 우승 팝업 ── -->
@@ -828,31 +208,31 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 
 
 <!-- ── 투수 설정 모달 ── -->
-<div id="pitcher-modal" style="position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:300;display:none;align-items:center;justify-content:center;">
-  <div class="turn-modal-inner" style="min-width:320px;max-width:400px;padding:20px;">
+<div id="pitcher-modal" class="modal-backdrop">
+  <div class="turn-modal-inner modal-panel-sm">
     <div class="turn-modal-title">선발 투수 선택</div>
-    <div id="pitcher-list-container" style="display:flex;flex-direction:column;gap:8px;max-height:400px;overflow-y:auto;margin-bottom:16px;"></div>
-    <div style="text-align:center;">
+    <div id="pitcher-list-container" class="modal-list"></div>
+    <div class="modal-actions">
       <button class="btn primary" onclick="confirmPitcher()">다음 (타선 설정)</button>
-      <button class="btn" style="margin-left:8px;" onclick="closePitcherModal()">취소</button>
+      <button class="btn" onclick="closePitcherModal()">취소</button>
     </div>
   </div>
 </div>
 
 <!-- ── 타선 설정 모달 ── -->
-<div id="lineup-modal" style="position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:300;display:none;align-items:center;justify-content:center;">
-  <div class="turn-modal-inner" style="min-width:340px;max-width:480px;padding:20px;">
+<div id="lineup-modal" class="modal-backdrop">
+  <div class="turn-modal-inner modal-panel-md">
     <div class="turn-modal-title">타선 순서 설정</div>
-    <div id="lineup-list-container" style="display:flex;flex-direction:column;gap:4px;max-height:450px;overflow-y:auto;margin-bottom:16px;"></div>
-    <div style="text-align:center;">
+    <div id="lineup-list-container" class="modal-list modal-list-tight"></div>
+    <div class="modal-actions">
       <button class="btn primary" onclick="confirmLineup()">경기 시작</button>
-      <button class="btn" style="margin-left:8px;" onclick="closeLineupModal()">취소</button>
+      <button class="btn" onclick="closeLineupModal()">취소</button>
     </div>
   </div>
 </div>
 
 <!-- ── 경기 중 선수 교체 모달 ── -->
-<div id="in-game-sub-modal" onclick="closeSubModal()" style="position:fixed;inset:0;background:rgba(0,0,0,0.58);z-index:300;display:none;">
+<div id="in-game-sub-modal" class="modal-backdrop modal-backdrop-soft" onclick="closeSubModal()">
   <div class="sub-sheet-panel" onclick="event.stopPropagation()">
     <div class="sub-sheet-head">
       <div class="sub-sheet-title" id="sub-sheet-title">선수 교체</div>
@@ -890,9 +270,9 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
     <div class="mvp-header">🏆 오늘의 MVP</div>
     <div class="mvp-body" id="mvp-body"></div>
   </div>
-  <div style="display:flex;gap:10px;margin-top:4px;margin-bottom:20px">
+  <div class="go-actions">
     <button class="btn primary" id="go-restart-btn" onclick="restartGame()">다시 시작</button>
-    <button class="btn primary" id="go-season-btn" style="display:none; padding:20px 60px; font-size:24px; width:100%;" onclick="returnToSeason()">시즌으로 돌아가기</button>
+    <button class="btn primary go-season-btn" id="go-season-btn" style="display:none" onclick="returnToSeason()">시즌으로 돌아가기</button>
   </div>
 </div>
 
@@ -904,7 +284,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
     <hr class="turn-divider">
     <div class="turn-other-title">같은 턴 다른 경기</div>
     <div id="turn-other-results"></div>
-    <div style="text-align:center;margin-top:16px">
+    <div class="modal-actions turn-modal-actions">
       <button class="btn primary" onclick="closeTurnModal()">확인</button>
     </div>
   </div>
@@ -966,35 +346,35 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
   <div id="atbat-panel">
     <div class="atbat-vs-wrap">
       <div class="atbat-vs-overlay">VS</div>
-      <div class="pitcher-card" style="flex: 1; border-right: 1px solid var(--border); border-bottom: none;">
+      <div class="pitcher-card atbat-half atbat-half-left">
         <div class="matchup-tap-area" onclick="openMatchupPopup()">
-          <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px; position: relative; z-index: 1;">
-            <div class="pteam" id="p-team" style="margin-top: 0; text-align: left;">-</div>
-            <div class="pname" id="p-name" style="line-height: 1;">-</div>
+          <div class="atbat-name-row">
+            <div class="pteam" id="p-team">-</div>
+            <div class="pname" id="p-name">-</div>
           </div>
           <div class="stamina-wrap">
-            <div class="stamina-label" style="justify-content: flex-end;"><span>체력</span><span id="stamina-pct" style="margin-left:8px;">100%</span></div>
+            <div class="stamina-label stamina-label-end"><span>체력</span><span class="stamina-pct" id="stamina-pct">100%</span></div>
             <div class="stamina-bar"><div class="stamina-fill" id="stamina-fill" style="width:100%;background:var(--accent3)"></div></div>
           </div>
         </div>
       </div>
-      <div class="batter-card" style="flex: 1; border-bottom: none;">
+      <div class="batter-card atbat-half">
         <div class="matchup-tap-area" onclick="openMatchupPopup()">
-          <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px; position: relative; z-index: 1;">
-            <div class="bname" id="b-name" style="line-height: 1;">-</div>
-            <div class="binfo" id="b-info" style="margin-top: 0; text-align: right;">-</div>
+          <div class="atbat-name-row">
+            <div class="bname" id="b-name">-</div>
+            <div class="binfo" id="b-info">-</div>
           </div>
           <div class="stamina-wrap">
-            <div class="stamina-label" style="justify-content: flex-start;"><span>체력</span><span id="b-stamina-pct" style="margin-left:8px;">-</span></div>
+            <div class="stamina-label stamina-label-start"><span>체력</span><span class="stamina-pct" id="b-stamina-pct">-</span></div>
             <div class="stamina-bar"><div class="stamina-fill" id="b-stamina-fill" style="width:100%;background:var(--accent3)"></div></div>
           </div>
         </div>
       </div>
     </div>
     <div class="today-stats">
-      <div style="display:flex; gap:34px;">
-        <div style="flex:1;">
-          <div style="font-size:10px; color:var(--text2); margin-bottom:4px; text-transform:uppercase; letter-spacing:1px;">투수</div>
+      <div class="ts-split">
+        <div class="ts-col">
+          <div class="ts-col-title">투수</div>
           <div class="ts-row"><span class="ts-k">투구</span><span class="ts-v" id="ts-p-pc">0</span></div>
           <div class="ts-row"><span class="ts-k">이닝</span><span class="ts-v" id="ts-p-ip">0.0</span></div>
           <div class="ts-row"><span class="ts-k">실점/자책</span><span class="ts-v" id="ts-p-rer">0/0</span></div>
@@ -1002,8 +382,8 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
           <div class="ts-row"><span class="ts-k">안타</span><span class="ts-v" id="ts-p-h">0</span></div>
           <div class="ts-row"><span class="ts-k">사사구</span><span class="ts-v" id="ts-p-bb">0</span></div>
         </div>
-        <div style="flex:1;">
-          <div style="font-size:10px; color:var(--text2); margin-bottom:4px; text-transform:uppercase; letter-spacing:1px;">타자</div>
+        <div class="ts-col">
+          <div class="ts-col-title">타자</div>
           <div class="ts-row"><span class="ts-k">타석</span><span class="ts-v" id="ts-pa">0</span></div>
           <div class="ts-row"><span class="ts-k">안타</span><span class="ts-v" id="ts-h">0</span></div>
           <div class="ts-row"><span class="ts-k">홈런</span><span class="ts-v" id="ts-hr">0</span></div>

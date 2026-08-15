@@ -4,15 +4,28 @@
     "2026": ["kia","samsung","lg","doosan","kt","ssg","lotte","hanhwa","nc","kiwoom"]
   },
   "name_kor": {
-    "kia": "KIA",
+    "kia":     "KIA",
     "samsung": "삼성",
-    "lg": "LG",
-    "doosan": "두산",
-    "kt": "KT",
-    "ssg": "SSG",
-    "lotte": "롯데",
-    "hanhwa": "한화",
-    "nc": "NC",
-    "kiwoom": "키움"
+    "lg":      "LG",
+    "doosan":  "두산",
+    "kt":      "KT",
+    "ssg":     "SSG",
+    "lotte":   "롯데",
+    "hanhwa":  "한화",
+    "nc":      "NC",
+    "kiwoom":  "키움"
+  },
+  "team_colors": {
+    "kia":     { "primary": "#EA0029", "secondary": "#000000" },
+    "samsung": { "primary": "#0066B3", "secondary": "#C0C0C0" },
+    "lg":      { "primary": "#C30452", "secondary": "#000000" },
+    "doosan":  { "primary": "#C8102E", "secondary": "#131230" },
+    "kt":      { "primary": "#EB0A1E", "secondary": "#000000" },
+    "ssg":     { "primary": "#CE0E2D", "secondary": "#FFB81C" },
+    "lotte":   { "primary": "#D71920", "secondary": "#002469" },
+    "hanhwa":  { "primary": "#FF6600", "secondary": "#1A1A1A" },
+    "nc":      { "primary": "#071D49", "secondary": "#B59A6B" },
+    "kiwoom":  { "primary": "#570861", "secondary": "#E30613" }
   }
 }
+

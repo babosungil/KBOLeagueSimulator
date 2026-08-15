@@ -281,6 +281,9 @@
 /* 자동 진행된 턴 결과 요약 */
 .turn-skip-title{font-size:var(--fs-7);margin-bottom:var(--sp-6);font-family:var(--font-display)}
 .turn-skip-table{font-size:var(--fs-5);width:100%;margin-bottom:var(--sp-9)}
+.turn-skip-table td:nth-child(1){text-align:right}
+.turn-skip-table td:nth-child(2){text-align:center}
+.turn-skip-table td:nth-child(3){text-align:left}
 
 /* ═══════════════════════════════════════════════════
    개발자 모드 패널

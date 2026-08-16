@@ -1657,15 +1657,19 @@ async function endGame() {
       <span class="gos-team${awayWins ? ' gos-team-winner' : ''}" ${teamColorStyle(aKor)}>${aKor}</span>
     </div>
   `;
+  let extLabelHtml = '';
   if (gs.isExtra) {
     // 실제 종료된 이닝 계산: 초 공격 시작 전(0아웃, 해당이닝 득점없음)이면 이전 이닝 종료임
     let lastInn = gs.inning;
     if (gs.isTop && gs.outs === 0 && (gs.innings.away[gs.inning - 1] === undefined)) {
       lastInn = gs.inning - 1;
     }
-    document.getElementById('go-ext-label').innerHTML =
-      `<span class="go-ext-badge">${lastInn}회 연장전 종료</span>`;
+    extLabelHtml += `<span class="go-ext-badge">${lastInn}회 연장전 종료</span>`;
   }
+  if (!homeWins && !awayWins) {
+    extLabelHtml += `<span class="go-ext-badge">⚾ 무승부</span>`;
+  }
+  document.getElementById('go-ext-label').innerHTML = extLabelHtml;
   buildFinalScoreboard();
   buildMVP();
   buildBoxScore();

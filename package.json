@@ -7,7 +7,10 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "desktop:sync": "cap copy @capacitor-community/electron",
+    "desktop:run": "npm run desktop:sync && cd electron && npm run electron:start",
+    "desktop:build": "npm run desktop:sync && cd electron && npm run electron:make"
   },
   "repository": {
     "type": "git",

@@ -13,6 +13,7 @@ const SS = {
   myTeamKor: null,   // '두산'
   teams:     [],     // ['kia','samsung', ...]
   nameKor:   {},     // { doosan:'두산', ... }
+  teamColors:{},     // { doosan:{ primary:'#C8102E', secondary:'#131230' }, ... }
   schedule:  [],     // 144경기 배열
   gameIdx:   0,      // 현재 경기 인덱스
   standings: {},     // { doosan:{ w,l,d,rs,ra }, ... }
@@ -1906,6 +1907,12 @@ async function startSeasonGame(matchup) {
   if (mobileHomeLnpTab) mobileHomeLnpTab.textContent = hKor;
   const mobileAwayLnpTab = document.getElementById('mobile-away-lineup-tab');
   if (mobileAwayLnpTab) mobileAwayLnpTab.textContent = aKor;
+  if (typeof setTeamColorVars === 'function') {
+    setTeamColorVars(homeLnpTitle, hKor);
+    setTeamColorVars(awayLnpTitle, aKor);
+    setTeamColorVars(mobileHomeLnpTab, hKor);
+    setTeamColorVars(mobileAwayLnpTab, aKor);
+  }
   
 
   document.getElementById('game-log').innerHTML             = '';

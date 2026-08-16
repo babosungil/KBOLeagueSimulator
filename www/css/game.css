@@ -39,13 +39,13 @@
   background:var(--bg2);
   padding:var(--sp-3) var(--sp-9);
   border-radius:0 0 var(--r-xl) var(--r-xl);
-  border:1px solid var(--border);border-top:none;
+  border:1px solid var(--border);border-top:3px solid var(--team-color, var(--border));
   box-shadow:0 4px 15px rgba(0,0,0,.3);
   min-width:100px;transition:all .3s ease;text-align:center;
 }
 .min-team-box.attacking{background:var(--accent);border-color:var(--accent);box-shadow:0 0 20px rgba(245,166,35,.3)}
 .min-team-name{font-size:var(--fs-3);font-family:var(--font-body);letter-spacing:1px;color:var(--text2);margin-bottom:var(--sp-1);transition:color .3s ease}
-.min-team-score{font-family:var(--font-num);font-size:var(--fs-8);color:var(--accent);letter-spacing:1px;line-height:1;transition:color .3s ease}
+.min-team-score{font-family:var(--font-num);font-size:var(--fs-8);color:var(--team-color-text, var(--accent));letter-spacing:1px;line-height:1;transition:color .3s ease}
 .min-team-box.attacking .min-team-name{color:rgba(0,0,0,.6);font-weight:var(--fw-bold)}
 .min-team-box.attacking .min-team-score{color:var(--on-accent)}
 .min-vs{font-family:var(--font-num);font-size:var(--fs-7);color:var(--text3);margin:0 var(--sp-5)}
@@ -233,7 +233,7 @@
 /* ── 라인업 ───────────────────────────────────────── */
 .lineup-half{flex:1 1 300px;overflow-y:auto;border-bottom:1px solid var(--border)}
 .lineup-half:last-child{border-bottom:none}
-.lineup-title{padding:7px var(--sp-6);font-size:var(--fs-2);letter-spacing:2px;text-transform:uppercase;color:var(--text2);border-bottom:1px solid var(--border);background:var(--bg2);position:sticky;top:0}
+.lineup-title{padding:7px var(--sp-6);font-size:var(--fs-2);letter-spacing:2px;text-transform:uppercase;color:var(--text2);border-bottom:2px solid var(--team-color, var(--border));background:var(--bg2);position:sticky;top:0}
 .lr{display:flex;align-items:center;padding:var(--sp-2) var(--sp-5);border-bottom:1px solid var(--border);gap:7px;transition:background var(--t-fast)}
 .lr:hover{background:var(--bg3)}
 .lr.batting{background:rgba(245,166,35,.07)}
@@ -256,7 +256,7 @@
 
 .bs-tabs{display:flex;gap:var(--sp-4);width:100%;max-width:780px;flex-shrink:0}
 .bs-tab{flex:1;padding:var(--sp-4) var(--sp-6);border:1px solid var(--border2);border-radius:var(--r-md);cursor:pointer;text-align:center;font-family:var(--font-body);font-size:var(--fs-5);font-weight:var(--fw-bold);background:var(--bg3);color:var(--text2);transition:all var(--t-base)}
-.bs-tab.active{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.bs-tab.active{background:var(--team-tab-bg, var(--accent));color:var(--team-tab-text, var(--on-accent));border-color:var(--team-tab-bg, var(--accent))}
 
 .boxscore-wrap{width:100%;max-width:780px;display:flex;flex-direction:column;flex-shrink:0;gap:var(--sp-7);margin-bottom:var(--sp-7)}
 .bs-tab-panel{display:flex;flex-direction:column;flex-shrink:0;gap:var(--sp-7)}
@@ -292,7 +292,7 @@
    font-size는 fitGosLine()이 실측 너비에 맞춰 px로 덮어쓴다 (아래 값은 초기 기준치) */
 .gos-line{display:inline-flex;flex-wrap:nowrap;align-items:baseline;gap:0.18em;font-size:56px}
 .gos-team{font-family:var(--font-display);font-size:0.5em;font-weight:var(--fw-bold);color:var(--text2);white-space:nowrap}
-.gos-team-winner{color:var(--text);-webkit-text-stroke:0.04em var(--accent)}
+.gos-team-winner{font-size:calc(0.5em + 6px);color:var(--text);-webkit-text-stroke:0.02em var(--accent)}
 .gos-score{font-family:var(--font-num);font-size:1em;color:var(--text);white-space:nowrap}
 .gos-colon{font-family:var(--font-num);font-size:0.5em;color:var(--text3)}
 
@@ -464,7 +464,7 @@
 .lineup-sheet-close:active{background:var(--bg3);color:var(--text)}
 .lineup-sheet-tabs{display:flex;background:var(--bg2);border-top:1px solid var(--border);order:3;flex-shrink:0}
 .lineup-sheet-tab{flex:1;height:52px;border:none;background:transparent;color:var(--text2);font-size:var(--fs-6);font-weight:var(--fw-bold);letter-spacing:1px;cursor:pointer;border-top:3px solid transparent}
-.lineup-sheet-tab.active{color:var(--accent);border-top-color:var(--accent)}
+.lineup-sheet-tab.active{color:var(--team-color-text, var(--accent));border-top-color:var(--team-color, var(--accent))}
 .lineup-sheet-body{order:2;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .mobile-lineup-list{display:none}
 .mobile-lineup-list.active{display:block}

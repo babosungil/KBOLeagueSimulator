@@ -669,6 +669,74 @@ function getTeamCode(korName) {
   if (typeof SS === 'undefined' || !SS.nameKor) return null;
   return Object.keys(SS.nameKor).find(k => SS.nameKor[k] === korName) || null;
 }
+// 팀 한글명 → 팀 컬러 { primary, secondary } (없으면 null)
+function getTeamColor(korName) {
+  const code = getTeamCode(korName);
+  if (!code || typeof SS === 'undefined' || !SS.teamColors) return null;
+  return SS.teamColors[code] || null;
+}
+
+// ── 팀 컬러 유틸 ──────────────────────────────────────
+// 어두운 앱 배경(--bg #0a0c10) 위에서 팀 컬러를 그대로 텍스트/보더로 쓰면
+// NC(#071D49)·키움(#570861)처럼 명도가 낮은 팀은 거의 안 보인다.
+// 배경 채움(탭 등)에는 원색을 그대로 쓰고, 텍스트로 쓸 때만 최소 대비(WCAG ≈3:1)를 확보하도록 밝힌다.
+function hexToRgb(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+}
+function relLuminance({ r, g, b }) {
+  const lin = [r, g, b].map(v => {
+    v /= 255;
+    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2];
+}
+const BG_LUMINANCE = 0.0037; // var(--bg) #0a0c10
+function readableTeamColor(hex) {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return hex;
+  const contrast = (relLuminance(rgb) + 0.05) / (BG_LUMINANCE + 0.05);
+  if (contrast >= 3) return hex;
+  const t = 0.4;
+  const lighten = c => Math.round(c + (255 - c) * t);
+  return `rgb(${lighten(rgb.r)}, ${lighten(rgb.g)}, ${lighten(rgb.b)})`;
+}
+// 팀 컬러를 배경으로 채울 때(탭 활성 상태 등) 그 위에 얹을 글자색(흑/백)을 고른다.
+function contrastingTextColor(hex) {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return '#000';
+  const l = relLuminance(rgb);
+  const contrastBlack = (l + 0.05) / 0.05;
+  const contrastWhite = 1.05 / (l + 0.05);
+  return contrastWhite > contrastBlack ? '#fff' : '#000';
+}
+// 팀명을 다크 배경 위 텍스트로 칠할 때 쓰는 style 속성 문자열. 팀 컬러가 없으면 빈 문자열(기본 CSS 색 유지).
+function teamColorStyle(korName) {
+  const c = getTeamColor(korName);
+  return c ? `style="color:${readableTeamColor(c.primary)}"` : '';
+}
+// 팀 탭처럼 원색을 배경으로 채우는 곳: --team-tab-bg/--team-tab-text 커스텀 프로퍼티로 넘긴다.
+// (활성 상태일 때만 CSS가 이 값을 실제로 소비하므로, 비활성 탭은 그대로 둬도 무방)
+function teamTabStyle(korName) {
+  const c = getTeamColor(korName);
+  if (!c) return '';
+  return `style="--team-tab-bg:${c.primary};--team-tab-text:${contrastingTextColor(c.primary)}"`;
+}
+// 헤더 팀 박스처럼 보더(원색 그대로)와 텍스트(가독성 보정)를 함께 쓰는 요소에 커스텀 프로퍼티를 심어준다.
+function setTeamColorVars(el, korName) {
+  if (!el) return;
+  const c = getTeamColor(korName);
+  if (!c) {
+    el.style.removeProperty('--team-color');
+    el.style.removeProperty('--team-color-text');
+    return;
+  }
+  el.style.setProperty('--team-color', c.primary);
+  el.style.setProperty('--team-color-text', readableTeamColor(c.primary));
+}
+
 // 수비 포지션 한글 → 영문 약어
 const POS_KOR_MAP = {
   '포수': 'C', '1루수': '1B', '2루수': '2B', '3루수': '3B',
@@ -1573,11 +1641,11 @@ async function endGame() {
   const awayWins = gs.awayScore > gs.homeScore;
   document.getElementById('go-score').innerHTML = `
     <div class="gos-line">
-      <span class="gos-team${homeWins ? ' gos-team-winner' : ''}">${hKor}</span>
+      <span class="gos-team${homeWins ? ' gos-team-winner' : ''}" ${teamColorStyle(hKor)}>${hKor}</span>
       <span class="gos-score">${gs.homeScore}</span>
       <span class="gos-colon">:</span>
       <span class="gos-score">${gs.awayScore}</span>
-      <span class="gos-team${awayWins ? ' gos-team-winner' : ''}">${aKor}</span>
+      <span class="gos-team${awayWins ? ' gos-team-winner' : ''}" ${teamColorStyle(aKor)}>${aKor}</span>
     </div>
   `;
   if (gs.isExtra) {
@@ -1641,7 +1709,7 @@ function buildFinalScoreboard() {
   ['away', 'home'].forEach(side => {
     const team = side === 'away' ? gs.awayTeam : gs.homeTeam;
     const score = side === 'away' ? gs.awayScore : gs.homeScore;
-    h += `<tr><td class="tc2">${team}</td>`;
+    h += `<tr><td class="tc2" ${teamColorStyle(team)}>${team}</td>`;
     for (let i = 0; i < maxInn; i++) {
       const v = gs.innings[side][i];
       h += `<td class="${i >= 9 ? 'ext-cell' : ''}">${v || 0}</td>`;
@@ -1657,7 +1725,7 @@ function buildTeamBoxHtml(side) {
   const team = side === 'away' ? gs.awayTeam : gs.homeTeam;
 
   let bh = `<div class="bs-section">
-    <div class="bs-title">${team} 타선</div>
+    <div class="bs-title"><span ${teamColorStyle(team)}>${team}</span> 타선</div>
     <table class="bs-table">
       <tr><th>타자</th><th>타석</th><th>안타</th><th>홈런</th><th>타점</th><th>삼진</th><th>볼넷</th><th>도루</th></tr>`;
   let totPA = 0, totH = 0, totHR = 0, totRBI = 0, totK = 0, totBB = 0, totSB = 0;
@@ -1675,7 +1743,7 @@ function buildTeamBoxHtml(side) {
   </tr></table></div>`;
 
   let ph = `<div class="bs-section">
-    <div class="bs-title">${team} 투수</div>
+    <div class="bs-title"><span ${teamColorStyle(team)}>${team}</span> 투수</div>
     <table class="bs-table">
       <tr><th>투수</th><th>이닝</th><th>투구수</th><th>안타</th><th>볼넷</th><th>삼진</th><th>실점</th></tr>`;
   pitchers.filter(p => p.todayStats && p.todayStats.IP_out > 0).forEach(p => {
@@ -1697,8 +1765,8 @@ function buildBoxScore() {
 
   wrap.innerHTML = `
     <div class="bs-tabs">
-      <div class="bs-tab${mySide === 'home' ? ' active' : ''}" id="bs-tab-home" onclick="switchBoxTab('home')">${gs.homeTeam}</div>
-      <div class="bs-tab${mySide === 'away' ? ' active' : ''}" id="bs-tab-away" onclick="switchBoxTab('away')">${gs.awayTeam}</div>
+      <div class="bs-tab${mySide === 'home' ? ' active' : ''}" id="bs-tab-home" ${teamTabStyle(gs.homeTeam)} onclick="switchBoxTab('home')">${gs.homeTeam}</div>
+      <div class="bs-tab${mySide === 'away' ? ' active' : ''}" id="bs-tab-away" ${teamTabStyle(gs.awayTeam)} onclick="switchBoxTab('away')">${gs.awayTeam}</div>
     </div>
     <div class="bs-tab-panel" id="bs-panel-home" style="display:${mySide === 'home' ? '' : 'none'}">${buildTeamBoxHtml('home')}</div>
     <div class="bs-tab-panel" id="bs-panel-away" style="display:${mySide === 'away' ? '' : 'none'}">${buildTeamBoxHtml('away')}</div>
@@ -1754,7 +1822,7 @@ function buildMVP() {
 
     body.innerHTML = `
       <div class="mvp-card overall-mvp">
-        <div class="mvp-tag">${mvp.team}</div>
+        <div class="mvp-tag" ${teamColorStyle(mvp.team)}>${mvp.team}</div>
         <div class="mvp-name">${formatPlayerName(p.name)}</div>
         <div class="mvp-stats">${statsHtml}</div>
       </div>
@@ -2027,7 +2095,7 @@ function updateSbUI() {
     ['away', 'home'].forEach(side => {
       const team = side === 'away' ? gs.awayTeam : gs.homeTeam;
       const score = side === 'away' ? gs.awayScore : gs.homeScore;
-      hh += `<tr><td class="tc">${team}</td>`;
+      hh += `<tr><td class="tc" ${teamColorStyle(team)}>${team}</td>`;
       for (let i = 0; i < displayInn; i++) {
         const v = gs.innings[side][i];
         hh += `<td class="${i + 1 === gs.inning ? 'current-inn' : ''}">${v !== undefined ? v : ''}</td>`;
@@ -2037,12 +2105,14 @@ function updateSbUI() {
     ht.innerHTML = hh;
   }
 
-  // 최소화 모드 공격팀 하이라이트
+  // 최소화 모드 공격팀 하이라이트 + 팀 컬러
   const abox = document.getElementById('min-a-box');
   const hbox = document.getElementById('min-h-box');
   if (abox && hbox) {
     abox.classList.toggle('attacking', gs.isTop);
     hbox.classList.toggle('attacking', !gs.isTop);
+    setTeamColorVars(abox, gs.awayTeam);
+    setTeamColorVars(hbox, gs.homeTeam);
   }
 }
 

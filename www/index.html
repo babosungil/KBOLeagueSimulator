@@ -571,6 +571,7 @@ async function startSeasonMode() {
   SS.myTeamKor  = nameKor[myTeam] || myTeam;
   SS.teams      = teams;
   SS.nameKor    = nameKor;
+  SS.teamColors = meta.team_colors || {};
   SS.schedule   = buildSchedule(teams, myTeam);
   SS.gameIdx    = 0;
   SS.standings  = initStandings(teams);
@@ -592,6 +593,13 @@ async function startSeasonMode() {
 // ── 이어하기 ───────────────────────────────────────────
 async function resumeSeasonMode() {
   if (!loadSeasonState()) { alert('저장된 시즌이 없습니다.'); return; }
+  if (!SS.teamColors || !Object.keys(SS.teamColors).length) {
+    try {
+      const metaRes = await fetch(dataUrl('data/_meta.json'));
+      const meta    = await metaRes.json();
+      SS.teamColors = meta.team_colors || {};
+    } catch (e) { SS.teamColors = SS.teamColors || {}; }
+  }
   await loadAllTeamData(SS.year, SS.teams, SS.nameKor);
   // 'done'(우승 확정)도 포스트시즌 화면을 보여준다.
   // 시즌 화면으로 보내면 다음 경기가 없는 빈 상태가 된다.

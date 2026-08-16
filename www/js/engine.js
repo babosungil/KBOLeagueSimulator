@@ -120,6 +120,10 @@ async function doScoreEffect(runsScored) {
   document.getElementById('se-away-new').textContent = newAway;
   document.getElementById('se-home-old').textContent = oldHome;
   document.getElementById('se-home-new').textContent = newHome;
+  setTeamColorVars(document.getElementById('se-away-name'), gs.awayTeam);
+  setTeamColorVars(document.getElementById('se-home-name'), gs.homeTeam);
+  setTeamColorVars(document.getElementById('se-away-new'), gs.awayTeam);
+  setTeamColorVars(document.getElementById('se-home-new'), gs.homeTeam);
 
   const awayInner = document.getElementById('se-away-inner');
   const homeInner = document.getElementById('se-home-inner');
@@ -156,8 +160,8 @@ async function doGameStartEffect(awayTeam, homeTeam, subTag = 'MATCH START') {
   const homeEl = document.getElementById('ms-home-team');
 
   if (subTagEl) subTagEl.textContent = subTag;
-  if (awayEl) awayEl.textContent = awayTeam;
-  if (homeEl) homeEl.textContent = homeTeam;
+  if (awayEl) { awayEl.textContent = awayTeam; setTeamColorVars(awayEl, awayTeam); }
+  if (homeEl) { homeEl.textContent = homeTeam; setTeamColorVars(homeEl, homeTeam); }
 
   overlay.classList.add('show');
   await sleep(2100);
@@ -202,6 +206,8 @@ async function doInningEffect(oldInning, newInning, oldTeam, newTeam, onMidway) 
   if (labelNew) labelNew.textContent = newInning;
   oldEl.textContent = oldTeam;
   newEl.textContent = newTeam;
+  setTeamColorVars(oldEl, oldTeam);
+  setTeamColorVars(newEl, newTeam);
 
   labelOld.className = 'inning-label old';
   labelNew.className = 'inning-label new';
@@ -731,10 +737,13 @@ function setTeamColorVars(el, korName) {
   if (!c) {
     el.style.removeProperty('--team-color');
     el.style.removeProperty('--team-color-text');
+    el.style.removeProperty('--team-color-tint');
     return;
   }
+  const rgb = hexToRgb(c.primary);
   el.style.setProperty('--team-color', c.primary);
   el.style.setProperty('--team-color-text', readableTeamColor(c.primary));
+  if (rgb) el.style.setProperty('--team-color-tint', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, .15)`);
 }
 
 // 수비 포지션 한글 → 영문 약어

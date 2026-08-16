@@ -332,12 +332,12 @@
 /* 득점 연출 */
 .score-vs-container{display:flex;align-items:center;gap:40px;animation:scaleUp .5s cubic-bezier(.175,.885,.32,1.275)}
 .score-team-col{display:flex;flex-direction:column;align-items:center;gap:var(--sp-6)}
-.score-team-name{font-family:var(--font-display);font-size:var(--fs-11);color:var(--text);letter-spacing:2px}
+.score-team-name{font-family:var(--font-display);font-size:var(--fs-11);color:var(--team-color-text, var(--text));letter-spacing:2px}
 .score-vs{font-family:var(--font-display);font-size:var(--fs-12);color:var(--text3)}
 .score-number-wrap{overflow:hidden;height:100px}
 .score-number-inner{display:flex;flex-direction:column;transition:transform .6s cubic-bezier(.34,1.56,.64,1)}
 .score-number{font-family:var(--font-num);font-size:var(--fs-cine-2xl);color:var(--text);letter-spacing:5px;height:100px;display:flex;justify-content:center;align-items:center;line-height:1;margin:0;padding:0}
-.score-number-new{color:var(--accent)}
+.score-number-new{color:var(--team-color-text, var(--accent))}
 .score-animate-up{transform:translateY(-100px)}
 
 .go-overlay-text{font-family:var(--font-display);font-size:var(--fs-13);color:var(--accent3);letter-spacing:6px;margin-bottom:var(--sp-5);animation:scaleUp .5s cubic-bezier(.175,.885,.32,1.275)}
@@ -369,8 +369,8 @@
   box-shadow:0 10px 30px rgba(0,0,0,.5);
   opacity:0;
 }
-.ms-team-box.away{border-color:rgba(59,130,246,.4);background:linear-gradient(135deg,rgba(59,130,246,.15),rgba(10,12,16,.4));color:var(--away)}
-.ms-team-box.home{border-color:rgba(245,166,35,.4);background:linear-gradient(135deg,rgba(245,166,35,.15),rgba(10,12,16,.4));color:var(--accent)}
+.ms-team-box.away{border-color:var(--team-color, rgba(59,130,246,.4));background:linear-gradient(135deg,var(--team-color-tint, rgba(59,130,246,.15)),rgba(10,12,16,.4));color:var(--team-color-text, var(--away))}
+.ms-team-box.home{border-color:var(--team-color, rgba(245,166,35,.4));background:linear-gradient(135deg,var(--team-color-tint, rgba(245,166,35,.15)),rgba(10,12,16,.4));color:var(--team-color-text, var(--accent))}
 #match-start-overlay.show .ms-team-box.away{animation:msSlideInLeft .5s cubic-bezier(.175,.885,.32,1.275) .15s forwards}
 #match-start-overlay.show .ms-team-box.home{animation:msSlideInRight .5s cubic-bezier(.175,.885,.32,1.275) .15s forwards}
 @keyframes msSlideInLeft{from{transform:translateX(-80px) scale(.8);opacity:0}to{transform:translateX(0) scale(1);opacity:1}}
@@ -401,8 +401,8 @@
 .inning-label.new{color:var(--accent);opacity:.9}
 .inning-team-slot{position:absolute;display:flex;align-items:center;justify-content:center;width:100%}
 .inning-team-text{font-family:var(--font-display);font-size:var(--fs-cine-xl);letter-spacing:4px;padding:var(--sp-7) var(--sp-12);border-radius:var(--r-2xl)}
-.inning-team-text.old{color:var(--text2);background:rgba(255,255,255,.05)}
-.inning-team-text.new{color:var(--accent);background:rgba(245,166,35,.12)}
+.inning-team-text.old{color:var(--team-color-text, var(--text2));background:var(--team-color-tint, rgba(255,255,255,.05))}
+.inning-team-text.new{color:var(--team-color-text, var(--accent));background:var(--team-color-tint, rgba(245,166,35,.12))}
 @keyframes ioOldOut{0%{transform:translateY(0) scale(1);opacity:1}100%{transform:translateY(-80px) scale(.6);opacity:0}}
 @keyframes ioNewIn{0%{transform:translateY(80px) scale(.6);opacity:0}100%{transform:translateY(0) scale(1);opacity:1}}
 @keyframes ioLabelOldOut{0%{transform:translateY(0);opacity:.7}100%{transform:translateY(30px);opacity:0}}

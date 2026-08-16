@@ -247,15 +247,20 @@
 .lr-today.ghr{color:var(--accent)}
 
 /* ── 게임 종료 화면 ───────────────────────────────── */
-.game-over{position:fixed;inset:0;background:var(--overlay-opaque);z-index:var(--z-screen);display:none;flex-direction:column;align-items:center;justify-content:flex-start;padding:var(--sp-9);overflow-y:auto}
+.game-over{position:fixed;inset:0;background:var(--overlay-opaque);z-index:var(--z-screen);display:none;flex-direction:column;align-items:center;justify-content:flex-start;padding:var(--sp-9);overflow:hidden}
 .game-over.show{display:flex}
-.go-title{font-family:var(--font-display);font-size:var(--fs-11);color:var(--accent);letter-spacing:4px;margin-bottom:var(--sp-2);margin-top:var(--sp-5)}
-.go-score{font-family:var(--font-num);font-size:var(--fs-13);letter-spacing:8px}
-.go-winner{color:var(--accent3);font-size:var(--fs-6);margin-bottom:var(--sp-8)}
+.go-title{flex-shrink:0;font-family:var(--font-display);font-size:var(--fs-11);color:var(--accent);letter-spacing:4px;margin-bottom:var(--sp-2);margin-top:var(--sp-5)}
+.go-scroll{width:100%;flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;align-items:center}
+.go-score{width:100%;flex-shrink:0;text-align:center;font-family:var(--font-num);font-size:var(--fs-13);letter-spacing:8px}
 .go-ext-badge{background:rgba(245,166,35,.2);border:1px solid var(--accent);color:var(--accent);padding:3px var(--sp-6);border-radius:var(--r-xl);font-size:var(--fs-4);margin-bottom:var(--sp-3);display:inline-block}
 
-.boxscore-wrap{width:100%;max-width:780px;display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-7);margin-bottom:var(--sp-7)}
-.bs-section{background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden}
+.bs-tabs{display:flex;gap:var(--sp-4);width:100%;max-width:780px;flex-shrink:0}
+.bs-tab{flex:1;padding:var(--sp-4) var(--sp-6);border:1px solid var(--border2);border-radius:var(--r-md);cursor:pointer;text-align:center;font-family:var(--font-body);font-size:var(--fs-5);font-weight:var(--fw-bold);background:var(--bg3);color:var(--text2);transition:all var(--t-base)}
+.bs-tab.active{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+
+.boxscore-wrap{width:100%;max-width:780px;display:flex;flex-direction:column;flex-shrink:0;gap:var(--sp-7);margin-bottom:var(--sp-7)}
+.bs-tab-panel{display:flex;flex-direction:column;flex-shrink:0;gap:var(--sp-7)}
+.bs-section{background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;flex-shrink:0}
 .bs-title{padding:var(--sp-4) var(--sp-7);background:var(--bg2);font-size:var(--fs-2);letter-spacing:2px;text-transform:uppercase;color:var(--text2);border-bottom:1px solid var(--border)}
 .bs-table{width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:var(--fs-3)}
 .bs-table th{padding:var(--sp-2) 7px;text-align:center;color:var(--text3);font-size:var(--fs-1);border-bottom:1px solid var(--border);background:var(--bg3)}
@@ -265,17 +270,16 @@
 .bs-table tr:last-child td{border-bottom:none}
 .bs-table .highlight{color:var(--accent)}
 
-.mvp-section{background:var(--panel);border:1px solid var(--accent);border-radius:var(--r-lg);overflow:hidden;width:100%;max-width:780px;margin-bottom:var(--sp-7)}
+.mvp-section{background:var(--panel);border:1px solid var(--accent);border-radius:var(--r-lg);overflow:hidden;flex-shrink:0;width:100%;max-width:780px;margin-bottom:var(--sp-7)}
 .mvp-header{padding:var(--sp-4) var(--sp-7);background:rgba(245,166,35,.1);font-size:var(--fs-2);letter-spacing:2px;text-transform:uppercase;color:var(--accent);border-bottom:1px solid rgba(245,166,35,.3)}
-.mvp-body{display:grid;grid-template-columns:1fr 1fr}
-.mvp-card{padding:var(--sp-6) var(--sp-8);border-right:1px solid var(--border)}
-.mvp-card:last-child{border-right:none}
+.mvp-body{display:block}
+.mvp-card{padding:var(--sp-6) var(--sp-8)}
 .mvp-tag{font-size:var(--fs-1);color:var(--text2);letter-spacing:1px;text-transform:uppercase;margin-bottom:var(--sp-2)}
 .mvp-name{font-family:var(--font-display);font-size:var(--fs-7);letter-spacing:1px;color:var(--accent)}
 .mvp-stats{font-size:var(--fs-3);color:var(--text2);margin-top:3px}
 .mvp-stats span{color:var(--text);font-family:var(--font-mono)}
 
-.sb-full{background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;width:100%;max-width:780px;margin-bottom:var(--sp-7)}
+.sb-full{background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;flex-shrink:0;width:100%;max-width:780px;margin-bottom:var(--sp-7)}
 .sb-full-table{width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:var(--fs-3)}
 .sb-full-table th{padding:var(--sp-2) var(--sp-3);text-align:center;color:var(--text2);font-size:var(--fs-1);background:var(--bg3)}
 .sb-full-table td{padding:3px var(--sp-3);text-align:center;border-top:1px solid var(--border)}
@@ -284,12 +288,13 @@
 .sb-full-table .tot2{color:var(--accent);font-weight:var(--fw-bold)}
 .ext-cell{color:var(--accent);font-size:var(--fs-2)}
 
-/* 최종 스코어 (#go-score 안에 JS가 그린다) */
-.gos-wrap{display:flex;flex-direction:column;align-items:center;width:100%}
-.gos-teams{display:flex;justify-content:space-between;width:100%;max-width:400px;font-family:var(--font-display);font-size:var(--fs-8);color:var(--text2);margin-bottom:var(--sp-5)}
-.gos-team{flex:1;text-align:center}
-.gos-nums{display:flex;justify-content:center;align-items:center;gap:var(--sp-12);font-family:var(--font-num);font-size:80px;letter-spacing:4px}
-.gos-colon{font-size:var(--fs-11);color:var(--text3)}
+/* 최종 스코어 (#go-score 안에 JS가 그린다) : 팀명 점수 : 점수 팀명 한 줄 표시
+   font-size는 fitGosLine()이 실측 너비에 맞춰 px로 덮어쓴다 (아래 값은 초기 기준치) */
+.gos-line{display:inline-flex;flex-wrap:nowrap;align-items:baseline;gap:0.18em;font-size:56px}
+.gos-team{font-family:var(--font-display);font-size:0.5em;font-weight:var(--fw-bold);color:var(--text2);white-space:nowrap}
+.gos-team-winner{color:var(--text);-webkit-text-stroke:0.04em var(--accent)}
+.gos-score{font-family:var(--font-num);font-size:1em;color:var(--text);white-space:nowrap}
+.gos-colon{font-family:var(--font-num);font-size:0.5em;color:var(--text3)}
 
 .bs-total{font-weight:var(--fw-bold);color:var(--accent)}
 
@@ -304,7 +309,7 @@
 /* 계산식 마지막 줄 (최종 확률) */
 .fr-final{color:var(--accent);margin-top:var(--sp-2)}
 
-.go-actions{display:flex;gap:var(--sp-5);margin-top:var(--sp-2);margin-bottom:var(--sp-9)}
+.go-actions{display:flex;gap:var(--sp-5);flex-shrink:0;width:100%;max-width:780px;margin-top:var(--sp-2)}
 .go-season-btn{padding:var(--sp-9) 60px;font-size:var(--fs-8);width:100%}
 
 /* ── 연장 배너 ────────────────────────────────────── */

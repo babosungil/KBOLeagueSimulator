@@ -258,17 +258,18 @@
 <!-- ── 게임 종료 화면 ── -->
 <div class="game-over" id="game-over">
   <div class="go-title">GAME OVER</div>
-  <div class="go-score"  id="go-score"></div>
-  <div id="go-ext-label"></div>
-  <div class="go-winner" id="go-winner"></div>
-  <div class="sb-full" style="display:none">
-    <div class="bs-title">이닝별 스코어</div>
-    <table class="sb-full-table" id="final-scoreboard"></table>
-  </div>
-  <div class="boxscore-wrap" id="boxscore-wrap"></div>
-  <div class="mvp-section">
-    <div class="mvp-header">🏆 오늘의 MVP</div>
-    <div class="mvp-body" id="mvp-body"></div>
+  <div class="go-scroll">
+    <div class="go-score"  id="go-score"></div>
+    <div id="go-ext-label"></div>
+    <div class="sb-full" style="display:none">
+      <div class="bs-title">이닝별 스코어</div>
+      <table class="sb-full-table" id="final-scoreboard"></table>
+    </div>
+    <div class="mvp-section">
+      <div class="mvp-header">🏆 오늘의 MVP</div>
+      <div class="mvp-body" id="mvp-body"></div>
+    </div>
+    <div class="boxscore-wrap" id="boxscore-wrap"></div>
   </div>
   <div class="go-actions">
     <button class="btn primary" id="go-restart-btn" onclick="restartGame()">다시 시작</button>

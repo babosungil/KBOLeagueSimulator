@@ -1567,24 +1567,19 @@ async function endGame() {
   if (typeof clearGameState === 'function') clearGameState(); // 즉시 저장된 게임 삭제 (12이닝 재시작 방지)
 
   await doGameOverEffect();
-  const w = gs.homeScore > gs.awayScore ? gs.homeTeam
-    : gs.awayScore > gs.homeScore ? gs.awayTeam : '무승부';
   const hKor = gs.homeTeam;
   const aKor = gs.awayTeam;
+  const homeWins = gs.homeScore > gs.awayScore;
+  const awayWins = gs.awayScore > gs.homeScore;
   document.getElementById('go-score').innerHTML = `
-    <div class="gos-wrap">
-      <div class="gos-teams">
-        <span class="gos-team">${hKor}</span>
-        <span class="gos-team">${aKor}</span>
-      </div>
-      <div class="gos-nums">
-        <span>${gs.homeScore}</span>
-        <span class="gos-colon">:</span>
-        <span>${gs.awayScore}</span>
-      </div>
+    <div class="gos-line">
+      <span class="gos-team${homeWins ? ' gos-team-winner' : ''}">${hKor}</span>
+      <span class="gos-score">${gs.homeScore}</span>
+      <span class="gos-colon">:</span>
+      <span class="gos-score">${gs.awayScore}</span>
+      <span class="gos-team${awayWins ? ' gos-team-winner' : ''}">${aKor}</span>
     </div>
   `;
-  document.getElementById('go-winner').textContent = w === '무승부' ? '⚾ 무승부!' : '🏆 ' + w + ' 승!';
   if (gs.isExtra) {
     // 실제 종료된 이닝 계산: 초 공격 시작 전(0아웃, 해당이닝 득점없음)이면 이전 이닝 종료임
     let lastInn = gs.inning;
@@ -1595,8 +1590,8 @@ async function endGame() {
       `<span class="go-ext-badge">${lastInn}회 연장전 종료</span>`;
   }
   buildFinalScoreboard();
-  buildBoxScore();
   buildMVP();
+  buildBoxScore();
   // ── 시즌 모드 훅 ──
   if (typeof onSeasonGameEnd === 'function' && gs._seasonGame) {
     onSeasonGameEnd(gs.homeScore, gs.awayScore);
@@ -1607,11 +1602,35 @@ async function endGame() {
     document.getElementById('go-restart-btn').style.display = 'inline-block';
   }
   document.getElementById('game-over').classList.add('show');
+  fitGosLine();
 }
 
 // ═══════════════════════════════════════════════════════
 //  결과 화면 빌더
 // ═══════════════════════════════════════════════════════
+
+// "팀명 점수 : 점수 팀명"이 화면 좌우 폭을 최대한 채우면서도 한 줄을 넘지 않도록
+// 기준 크기에서 실측한 너비를 기반으로 목표 폭에 맞는 글자 크기를 역산한다.
+// .gos-line은 inline-flex(내용에 맞춰 축소)라서 scrollWidth가 실제 내용 너비를 그대로 보여준다.
+// (width:100%인 블록이었다면 내용이 더 좁아도 scrollWidth가 컨테이너 너비 아래로 못 내려가
+//  "이미 꽉 찼다"고 착각해 확대가 전혀 일어나지 않는다.)
+function fitGosLine() {
+  const line = document.querySelector('.gos-line');
+  if (!line) return;
+  const targetWidth = line.parentElement.clientWidth;
+  if (!targetWidth) return;
+  const minFs = 18, maxFs = 84, probeFs = 40;
+  line.style.fontSize = probeFs + 'px';
+  const probeWidth = line.scrollWidth;
+  if (!probeWidth) return;
+  let fs = Math.floor(probeFs * (targetWidth / probeWidth));
+  fs = Math.max(minFs, Math.min(maxFs, fs));
+  line.style.fontSize = fs + 'px';
+  while (line.scrollWidth > targetWidth && fs > minFs) {
+    fs -= 1;
+    line.style.fontSize = fs + 'px';
+  }
+}
 
 function buildFinalScoreboard() {
   const t = document.getElementById('final-scoreboard');
@@ -1632,31 +1651,65 @@ function buildFinalScoreboard() {
   t.innerHTML = h;
 }
 
-function buildBoxScore() {
-  const wrap = document.getElementById('boxscore-wrap');
-  wrap.innerHTML = '';
-  ['away', 'home'].forEach(side => {
-    const lineup = side === 'away' ? gs.awayLineup : gs.homeLineup;
-    const team = side === 'away' ? gs.awayTeam : gs.homeTeam;
-    const div = document.createElement('div'); div.className = 'bs-section';
-    let h = `<div class="bs-title">${team} 타선</div>
+function buildTeamBoxHtml(side) {
+  const lineup = side === 'away' ? gs.awayLineup : gs.homeLineup;
+  const pitchers = side === 'away' ? gs.awayPitchers : gs.homePitchers;
+  const team = side === 'away' ? gs.awayTeam : gs.homeTeam;
+
+  let bh = `<div class="bs-section">
+    <div class="bs-title">${team} 타선</div>
     <table class="bs-table">
       <tr><th>타자</th><th>타석</th><th>안타</th><th>홈런</th><th>타점</th><th>삼진</th><th>볼넷</th><th>도루</th></tr>`;
-    let totPA = 0, totH = 0, totHR = 0, totRBI = 0, totK = 0, totBB = 0, totSB = 0;
-    lineup.forEach(p => {
-      const ts = p.todayStats;
-      const hi = ts.H >= 2 || ts.HR >= 1 || ts.RBI >= 2;
-      h += `<tr class="${hi ? 'highlight' : ''}">
-        <td>${formatPlayerName(p.name)}</td><td>${ts.PA}</td><td>${ts.H}</td>
-        <td>${ts.HR || 0}</td><td>${ts.RBI || 0}</td><td>${ts.K || 0}</td><td>${ts.BB || 0}</td><td>${ts.SB || 0}</td>
-      </tr>`;
-      totPA += ts.PA; totH += ts.H; totHR += ts.HR || 0; totRBI += ts.RBI || 0; totK += ts.K || 0; totBB += ts.BB || 0; totSB += ts.SB || 0;
-    });
-    h += `<tr class="bs-total">
-      <td>합계</td><td>${totPA}</td><td>${totH}</td><td>${totHR}</td><td>${totRBI}</td><td>${totK}</td><td>${totBB}</td><td>${totSB}</td>
-    </tr></table>`;
-    div.innerHTML = h; wrap.appendChild(div);
+  let totPA = 0, totH = 0, totHR = 0, totRBI = 0, totK = 0, totBB = 0, totSB = 0;
+  lineup.forEach(p => {
+    const ts = p.todayStats;
+    const hi = ts.H >= 2 || ts.HR >= 1 || ts.RBI >= 2;
+    bh += `<tr class="${hi ? 'highlight' : ''}">
+      <td>${formatPlayerName(p.name)}</td><td>${ts.PA}</td><td>${ts.H}</td>
+      <td>${ts.HR || 0}</td><td>${ts.RBI || 0}</td><td>${ts.K || 0}</td><td>${ts.BB || 0}</td><td>${ts.SB || 0}</td>
+    </tr>`;
+    totPA += ts.PA; totH += ts.H; totHR += ts.HR || 0; totRBI += ts.RBI || 0; totK += ts.K || 0; totBB += ts.BB || 0; totSB += ts.SB || 0;
   });
+  bh += `<tr class="bs-total">
+    <td>합계</td><td>${totPA}</td><td>${totH}</td><td>${totHR}</td><td>${totRBI}</td><td>${totK}</td><td>${totBB}</td><td>${totSB}</td>
+  </tr></table></div>`;
+
+  let ph = `<div class="bs-section">
+    <div class="bs-title">${team} 투수</div>
+    <table class="bs-table">
+      <tr><th>투수</th><th>이닝</th><th>투구수</th><th>안타</th><th>볼넷</th><th>삼진</th><th>실점</th></tr>`;
+  pitchers.filter(p => p.todayStats && p.todayStats.IP_out > 0).forEach(p => {
+    const ts = p.todayStats;
+    const ip = (ts.IP_out / 3).toFixed(1);
+    ph += `<tr>
+      <td>${formatPlayerName(p.name)}</td><td>${ip}</td><td>${p.pitchCount || 0}</td>
+      <td>${ts.H || 0}</td><td>${ts.BB || 0}</td><td>${ts.K || 0}</td><td>${ts.R || 0}</td>
+    </tr>`;
+  });
+  ph += `</table></div>`;
+
+  return bh + ph;
+}
+
+function buildBoxScore() {
+  const wrap = document.getElementById('boxscore-wrap');
+  const mySide = getMySide();
+
+  wrap.innerHTML = `
+    <div class="bs-tabs">
+      <div class="bs-tab${mySide === 'home' ? ' active' : ''}" id="bs-tab-home" onclick="switchBoxTab('home')">${gs.homeTeam}</div>
+      <div class="bs-tab${mySide === 'away' ? ' active' : ''}" id="bs-tab-away" onclick="switchBoxTab('away')">${gs.awayTeam}</div>
+    </div>
+    <div class="bs-tab-panel" id="bs-panel-home" style="display:${mySide === 'home' ? '' : 'none'}">${buildTeamBoxHtml('home')}</div>
+    <div class="bs-tab-panel" id="bs-panel-away" style="display:${mySide === 'away' ? '' : 'none'}">${buildTeamBoxHtml('away')}</div>
+  `;
+}
+
+function switchBoxTab(side) {
+  document.getElementById('bs-tab-home').classList.toggle('active', side === 'home');
+  document.getElementById('bs-tab-away').classList.toggle('active', side === 'away');
+  document.getElementById('bs-panel-home').style.display = side === 'home' ? '' : 'none';
+  document.getElementById('bs-panel-away').style.display = side === 'away' ? '' : 'none';
 }
 
 function buildMVP() {

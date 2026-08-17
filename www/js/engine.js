@@ -700,14 +700,113 @@ function relLuminance({ r, g, b }) {
   return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2];
 }
 const BG_LUMINANCE = 0.0037; // var(--bg) #0a0c10
-function readableTeamColor(hex) {
+const MIN_BG_CONTRAST = 3;   // WCAG 큰 글씨 기준
+// 앱 배경 대비 명암비. 클수록 잘 보인다.
+function bgContrast(hex) {
   const rgb = hexToRgb(hex);
-  if (!rgb) return hex;
-  const contrast = (relLuminance(rgb) + 0.05) / (BG_LUMINANCE + 0.05);
-  if (contrast >= 3) return hex;
+  if (!rgb) return 0;
+  return (relLuminance(rgb) + 0.05) / (BG_LUMINANCE + 0.05);
+}
+// 대비 보정까지 끝난, 화면에 실제로 찍히는 RGB 값
+function paintedRgb(hex) {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return null;
+  if (bgContrast(hex) >= MIN_BG_CONTRAST) return rgb;
   const t = 0.4;
   const lighten = c => Math.round(c + (255 - c) * t);
-  return `rgb(${lighten(rgb.r)}, ${lighten(rgb.g)}, ${lighten(rgb.b)})`;
+  return { r: lighten(rgb.r), g: lighten(rgb.g), b: lighten(rgb.b) };
+}
+function readableTeamColor(hex) {
+  const p = paintedRgb(hex);
+  if (!p) return hex;
+  return `rgb(${p.r}, ${p.g}, ${p.b})`;
+}
+
+// ── 인지 색차(CIEDE2000) ──
+// 단순 hex 비교로는 KIA(#EA0029)와 KT(#EB0A1E)처럼 "값은 다른데 눈에는 같은" 조합을 못 걸러낸다.
+// 사람 눈 기준 거리를 재려면 sRGB → Lab 변환 후 CIEDE2000을 써야 한다.
+function rgbToLab({ r, g, b }) {
+  const lin = [r, g, b].map(v => {
+    v /= 255;
+    return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  });
+  const [R, G, B] = lin;
+  const X = (0.4124 * R + 0.3576 * G + 0.1805 * B) / 0.95047;
+  const Y = (0.2126 * R + 0.7152 * G + 0.0722 * B);
+  const Z = (0.0193 * R + 0.1192 * G + 0.9505 * B) / 1.08883;
+  const f = t => t > 0.008856 ? Math.cbrt(t) : (7.787 * t + 16 / 116);
+  const fx = f(X), fy = f(Y), fz = f(Z);
+  return { L: 116 * fy - 16, a: 500 * (fx - fy), b: 200 * (fy - fz) };
+}
+function deltaE2000(lab1, lab2) {
+  const rad = Math.PI / 180, deg = 180 / Math.PI;
+  const { L: L1, a: a1, b: b1 } = lab1, { L: L2, a: a2, b: b2 } = lab2;
+  const C1 = Math.hypot(a1, b1), C2 = Math.hypot(a2, b2);
+  const Cbar7 = Math.pow((C1 + C2) / 2, 7);
+  const G = 0.5 * (1 - Math.sqrt(Cbar7 / (Cbar7 + 6103515625))); // 25^7
+  const a1p = (1 + G) * a1, a2p = (1 + G) * a2;
+  const C1p = Math.hypot(a1p, b1), C2p = Math.hypot(a2p, b2);
+  const norm = h => (h < 0 ? h + 360 : h);
+  const h1p = C1p === 0 ? 0 : norm(Math.atan2(b1, a1p) * deg);
+  const h2p = C2p === 0 ? 0 : norm(Math.atan2(b2, a2p) * deg);
+  const dLp = L2 - L1, dCp = C2p - C1p;
+  let dhp = 0;
+  if (C1p * C2p !== 0) {
+    dhp = h2p - h1p;
+    if (dhp > 180) dhp -= 360; else if (dhp < -180) dhp += 360;
+  }
+  const dHp = 2 * Math.sqrt(C1p * C2p) * Math.sin((dhp / 2) * rad);
+  const Lbarp = (L1 + L2) / 2, Cbarp = (C1p + C2p) / 2;
+  let hbarp;
+  if (C1p * C2p === 0) hbarp = h1p + h2p;
+  else if (Math.abs(h1p - h2p) <= 180) hbarp = (h1p + h2p) / 2;
+  else hbarp = (h1p + h2p + (h1p + h2p < 360 ? 360 : -360)) / 2;
+  const T = 1 - 0.17 * Math.cos((hbarp - 30) * rad) + 0.24 * Math.cos(2 * hbarp * rad)
+    + 0.32 * Math.cos((3 * hbarp + 6) * rad) - 0.20 * Math.cos((4 * hbarp - 63) * rad);
+  const Cbarp7 = Math.pow(Cbarp, 7);
+  const RC = 2 * Math.sqrt(Cbarp7 / (Cbarp7 + 6103515625));
+  const SL = 1 + (0.015 * Math.pow(Lbarp - 50, 2)) / Math.sqrt(20 + Math.pow(Lbarp - 50, 2));
+  const SC = 1 + 0.045 * Cbarp;
+  const SH = 1 + 0.015 * Cbarp * T;
+  const RT = -Math.sin(2 * (30 * Math.exp(-Math.pow((hbarp - 275) / 25, 2))) * rad) * RC;
+  return Math.sqrt(Math.pow(dLp / SL, 2) + Math.pow(dCp / SC, 2) + Math.pow(dHp / SH, 2)
+    + RT * (dCp / SC) * (dHp / SH));
+}
+// 두 팀 컬러가 화면에서 얼마나 달라 보이는지 (보정 후 실제 렌더링 색 기준)
+function teamColorDistance(hexA, hexB) {
+  const a = paintedRgb(hexA), b = paintedRgb(hexB);
+  if (!a || !b) return Infinity;
+  return deltaE2000(rgbToLab(a), rgbToLab(b));
+}
+
+// 화면에 실제로 칠할 색 하나를 고른다.
+//
+// 원칙: 홈·원정 모두 팀 고유색(primary)을 쓴다.
+// 예외: KBO 10팀 중 6팀이 빨강 계열이라(KIA·KT·롯데·SSG·두산 등) 두 팀 색이 거의 같아 보이는
+//       조합이 생긴다. 이때만 원정팀이 secondary로 비켜선다. secondary가 더 낫지 않으면 그대로 둔다.
+// 소속(홈/원정)과 상대 팀은 호출부마다 넘기지 않고 현재 경기 상태(gs)에서 읽는다.
+const MIN_TEAM_COLOR_DELTA_E = 15;  // 이 값 미만이면 "구분하기 어렵다"고 본다
+const _teamColorCache = new Map();  // '홈|원정' → 원정팀이 쓸 hex (경기당 사실상 1건)
+function getTeamDisplayColor(korName) {
+  const c = getTeamColor(korName);
+  if (!c) return null;
+  const isAway = typeof gs !== 'undefined' && gs && gs.awayTeam === korName && gs.homeTeam !== korName;
+  if (!isAway || !c.secondary) return c.primary;
+
+  const home = getTeamColor(gs.homeTeam);
+  if (!home) return c.primary;
+
+  const key = `${gs.homeTeam}|${korName}`;
+  if (_teamColorCache.has(key)) return _teamColorCache.get(key);
+
+  const dPrimary = teamColorDistance(home.primary, c.primary);
+  let pick = c.primary;
+  if (dPrimary < MIN_TEAM_COLOR_DELTA_E) {
+    // secondary가 실제로 더 잘 구분될 때만 교체 (더 나쁘면 고유색 유지)
+    if (teamColorDistance(home.primary, c.secondary) > dPrimary) pick = c.secondary;
+  }
+  _teamColorCache.set(key, pick);
+  return pick;
 }
 // 팀 컬러를 배경으로 채울 때(탭 활성 상태 등) 그 위에 얹을 글자색(흑/백)을 고른다.
 function contrastingTextColor(hex) {
@@ -720,29 +819,29 @@ function contrastingTextColor(hex) {
 }
 // 팀명을 다크 배경 위 텍스트로 칠할 때 쓰는 style 속성 문자열. 팀 컬러가 없으면 빈 문자열(기본 CSS 색 유지).
 function teamColorStyle(korName) {
-  const c = getTeamColor(korName);
-  return c ? `style="color:${readableTeamColor(c.primary)}"` : '';
+  const hex = getTeamDisplayColor(korName);
+  return hex ? `style="color:${readableTeamColor(hex)}"` : '';
 }
 // 팀 탭처럼 원색을 배경으로 채우는 곳: --team-tab-bg/--team-tab-text 커스텀 프로퍼티로 넘긴다.
 // (활성 상태일 때만 CSS가 이 값을 실제로 소비하므로, 비활성 탭은 그대로 둬도 무방)
 function teamTabStyle(korName) {
-  const c = getTeamColor(korName);
-  if (!c) return '';
-  return `style="--team-tab-bg:${c.primary};--team-tab-text:${contrastingTextColor(c.primary)}"`;
+  const hex = getTeamDisplayColor(korName);
+  if (!hex) return '';
+  return `style="--team-tab-bg:${hex};--team-tab-text:${contrastingTextColor(hex)}"`;
 }
 // 헤더 팀 박스처럼 보더(원색 그대로)와 텍스트(가독성 보정)를 함께 쓰는 요소에 커스텀 프로퍼티를 심어준다.
 function setTeamColorVars(el, korName) {
   if (!el) return;
-  const c = getTeamColor(korName);
-  if (!c) {
+  const hex = getTeamDisplayColor(korName);
+  if (!hex) {
     el.style.removeProperty('--team-color');
     el.style.removeProperty('--team-color-text');
     el.style.removeProperty('--team-color-tint');
     return;
   }
-  const rgb = hexToRgb(c.primary);
-  el.style.setProperty('--team-color', c.primary);
-  el.style.setProperty('--team-color-text', readableTeamColor(c.primary));
+  const rgb = hexToRgb(hex);
+  el.style.setProperty('--team-color', hex);
+  el.style.setProperty('--team-color-text', readableTeamColor(hex));
   if (rgb) el.style.setProperty('--team-color-tint', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, .15)`);
 }
 

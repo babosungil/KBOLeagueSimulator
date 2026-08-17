@@ -106,8 +106,12 @@ window.setupAndroidBackButton = function() {
 };
 
 // 게임 진행 중 상태 저장 (gs 전체 + 시즌 컨텍스트)
+// 이미 끝난 경기는 저장하지 않는다. returnToSeason()이 stopPlay()와 함께 이 함수를 부르는데,
+// 종료된 경기까지 다시 써버리면 포스트시즌에서 같은 시리즈의 다음 경기를 시작할 때
+// hasSavedGame()이 그 잔여 데이터를 "진행 중인 경기"로 오인해 끝난 경기를 복원한다.
+// (정규시즌은 gameIdx가 증가해 우연히 걸러졌을 뿐, 포스트시즌은 psStage가 시리즈 내내 같아 그대로 노출된다)
 function saveGameState() {
-  if (!gs || !gs._seasonGame) return;
+  if (!gs || !gs._seasonGame || gs.gameOver) return;
   try {
     const snapshot = {
       homeTeam:    gs.homeTeam,
@@ -153,6 +157,10 @@ function hasSavedGame(currentGame) {
     const saved = data._seasonGame;
     const game = currentGame || SS.schedule[SS.gameIdx];
     if (!game || !saved) return false;
+
+    // 종료된 경기 스냅샷은 "이어하기" 대상이 아니다.
+    // (구버전에서 저장된 잔여 데이터가 남아 있어도 여기서 걸러진다)
+    if (data.gameOver) return false;
 
     // 다른 시즌(다른 내 팀)의 잔여 저장 데이터가 우연히 대진이 일치해
     // 엉뚱하게 복원되는 것을 방지
